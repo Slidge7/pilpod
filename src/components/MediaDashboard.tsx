@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -10,6 +10,7 @@ import type {
 
 const EVT = "gsmtc://update";
 const ALWAYS_ON_TOP_STORAGE_KEY = "omnimedia-always-on-top";
+const WIDGET_TRANSITION_MS = 230;
 
 function thumbSrc(s: MediaSessionDto): string | null {
   if (!s.thumbnailBase64) return null;
@@ -132,6 +133,62 @@ function IconStayOnTop() {
   );
 }
 
+function IconWidgetMinimize({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="7" y="7" width="10" height="10" rx="2" />
+      <path d="M7 3h6a4 4 0 0 1 4 4v6" />
+    </svg>
+  );
+}
+
+function IconClose({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
+function IconMusicGlyph({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M9 18V5l12-2v13" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="18" cy="16" r="3" />
+    </svg>
+  );
+}
+
 export function MediaDashboard() {
   const [snapshot, setSnapshot] = useState<GsmtcSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -144,6 +201,11 @@ export function MediaDashboard() {
       return false;
     }
   });
+  const [isWidget, setIsWidget] = useState(false);
+  const [dimmingToWidget, setDimmingToWidget] = useState(false);
+  const [fullEnterActive, setFullEnterActive] = useState(false);
+  const [fullEnterVisible, setFullEnterVisible] = useState(false);
+  const windowTransitionLock = useRef(false);
 
   const markPending = useCallback((key: string) => {
     setPendingKeys((prev) => new Set(prev).add(key));
@@ -172,12 +234,13 @@ export function MediaDashboard() {
   }, []);
 
   useEffect(() => {
+    if (isWidget) return;
     void getCurrentWindow()
       .setAlwaysOnTop(alwaysOnTop)
       .catch(() => {
         /* e.g. Vite dev in a normal browser */
       });
-  }, [alwaysOnTop]);
+  }, [alwaysOnTop, isWidget]);
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -225,6 +288,58 @@ export function MediaDashboard() {
     });
   }, []);
 
+  const minimizeToWidgetMode = useCallback(async () => {
+    if (windowTransitionLock.current || isWidget) return;
+    windowTransitionLock.current = true;
+    setDimmingToWidget(true);
+    window.setTimeout(async () => {
+      try {
+        await invoke("toggle_widget_mode", { isMini: true });
+        setIsWidget(true);
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        setDimmingToWidget(false);
+        windowTransitionLock.current = false;
+      }
+    }, WIDGET_TRANSITION_MS);
+  }, [isWidget]);
+
+  const restoreFromWidget = useCallback(async () => {
+    if (windowTransitionLock.current || !isWidget) return;
+    windowTransitionLock.current = true;
+    try {
+      await invoke("toggle_widget_mode", { isMini: false });
+      setIsWidget(false);
+      void getCurrentWindow()
+        .setAlwaysOnTop(alwaysOnTop)
+        .catch(() => {
+          /* browser dev */
+        });
+      setFullEnterActive(true);
+      setFullEnterVisible(false);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setFullEnterVisible(true);
+          window.setTimeout(() => {
+            setFullEnterActive(false);
+            setFullEnterVisible(false);
+            windowTransitionLock.current = false;
+          }, WIDGET_TRANSITION_MS + 40);
+        });
+      });
+    } catch (e) {
+      setError(String(e));
+      windowTransitionLock.current = false;
+    }
+  }, [alwaysOnTop, isWidget]);
+
+  const closeApp = useCallback(() => {
+    void getCurrentWindow().close().catch(() => {
+      /* browser dev */
+    });
+  }, []);
+
   const toggleWinSession = useCallback(
     async (s: MediaSessionDto) => {
       const key = winRowKey(s);
@@ -250,57 +365,105 @@ export function MediaDashboard() {
     [browserTabs],
   );
 
+  if (isWidget) {
+    return (
+      <div
+        className="flex h-full w-full items-center justify-center bg-transparent"
+        data-tauri-drag-region="deep"
+      >
+        <button
+          type="button"
+          onClick={() => void restoreFromWidget()}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-zinc-800/95 text-amber-400 ring-1 ring-zinc-600/80 shadow-lg shadow-black/40 hover:bg-zinc-700"
+          title="Restore OmniMedia (tap)"
+          aria-label="Restore OmniMedia window"
+        >
+          <IconMusicGlyph className="h-[18px] w-[18px]" />
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen flex flex-col bg-zinc-950 text-zinc-100">
-      <header className="shrink-0 border-b border-zinc-800/90 px-3 py-2.5 flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <h1 className="text-sm font-semibold tracking-tight truncate">
-            OmniMedia
-          </h1>
-          <p className="text-[11px] text-zinc-500 truncate">
-            {browserTabs.length} browser · {sessions.length} Windows
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            onClick={toggleAlwaysOnTop}
-            className={`rounded-full p-2 transition-colors ${
-              alwaysOnTop
-                ? "bg-amber-950/70 text-amber-400 ring-1 ring-amber-700/60"
-                : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-            }`}
-            title={alwaysOnTop ? "Disable always on top" : "Keep window on top"}
-            aria-pressed={alwaysOnTop}
-          >
-            <IconStayOnTop />
-          </button>
-          <button
-            type="button"
-            onClick={() => void refresh()}
-            className="rounded-full bg-zinc-800 p-2 text-zinc-300 hover:bg-zinc-700"
-            title="Refresh"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden
+    <div
+      className={`omni-shell-dim flex h-screen min-h-0 flex-col bg-transparent text-zinc-100 ${
+        dimmingToWidget ? "is-dimming" : ""
+      } ${fullEnterActive ? "is-entering" : ""} ${
+        fullEnterVisible ? "is-entered" : ""
+      }`}
+    >
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-zinc-950">
+        <header
+          className="flex min-h-8 shrink-0 items-stretch border-b border-zinc-800/90 bg-zinc-950/95"
+          data-tauri-drag-region="deep"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-2 px-2">
+            <span className="truncate text-[11px] font-medium tracking-tight text-zinc-300">
+              OmniMedia
+            </span>
+            <span className="truncate text-[10px] text-zinc-600">
+              {browserTabs.length} br · {sessions.length} win
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-px pr-1">
+            <button
+              type="button"
+              onClick={toggleAlwaysOnTop}
+              className={`flex h-8 min-w-8 items-center justify-center rounded-md transition-colors ${
+                alwaysOnTop
+                  ? "bg-amber-950/70 text-amber-400 ring-1 ring-amber-700/50"
+                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              }`}
+              title={
+                alwaysOnTop ? "Disable always on top" : "Keep window on top"
+              }
+              aria-pressed={alwaysOnTop}
             >
-              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-              <path d="M16 3h5v5" />
-            </svg>
-          </button>
-        </div>
-      </header>
+              <IconStayOnTop />
+            </button>
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              className="flex h-8 min-w-8 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              title="Refresh"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden
+              >
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                <path d="M16 3h5v5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => void minimizeToWidgetMode()}
+              className="flex h-8 min-w-8 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              title="Minimize to floating widget"
+            >
+              <IconWidgetMinimize />
+            </button>
+            <button
+              type="button"
+              onClick={closeApp}
+              className="flex h-8 min-w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-red-950/60 hover:text-red-300"
+              title="Close"
+            >
+              <IconClose />
+            </button>
+          </div>
+        </header>
 
       <div
-        className="shrink-0 flex p-1.5 gap-1 border-b border-zinc-800/80 bg-zinc-900/40"
+        className="flex shrink-0 gap-1 border-b border-zinc-800/80 bg-zinc-900/40 p-1.5"
+        data-tauri-drag-region="deep"
         role="tablist"
         aria-label="Media source"
       >
@@ -494,6 +657,7 @@ export function MediaDashboard() {
           </section>
         )}
       </main>
+      </div>
     </div>
   );
 }

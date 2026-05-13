@@ -13,6 +13,35 @@ use windows::{
 use super::dto::{ControlsDto, MediaSessionDto, TimelineDto, GsmtcSnapshot, SNAPSHOT_VERSION};
 use super::thumbnail::read_thumbnail_b64;
 
+/// GSMTC AUMID substrings for browsers that can run the Chromium companion extension.
+/// When `browser_tabs` is non-empty, these sessions duplicate the extension list.
+const CHROMIUM_FAMILY_AUMID_MARKERS: &[&str] = &[
+    "chrome",
+    "msedge",
+    "microsoftedge",
+    "brave",
+    "opera",
+    "vivaldi",
+    "chromium",
+    "yandexbrowser",
+];
+
+fn aumid_is_chromium_browser_media_source(aumid: &str) -> bool {
+    let a = aumid.to_lowercase();
+    CHROMIUM_FAMILY_AUMID_MARKERS.iter().any(|m| a.contains(m))
+}
+
+/// Drops Chromium-family system sessions from `sessions` when the extension supplies tab data,
+/// so the same media is not listed under both Browsers and Windows.
+pub fn apply_extension_gsmtc_dedup(mut snap: GsmtcSnapshot) -> GsmtcSnapshot {
+    if snap.browser_tabs.is_empty() {
+        return snap;
+    }
+    snap.sessions
+        .retain(|s| !aumid_is_chromium_browser_media_source(&s.source_app_user_model_id));
+    snap
+}
+
 fn hstring_opt(h: windows::core::Result<HSTRING>) -> String {
     h.map(|s| s.to_string()).unwrap_or_default()
 }

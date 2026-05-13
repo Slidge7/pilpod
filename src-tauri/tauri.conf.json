@@ -12,10 +12,14 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "OmniMedia",
-        "width": 380,
-        "height": 720,
-        "resizable": true
+        "width": 350,
+        "height": 600,
+        "resizable": true,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false
       }
     ],
     "security": {

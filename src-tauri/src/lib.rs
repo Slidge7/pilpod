@@ -1,6 +1,8 @@
 #[cfg(windows)]
 mod browser_bridge;
 mod gsmtc;
+#[cfg(windows)]
+mod window_widget;
 
 use tauri::Manager;
 
@@ -10,6 +12,7 @@ pub fn run() {
 
     #[cfg(windows)]
     {
+        builder = builder.manage(window_widget::RestoreBounds::default());
         builder = builder.setup(|app| {
             let handle = app.handle().clone();
             let browser_tabs: browser_bridge::BrowserTabsMap =
@@ -56,6 +59,7 @@ pub fn run() {
             gsmtc::commands::gsmtc_skip_next,
             gsmtc::commands::gsmtc_skip_previous,
             browser_bridge::browser_media_control,
+            window_widget::toggle_widget_mode,
         ]);
     }
 
@@ -67,6 +71,7 @@ pub fn run() {
             gsmtc_skip_next,
             gsmtc_skip_previous,
             browser_media_control,
+            toggle_widget_mode,
         ]);
     }
 
@@ -106,5 +111,11 @@ fn browser_media_control(
     _tab_id: i32,
     _action: String,
 ) -> Result<(), String> {
+    Err("OmniMedia requires Windows".into())
+}
+
+#[cfg(not(windows))]
+#[tauri::command]
+fn toggle_widget_mode(_is_mini: bool) -> Result<(), String> {
     Err("OmniMedia requires Windows".into())
 }
