@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "OmniMedia companion",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Sends per-tab media metadata to the OmniMedia desktop app over localhost.",
   "permissions": ["storage", "tabs"],
   "host_permissions": ["http://127.0.0.1:17399/*"],

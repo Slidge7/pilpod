@@ -66,5 +66,5 @@ function tick() {
   } catch (_) {}
 }
 
-setInterval(tick, 1500);
+setInterval(tick, 800);
 tick();

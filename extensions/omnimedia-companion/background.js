@@ -2,11 +2,24 @@
 
 const PUSH_URL = "http://127.0.0.1:17399/browser-media";
 
+/** How often we POST tab state and pick up play/pause/etc. commands from the desktop (ms). */
+const PUSH_INTERVAL_MS = 200;
+
 /** @type {Map<number, TabRow>} */
 const byTab = new Map();
 
 /** Stable UUID for this browser profile — generated once, persisted in storage. */
 let browserId = "";
+
+/** Debounced push when a tab sends a snapshot — snappier metadata without one POST per event. */
+let pushDebounceTimer = 0;
+function schedulePushSoon() {
+  if (pushDebounceTimer) return;
+  pushDebounceTimer = setTimeout(() => {
+    pushDebounceTimer = 0;
+    void push();
+  }, 50);
+}
 
 chrome.storage.local.get(["omniBrowserId"], (result) => {
   if (result.omniBrowserId) {
@@ -38,6 +51,7 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
 
   if (!hasSignal) {
     byTab.delete(id);
+    schedulePushSoon();
     return;
   }
 
@@ -50,6 +64,7 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     album,
     playbackState,
   });
+  schedulePushSoon();
 });
 
 async function push() {
@@ -88,8 +103,8 @@ async function push() {
   }
 }
 
-setInterval(push, 2000);
 void push();
+setInterval(push, PUSH_INTERVAL_MS);
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   byTab.delete(tabId);
