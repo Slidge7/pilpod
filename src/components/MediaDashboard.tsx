@@ -11,6 +11,7 @@ import type {
 const EVT = "gsmtc://update";
 const ALWAYS_ON_TOP_STORAGE_KEY = "omnimedia-always-on-top";
 const WIDGET_TRANSITION_MS = 230;
+const WIDGET_DRAG_THRESHOLD_PX = 6;
 
 function thumbSrc(s: MediaSessionDto): string | null {
   if (!s.thumbnailBase64) return null;
@@ -163,6 +164,25 @@ function IconClose({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
+function IconWidgetClose({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
       strokeLinecap="round"
       aria-hidden
     >
@@ -340,6 +360,82 @@ export function MediaDashboard() {
     });
   }, []);
 
+  const widgetGestureRef = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    dragged: boolean;
+  } | null>(null);
+
+  const onWidgetSurfacePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.button !== 0) return;
+      widgetGestureRef.current = {
+        pointerId: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        dragged: false,
+      };
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    [],
+  );
+
+  const onWidgetSurfacePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const g = widgetGestureRef.current;
+      if (!g || e.pointerId !== g.pointerId || g.dragged) return;
+      const dx = e.clientX - g.x;
+      const dy = e.clientY - g.y;
+      if (
+        dx * dx + dy * dy >=
+        WIDGET_DRAG_THRESHOLD_PX * WIDGET_DRAG_THRESHOLD_PX
+      ) {
+        g.dragged = true;
+        void getCurrentWindow().startDragging();
+        try {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        } catch {
+          /* already released */
+        }
+        widgetGestureRef.current = null;
+      }
+    },
+    [],
+  );
+
+  const endWidgetSurfacePointer = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>, isCancel: boolean) => {
+      const g = widgetGestureRef.current;
+      if (!g || e.pointerId !== g.pointerId) return;
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        /* */
+      }
+      const dragged = g.dragged;
+      widgetGestureRef.current = null;
+      if (!dragged && !isCancel && e.button === 0) {
+        void restoreFromWidget();
+      }
+    },
+    [restoreFromWidget],
+  );
+
+  const onWidgetSurfacePointerUp = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      endWidgetSurfacePointer(e, false);
+    },
+    [endWidgetSurfacePointer],
+  );
+
+  const onWidgetSurfacePointerCancel = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      endWidgetSurfacePointer(e, true);
+    },
+    [endWidgetSurfacePointer],
+  );
+
   const toggleWinSession = useCallback(
     async (s: MediaSessionDto) => {
       const key = winRowKey(s);
@@ -367,19 +463,46 @@ export function MediaDashboard() {
 
   if (isWidget) {
     return (
-      <div
-        className="flex h-full w-full items-center justify-center bg-transparent"
-        data-tauri-drag-region="deep"
-      >
+      <div className="group relative isolate h-full min-h-0 w-full overflow-hidden touch-none bg-transparent">
         <button
           type="button"
-          onClick={() => void restoreFromWidget()}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-zinc-800/95 text-amber-400 ring-1 ring-zinc-600/80 shadow-lg shadow-black/40 hover:bg-zinc-700"
-          title="Restore OmniMedia (tap)"
-          aria-label="Restore OmniMedia window"
+          className="pointer-events-none absolute right-0.5 top-0.5 z-20 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-red-600 text-white opacity-0 shadow-md ring-1 ring-red-800/80 transition-opacity hover:bg-red-500 group-hover:pointer-events-auto group-hover:opacity-100"
+          title="Exit widget — show full window"
+          aria-label="Exit widget mode and show full window"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            void restoreFromWidget();
+          }}
         >
-          <IconMusicGlyph className="h-[18px] w-[18px]" />
+          <IconWidgetClose className="shrink-0" />
         </button>
+        <div
+          className="flex h-full min-h-0 w-full cursor-grab items-center justify-center overflow-hidden active:cursor-grabbing"
+          role="button"
+          tabIndex={0}
+          aria-label="Open OmniMedia — drag to move"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              void restoreFromWidget();
+            }
+          }}
+          onPointerDown={onWidgetSurfacePointerDown}
+          onPointerMove={onWidgetSurfacePointerMove}
+          onPointerUp={onWidgetSurfacePointerUp}
+          onPointerCancel={onWidgetSurfacePointerCancel}
+        >
+          <div
+            className="pointer-events-none flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-2xl bg-zinc-800/95 text-amber-400 ring-1 ring-zinc-600/80 shadow-lg shadow-black/40"
+            title=""
+            aria-hidden
+          >
+            <IconMusicGlyph className="h-[18px] w-[18px]" />
+          </div>
+        </div>
       </div>
     );
   }

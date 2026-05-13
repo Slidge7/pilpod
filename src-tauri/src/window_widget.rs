@@ -8,7 +8,8 @@ const PHONE_W: f64 = 350.0;
 const PHONE_H: f64 = 600.0;
 const WIDGET_PX: u32 = 50;
 const CORNER_MARGIN_PX: i32 = 12;
-const ABOVE_WIDGET_GAP_PX: i32 = 8;
+/// Gap between the bottom edge of the restored window and the top of the widget slot (px).
+const ABOVE_WIDGET_GAP_PX: i32 = 0;
 
 #[derive(Default)]
 pub struct RestoreBounds(
@@ -74,7 +75,6 @@ pub fn toggle_widget_mode(
             .set_size(PhysicalSize::new(WIDGET_PX, WIDGET_PX))
             .map_err(|e| e.to_string())?;
     } else {
-        let sf = window.scale_factor().map_err(|e| e.to_string())?;
         let current_size = window.outer_size().map_err(|e| e.to_string())?;
         let current_pos = window.outer_position().map_err(|e| e.to_string())?;
 
@@ -89,6 +89,8 @@ pub fn toggle_widget_mode(
         window
             .set_size(logical_size)
             .map_err(|e| e.to_string())?;
+
+        let actual_outer = window.outer_size().map_err(|e| e.to_string())?;
 
         let is_widget = current_size.width == WIDGET_PX && current_size.height == WIDGET_PX;
 
@@ -105,31 +107,28 @@ pub fn toggle_widget_mode(
             let max_x = wa.position.x + wa.size.width as i32;
             let max_y = wa.position.y + wa.size.height as i32;
 
-            let full_w = (logical_size.width * sf).round() as i32;
-            let full_h = (logical_size.height * sf).round() as i32;
+            let full_w = actual_outer.width as i32;
+            let full_h = actual_outer.height as i32;
 
             let wx = current_pos.x;
             let wy = current_pos.y;
             let widget_w = current_size.width as i32;
 
-            let widget_cx = wx + widget_w / 2;
-            let mut new_x = widget_cx - full_w / 2;
+            // Stack the phone window directly above the widget: same horizontal center,
+            // bottom edge of phone = top of widget minus gap (physical pixels).
+            let mut new_x = wx + (widget_w - full_w) / 2;
             let mut new_y = wy - ABOVE_WIDGET_GAP_PX - full_h;
 
-            let clamp_x0 = min_x;
-            let clamp_x1 = max_x - full_w;
-            if clamp_x1 >= clamp_x0 {
-                new_x = new_x.clamp(clamp_x0, clamp_x1);
-            } else {
-                new_x = clamp_x0;
+            if new_x < min_x {
+                new_x = min_x;
+            } else if new_x + full_w > max_x {
+                new_x = max_x - full_w;
             }
 
-            let clamp_y0 = min_y;
-            let clamp_y1 = max_y - full_h;
-            if clamp_y1 >= clamp_y0 {
-                new_y = new_y.clamp(clamp_y0, clamp_y1);
-            } else {
-                new_y = clamp_y0;
+            if new_y < min_y {
+                new_y = min_y;
+            } else if new_y + full_h > max_y {
+                new_y = max_y - full_h;
             }
 
             window
