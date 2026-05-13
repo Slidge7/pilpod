@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { GsmtcSnapshot, MediaSessionDto } from "../types/media";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import type {
+  BrowserTabMediaDto,
+  GsmtcSnapshot,
+  MediaSessionDto,
+} from "../types/media";
 
 const EVT = "gsmtc://update";
+const ALWAYS_ON_TOP_STORAGE_KEY = "omnimedia-always-on-top";
 
 function thumbSrc(s: MediaSessionDto): string | null {
   if (!s.thumbnailBase64) return null;
@@ -18,9 +24,138 @@ function formatTicks(ticks: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function sessionDurationLabel(s: MediaSessionDto): string | null {
+  if (s.timeline.endTicks <= 0) return null;
+  return formatTicks(s.timeline.endTicks);
+}
+
+function channelBrowser(t: BrowserTabMediaDto): string | null {
+  const a = t.artist?.trim();
+  return a || null;
+}
+
+function channelSession(s: MediaSessionDto): string | null {
+  const a = s.artist?.trim();
+  if (a) return a;
+  const sub = s.subtitle?.trim();
+  return sub || null;
+}
+
+function isBrowserPlaying(t: BrowserTabMediaDto): boolean {
+  return t.playbackState === "playing";
+}
+
+function isSessionPlaying(s: MediaSessionDto): boolean {
+  const st = (s.playbackStatus || "").toLowerCase();
+  return st === "playing";
+}
+
+function groupBrowserTabsByProfile(
+  tabs: BrowserTabMediaDto[],
+): [string, BrowserTabMediaDto[]][] {
+  const map = new Map<string, BrowserTabMediaDto[]>();
+  const order: string[] = [];
+  for (const t of tabs) {
+    if (!map.has(t.browserId)) {
+      order.push(t.browserId);
+      map.set(t.browserId, []);
+    }
+    map.get(t.browserId)!.push(t);
+  }
+  return order.map((id) => [id, map.get(id)!]);
+}
+
+function browserRowKey(t: BrowserTabMediaDto): string {
+  return `b:${t.browserId}:${t.tabId}`;
+}
+
+function winRowKey(s: MediaSessionDto): string {
+  return `w:${s.sessionIndex}`;
+}
+
+function IconPlay({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M8 5v14l11-7L8 5z" />
+    </svg>
+  );
+}
+
+function IconPause({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z" />
+    </svg>
+  );
+}
+
+function Spinner() {
+  return (
+    <span
+      className="inline-block h-5 w-5 rounded-full border-2 border-zinc-400 border-t-zinc-900 animate-spin"
+      aria-hidden
+    />
+  );
+}
+
+function IconStayOnTop() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 17v5" />
+      <path d="M9 10.76a2 2 0 0 1-1.11 1.78l-1.28.64A2 2 0 0 0 5 15.16V17h14v-1.84a2 2 0 0 0-1.61-1.98l-1.28-.64A2 2 0 0 1 15 10.76V7a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v3.76z" />
+      <path d="M8 2h8v4H8z" />
+    </svg>
+  );
+}
+
 export function MediaDashboard() {
   const [snapshot, setSnapshot] = useState<GsmtcSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mainTab, setMainTab] = useState<"browser" | "windows">("browser");
+  const [pendingKeys, setPendingKeys] = useState<Set<string>>(() => new Set());
+  const [alwaysOnTop, setAlwaysOnTop] = useState(() => {
+    try {
+      return localStorage.getItem(ALWAYS_ON_TOP_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const markPending = useCallback((key: string) => {
+    setPendingKeys((prev) => new Set(prev).add(key));
+  }, []);
+
+  const clearPending = useCallback((key: string) => {
+    setPendingKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  }, []);
 
   const refresh = useCallback(async (retries = 12) => {
     try {
@@ -37,6 +172,14 @@ export function MediaDashboard() {
   }, []);
 
   useEffect(() => {
+    void getCurrentWindow()
+      .setAlwaysOnTop(alwaysOnTop)
+      .catch(() => {
+        /* e.g. Vite dev in a normal browser */
+      });
+  }, [alwaysOnTop]);
+
+  useEffect(() => {
     let unlisten: UnlistenFn | undefined;
     void listen<GsmtcSnapshot>(EVT, (ev) => {
       setSnapshot(ev.payload);
@@ -50,124 +193,305 @@ export function MediaDashboard() {
     };
   }, [refresh]);
 
+  const toggleBrowser = useCallback(
+    async (t: BrowserTabMediaDto) => {
+      const key = browserRowKey(t);
+      markPending(key);
+      setError(null);
+      try {
+        await invoke("browser_media_control", {
+          browserId: t.browserId,
+          tabId: t.tabId,
+          action: "playPause",
+        });
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        clearPending(key);
+      }
+    },
+    [clearPending, markPending],
+  );
+
+  const toggleAlwaysOnTop = useCallback(() => {
+    setAlwaysOnTop((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(ALWAYS_ON_TOP_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleWinSession = useCallback(
+    async (s: MediaSessionDto) => {
+      const key = winRowKey(s);
+      markPending(key);
+      setError(null);
+      try {
+        await invoke("gsmtc_toggle_play_pause", {
+          sessionIndex: s.sessionIndex,
+        });
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        clearPending(key);
+      }
+    },
+    [clearPending, markPending],
+  );
+
   const sessions = snapshot?.sessions ?? [];
+  const browserTabs = snapshot?.browserTabs ?? [];
+  const browserProfileGroups = useMemo(
+    () => groupBrowserTabsByProfile(browserTabs),
+    [browserTabs],
+  );
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">OmniMedia</h1>
-          <p className="text-sm text-zinc-400">
-            Windows system media sessions (GSMTC)
+    <div className="h-screen flex flex-col bg-zinc-950 text-zinc-100">
+      <header className="shrink-0 border-b border-zinc-800/90 px-3 py-2.5 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-sm font-semibold tracking-tight truncate">
+            OmniMedia
+          </h1>
+          <p className="text-[11px] text-zinc-500 truncate">
+            {browserTabs.length} browser · {sessions.length} Windows
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void refresh()}
-          className="rounded-lg bg-zinc-800 px-4 py-2 text-sm font-medium hover:bg-zinc-700 active:bg-zinc-600"
-        >
-          Refresh
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={toggleAlwaysOnTop}
+            className={`rounded-full p-2 transition-colors ${
+              alwaysOnTop
+                ? "bg-amber-950/70 text-amber-400 ring-1 ring-amber-700/60"
+                : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+            }`}
+            title={alwaysOnTop ? "Disable always on top" : "Keep window on top"}
+            aria-pressed={alwaysOnTop}
+          >
+            <IconStayOnTop />
+          </button>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="rounded-full bg-zinc-800 p-2 text-zinc-300 hover:bg-zinc-700"
+            title="Refresh"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden
+            >
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+              <path d="M16 3h5v5" />
+            </svg>
+          </button>
+        </div>
       </header>
 
-      <main className="p-6">
+      <div
+        className="shrink-0 flex p-1.5 gap-1 border-b border-zinc-800/80 bg-zinc-900/40"
+        role="tablist"
+        aria-label="Media source"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mainTab === "browser"}
+          id="tab-browser"
+          aria-controls="panel-browser"
+          onClick={() => setMainTab("browser")}
+          className={`flex-1 rounded-lg py-2 px-2 text-xs font-medium transition-colors ${
+            mainTab === "browser"
+              ? "bg-zinc-800 text-zinc-100 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          Browsers ({browserTabs.length})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mainTab === "windows"}
+          id="tab-windows"
+          aria-controls="panel-windows"
+          onClick={() => setMainTab("windows")}
+          className={`flex-1 rounded-lg py-2 px-2 text-xs font-medium transition-colors ${
+            mainTab === "windows"
+              ? "bg-zinc-800 text-zinc-100 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          Windows ({sessions.length})
+        </button>
+      </div>
+
+      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3">
         {error ? (
-          <div className="rounded-lg border border-red-900/60 bg-red-950/40 px-4 py-3 text-sm text-red-200">
+          <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-2.5 py-2 text-[11px] text-red-200 mb-3">
             {error}
           </div>
         ) : null}
 
-        {sessions.length === 0 && !error ? (
-          <p className="text-zinc-500 text-sm">
-            No active media sessions. Start playback in Spotify, Chrome, Edge,
-            etc.
-          </p>
+        {mainTab === "browser" ? (
+          <section
+            className="space-y-3"
+            role="tabpanel"
+            id="panel-browser"
+            aria-labelledby="tab-browser"
+          >
+            {browserTabs.length === 0 ? (
+              <p className="text-xs text-zinc-500 py-6 text-center leading-relaxed">
+                No browser tabs yet. Load the companion extension and open media
+                in Chromium.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {browserProfileGroups.map(([browserId, tabs]) => (
+                  <div key={browserId} className="flex flex-col gap-2">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500 px-0.5">
+                      Browser · {browserId.slice(0, 8)}…
+                    </p>
+                    <ul className="flex flex-col gap-2">
+                      {tabs.map((t) => {
+                        const rk = browserRowKey(t);
+                        const busy = pendingKeys.has(rk);
+                        const playing = isBrowserPlaying(t);
+                        const ch = channelBrowser(t);
+
+                        return (
+                          <li
+                            key={rk}
+                            className="flex items-center gap-2.5 rounded-xl border border-zinc-800/90 bg-zinc-900/35 px-2.5 py-2"
+                          >
+                            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-zinc-800 flex items-center justify-center">
+                              <span className="text-sm font-medium text-zinc-500">
+                                {(t.title?.trim() || "?").slice(0, 1).toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium leading-snug line-clamp-2 text-zinc-100">
+                                {t.title?.trim() || "Untitled"}
+                              </p>
+                              <div className="mt-0.5 flex flex-wrap gap-x-1.5 text-[11px] text-zinc-500">
+                                {ch ? (
+                                  <span className="truncate">{ch}</span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              title={playing ? "Pause" : "Play"}
+                              aria-label={playing ? "Pause" : "Play"}
+                              onClick={() => void toggleBrowser(t)}
+                              className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-900 enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                              {busy ? (
+                                <Spinner />
+                              ) : playing ? (
+                                <IconPause />
+                              ) : (
+                                <IconPlay />
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {sessions.map((s) => (
-              <li
-                key={s.sourceAppUserModelId}
-                className="flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60 shadow-sm"
-              >
-                <div className="flex gap-4 p-4">
-                  <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-zinc-800">
-                    {thumbSrc(s) ? (
-                      <img
-                        src={thumbSrc(s)!}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs text-zinc-500">
-                        No art
+          <section
+            className="flex flex-col gap-2"
+            role="tabpanel"
+            id="panel-windows"
+            aria-labelledby="tab-windows"
+          >
+            {sessions.length === 0 ? (
+              <p className="text-xs text-zinc-500 py-6 text-center">
+                No Windows media sessions.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {sessions.map((s) => {
+                  const rk = winRowKey(s);
+                  const busy = pendingKeys.has(rk);
+                  const playing = isSessionPlaying(s);
+                  const ch = channelSession(s);
+                  const dur = sessionDurationLabel(s);
+                  const winDisabled =
+                    busy || !s.controls.playPauseToggleEnabled;
+
+                  return (
+                    <li
+                      key={rk}
+                      className="flex items-center gap-2.5 rounded-xl border border-zinc-800/90 bg-zinc-900/35 px-2.5 py-2"
+                    >
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-zinc-800">
+                        {thumbSrc(s) ? (
+                          <img
+                            src={thumbSrc(s)!}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[10px] text-zinc-600">
+                            —
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs uppercase tracking-wide text-zinc-500">
-                      {s.sourceAppUserModelId}
-                    </p>
-                    <p className="truncate text-lg font-medium leading-snug">
-                      {s.title || "Unknown title"}
-                    </p>
-                    <p className="truncate text-sm text-zinc-400">
-                      {s.artist || "Unknown artist"}
-                    </p>
-                    {s.album ? (
-                      <p className="truncate text-xs text-zinc-500">{s.album}</p>
-                    ) : null}
-                    <p className="mt-2 inline-flex rounded-full bg-zinc-800 px-2 py-0.5 text-xs capitalize text-zinc-300">
-                      {s.playbackStatus}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="border-t border-zinc-800 px-4 py-2 text-xs text-zinc-500">
-                  {formatTicks(s.timeline.positionTicks)} /{" "}
-                  {formatTicks(s.timeline.endTicks)}
-                </div>
-
-                <div className="flex gap-2 border-t border-zinc-800 p-3">
-                  <button
-                    type="button"
-                    disabled={!s.controls.previousEnabled}
-                    onClick={() =>
-                      void invoke("gsmtc_skip_previous", {
-                        aumid: s.sourceAppUserModelId,
-                      })
-                    }
-                    className="flex-1 rounded-lg bg-zinc-800 py-2 text-sm font-medium enabled:hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!s.controls.playPauseToggleEnabled}
-                    onClick={() =>
-                      void invoke("gsmtc_toggle_play_pause", {
-                        aumid: s.sourceAppUserModelId,
-                      })
-                    }
-                    className="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white enabled:hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Play / Pause
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!s.controls.nextEnabled}
-                    onClick={() =>
-                      void invoke("gsmtc_skip_next", {
-                        aumid: s.sourceAppUserModelId,
-                      })
-                    }
-                    className="flex-1 rounded-lg bg-zinc-800 py-2 text-sm font-medium enabled:hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Next
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium leading-snug line-clamp-2 text-zinc-100">
+                          {s.title?.trim() || "Unknown title"}
+                        </p>
+                        <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-[11px] text-zinc-500">
+                          {ch ? (
+                            <span className="truncate max-w-full">{ch}</span>
+                          ) : null}
+                          {ch && dur ? (
+                            <span className="text-zinc-600" aria-hidden>
+                              ·
+                            </span>
+                          ) : null}
+                          {dur ? <span>{dur}</span> : null}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={winDisabled}
+                        title={playing ? "Pause" : "Play"}
+                        aria-label={playing ? "Pause" : "Play"}
+                        onClick={() => void toggleWinSession(s)}
+                        className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-900 enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        {busy ? (
+                          <Spinner />
+                        ) : playing ? (
+                          <IconPause />
+                        ) : (
+                          <IconPlay />
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         )}
       </main>
     </div>

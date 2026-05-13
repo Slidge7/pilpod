@@ -74,6 +74,7 @@ fn playback_type_str(
 
 pub fn map_session(
     session: &GlobalSystemMediaTransportControlsSession,
+    session_index: u32,
     include_thumbnails: bool,
 ) -> MediaSessionDto {
     let aumid = session
@@ -151,6 +152,7 @@ pub fn map_session(
     }
 
     MediaSessionDto {
+        session_index,
         source_app_user_model_id: aumid,
         title,
         artist,
@@ -174,7 +176,7 @@ pub fn build_snapshot(
         if let Ok(n) = list.Size() {
             for i in 0..n {
                 if let Ok(s) = list.GetAt(i) {
-                    sessions.push(map_session(&s, include_thumbnails));
+                    sessions.push(map_session(&s, i, include_thumbnails));
                 }
             }
         }
@@ -182,5 +184,6 @@ pub fn build_snapshot(
     GsmtcSnapshot {
         version: SNAPSHOT_VERSION,
         sessions,
+        browser_tabs: Vec::new(),
     }
 }

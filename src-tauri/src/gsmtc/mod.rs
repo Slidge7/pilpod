@@ -3,7 +3,7 @@ pub mod dto;
 #[cfg(windows)]
 mod mapping;
 #[cfg(windows)]
-mod state;
+pub(crate) mod state;
 #[cfg(windows)]
 mod thumbnail;
 
@@ -44,11 +44,11 @@ pub mod commands {
     #[tauri::command]
     pub async fn gsmtc_toggle_play_pause(
         state: State<'_, Arc<GsmtcState>>,
-        aumid: String,
+        session_index: u32,
     ) -> Result<(), String> {
         let state = Arc::clone(&state);
         run_blocking(move || {
-            let session = state.find_session(&aumid)?;
+            let session = state.session_at_index(session_index)?;
             session
                 .TryTogglePlayPauseAsync()
                 .map_err(|e| e.message().to_string())?
@@ -63,11 +63,11 @@ pub mod commands {
     #[tauri::command]
     pub async fn gsmtc_skip_next(
         state: State<'_, Arc<GsmtcState>>,
-        aumid: String,
+        session_index: u32,
     ) -> Result<(), String> {
         let state = Arc::clone(&state);
         run_blocking(move || {
-            let session = state.find_session(&aumid)?;
+            let session = state.session_at_index(session_index)?;
             session
                 .TrySkipNextAsync()
                 .map_err(|e| e.message().to_string())?
@@ -82,11 +82,11 @@ pub mod commands {
     #[tauri::command]
     pub async fn gsmtc_skip_previous(
         state: State<'_, Arc<GsmtcState>>,
-        aumid: String,
+        session_index: u32,
     ) -> Result<(), String> {
         let state = Arc::clone(&state);
         run_blocking(move || {
-            let session = state.find_session(&aumid)?;
+            let session = state.session_at_index(session_index)?;
             session
                 .TrySkipPreviousAsync()
                 .map_err(|e| e.message().to_string())?
