@@ -9,6 +9,7 @@ use windows::Media::Control::{
 };
 
 use super::mapping::{apply_extension_gsmtc_dedup, build_snapshot};
+use super::audio_attach::enrich_snapshot_with_audio;
 use crate::browser_tabs::{flatten_tabs, BrowserTabsMap};
 
 const EVT: &str = "gsmtc://update";
@@ -44,6 +45,7 @@ pub(crate) fn emit_fast_to_ui(app: &AppHandle, state: &Arc<GsmtcState>) {
             if let Ok(map) = state.browser_tabs.lock() {
                 snap.browser_tabs = flatten_tabs(&map);
             }
+            enrich_snapshot_with_audio(&mut snap);
             snap = apply_extension_gsmtc_dedup(snap);
             if let Err(e) = app.emit(EVT, snap) {
                 eprintln!("[gsmtc] emit failed: {e}");
@@ -179,6 +181,7 @@ impl GsmtcState {
             .lock()
             .map(|map| flatten_tabs(&map))
             .unwrap_or_default();
+        enrich_snapshot_with_audio(&mut snap);
         snap = apply_extension_gsmtc_dedup(snap);
         Ok(snap)
     }

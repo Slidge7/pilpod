@@ -4,6 +4,8 @@ mod browser_tabs;
 mod browser_bridge;
 #[cfg(windows)]
 mod browser_focus_win;
+#[cfg(windows)]
+mod audio_mixer;
 mod gsmtc;
 #[cfg(not(windows))]
 mod platform;

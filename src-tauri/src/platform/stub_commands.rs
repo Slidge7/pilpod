@@ -21,6 +21,11 @@ pub fn gsmtc_skip_previous(_session_index: u32) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn mixer_set_volume(_instance_id: String, _volume: f32) -> Result<(), String> {
+    Err("PilPod requires Windows".into())
+}
+
+#[tauri::command]
 pub fn browser_media_control(
     _browser_id: String,
     _tab_id: i32,

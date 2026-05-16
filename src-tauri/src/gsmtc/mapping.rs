@@ -10,7 +10,9 @@ use windows::{
     },
 };
 
-use super::dto::{ControlsDto, MediaSessionDto, TimelineDto, GsmtcSnapshot, SNAPSHOT_VERSION};
+use super::dto::{
+    ControlsDto, MediaSessionDto, TimelineDto, GsmtcSnapshot, SNAPSHOT_VERSION,
+};
 use super::thumbnail::read_thumbnail_b64;
 
 /// GSMTC AUMID substrings for browsers that can run the Chromium companion extension.
@@ -193,6 +195,7 @@ pub fn map_session(
         controls,
         thumbnail_mime: thumb_mime,
         thumbnail_base64: thumb_b64,
+        audio: None,
     }
 }
 
@@ -214,5 +217,6 @@ pub fn build_snapshot(
         version: SNAPSHOT_VERSION,
         sessions,
         browser_tabs: Vec::new(),
+        browser_audio: Default::default(),
     }
 }

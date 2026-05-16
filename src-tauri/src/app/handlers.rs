@@ -8,6 +8,7 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::gsmtc::commands::gsmtc_skip_next,
         crate::gsmtc::commands::gsmtc_skip_previous,
         crate::browser_bridge::command::browser_media_control,
+        crate::gsmtc::commands::mixer_set_volume,
         crate::window_widget::toggle_widget_mode,
     ])
 }
@@ -20,6 +21,7 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::platform::stub_commands::gsmtc_skip_next,
         crate::platform::stub_commands::gsmtc_skip_previous,
         crate::platform::stub_commands::browser_media_control,
+        crate::platform::stub_commands::mixer_set_volume,
         crate::platform::stub_commands::toggle_widget_mode,
     ])
 }

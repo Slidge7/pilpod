@@ -27,8 +27,10 @@ export function MediaDashboard() {
     closeApp,
     widgetGestures,
     toggleWinSession,
+    setMixerVolume,
     sessions,
     browserTabs,
+    browserAudio,
     browserProfileGroups,
   } = useMediaDashboard();
 
@@ -77,14 +79,17 @@ export function MediaDashboard() {
             <BrowserSessionsPanel
               groups={browserProfileGroups}
               pendingKeys={pendingKeys}
+              browserAudio={browserAudio}
               onPlayPauseBrowser={toggleBrowser}
               onFocusBrowserTab={focusBrowserTab}
+              onMixerVolume={(id, v) => void setMixerVolume(id, v)}
             />
           ) : (
             <WindowsSessionsPanel
               sessions={sessions}
               pendingKeys={pendingKeys}
               onToggleSession={toggleWinSession}
+              onMixerVolume={(id, v) => void setMixerVolume(id, v)}
             />
           )}
         </main>

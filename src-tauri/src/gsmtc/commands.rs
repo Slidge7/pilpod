@@ -1,8 +1,10 @@
 use std::sync::Arc;
-use tauri::State;
+use tauri::{AppHandle, State};
+
+use crate::audio_mixer::set_session_volume_by_instance_id;
 
 use super::dto::GsmtcSnapshot;
-use super::state::GsmtcState;
+use super::state::{emit_fast_to_ui, GsmtcState};
 
 // NOTE: All commands are `async fn` on purpose. In Tauri 2 a plain `fn`
 // command runs on the **main thread**, and the WinRT `.get()` calls below
@@ -77,6 +79,23 @@ pub async fn gsmtc_skip_previous(
             .map_err(|e| e.message().to_string())?
             .get()
             .map_err(|e| e.message().to_string())?;
+        Ok::<(), String>(())
+    })
+    .await
+    .map_err(|e| format!("join error: {e}"))?
+}
+
+#[tauri::command]
+pub async fn mixer_set_volume(
+    app: AppHandle,
+    state: State<'_, Arc<GsmtcState>>,
+    instance_id: String,
+    volume: f32,
+) -> Result<(), String> {
+    let state = Arc::clone(&state);
+    run_blocking(move || {
+        set_session_volume_by_instance_id(&instance_id, volume)?;
+        emit_fast_to_ui(&app, &state);
         Ok::<(), String>(())
     })
     .await

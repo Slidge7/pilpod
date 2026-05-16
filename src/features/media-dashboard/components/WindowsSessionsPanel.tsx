@@ -6,12 +6,14 @@ type Props = {
   sessions: MediaSessionDto[];
   pendingKeys: ReadonlySet<string>;
   onToggleSession: (s: MediaSessionDto) => void;
+  onMixerVolume: (instanceId: string, volume: number) => void;
 };
 
 export function WindowsSessionsPanel({
   sessions,
   pendingKeys,
   onToggleSession,
+  onMixerVolume,
 }: Props) {
   return (
     <section role="tabpanel" id="panel-windows" aria-labelledby="tab-windows">
@@ -33,6 +35,7 @@ export function WindowsSessionsPanel({
                 busy={busy}
                 disabled={disabled}
                 onPlayPause={onToggleSession}
+                onMixerVolume={onMixerVolume}
               />
             );
           })}

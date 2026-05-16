@@ -304,8 +304,18 @@ export function useMediaDashboard() {
     [clearPending, markPending],
   );
 
+  const setMixerVolume = useCallback(async (instanceId: string, volume: number) => {
+    setError(null);
+    try {
+      await invoke("mixer_set_volume", { instanceId, volume });
+    } catch (e) {
+      setError(String(e));
+    }
+  }, []);
+
   const sessions = snapshot?.sessions ?? [];
   const browserTabs = snapshot?.browserTabs ?? [];
+  const browserAudio = snapshot?.browserAudio ?? {};
   const browserProfileGroups = useMemo(
     () => groupBrowserTabsByProfile(browserTabs),
     [browserTabs],
@@ -335,8 +345,10 @@ export function useMediaDashboard() {
       onPointerCancel: onWidgetSurfacePointerCancel,
     },
     toggleWinSession,
+    setMixerVolume,
     sessions,
     browserTabs,
+    browserAudio,
     browserProfileGroups,
   };
 }

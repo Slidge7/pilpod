@@ -5,6 +5,7 @@ import {
   isSessionPlaying,
   thumbSrc,
 } from "../lib/windowsMedia";
+import { AppVolumeSlider } from "./AppVolumeSlider";
 import { IconPause, IconPlay, Spinner } from "./icons";
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
   busy: boolean;
   disabled: boolean;
   onPlayPause: (s: MediaSessionDto) => void;
+  onMixerVolume: (instanceId: string, volume: number) => void;
 };
 
 const iconSm = "h-3 w-3";
@@ -21,6 +23,7 @@ export function WindowsSessionRow({
   busy,
   disabled,
   onPlayPause,
+  onMixerVolume,
 }: Props) {
   const playing = isSessionPlaying(session);
   const ch = channelSession(session);
@@ -54,6 +57,13 @@ export function WindowsSessionRow({
           </div>
         ) : null}
       </div>
+      {session.audio ? (
+        <AppVolumeSlider
+          ariaLabel={`Volume for ${session.title?.trim() || "media"}`}
+          audio={session.audio}
+          onVolumeChange={onMixerVolume}
+        />
+      ) : null}
       <button
         type="button"
         disabled={disabled}

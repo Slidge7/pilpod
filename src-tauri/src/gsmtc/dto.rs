@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
-pub const SNAPSHOT_VERSION: u32 = 4;
+pub const SNAPSHOT_VERSION: u32 = 7;
 
 /// Per-tab media reported by the PilPod Chromium companion extension (localhost HTTP).
 /// Windows GSMTC often collapses all browser tabs into one session; this fills the gap.
@@ -40,29 +42,10 @@ pub struct BrowserTabMediaDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GsmtcSnapshot {
-    pub version: u32,
-    pub sessions: Vec<MediaSessionDto>,
-    #[serde(default)]
-    pub browser_tabs: Vec<BrowserTabMediaDto>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MediaSessionDto {
-    /// Index in `GlobalSystemMediaTransportControlsSessionManager::GetSessions()` order.
-    pub session_index: u32,
-    pub source_app_user_model_id: String,
-    pub title: String,
-    pub artist: String,
-    pub album: String,
-    pub subtitle: String,
-    pub playback_status: String,
-    pub playback_type: Option<String>,
-    pub timeline: TimelineDto,
-    pub controls: ControlsDto,
-    pub thumbnail_mime: Option<String>,
-    pub thumbnail_base64: Option<String>,
+pub struct AudioSessionInfoDto {
+    pub instance_id: String,
+    pub volume: f32,
+    pub muted: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,4 +65,36 @@ pub struct ControlsDto {
     pub play_pause_toggle_enabled: bool,
     pub next_enabled: bool,
     pub previous_enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaSessionDto {
+    /// Index in `GlobalSystemMediaTransportControlsSessionManager::GetSessions()` order.
+    pub session_index: u32,
+    pub source_app_user_model_id: String,
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    pub subtitle: String,
+    pub playback_status: String,
+    pub playback_type: Option<String>,
+    pub timeline: TimelineDto,
+    pub controls: ControlsDto,
+    pub thumbnail_mime: Option<String>,
+    pub thumbnail_base64: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audio: Option<AudioSessionInfoDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GsmtcSnapshot {
+    pub version: u32,
+    pub sessions: Vec<MediaSessionDto>,
+    #[serde(default)]
+    pub browser_tabs: Vec<BrowserTabMediaDto>,
+    /// Per Chromium profile (`browser_id`) — matched from WASAPI session display names.
+    #[serde(default)]
+    pub browser_audio: HashMap<String, AudioSessionInfoDto>,
 }

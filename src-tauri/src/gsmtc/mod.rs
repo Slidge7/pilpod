@@ -3,6 +3,8 @@ pub mod dto;
 #[cfg(windows)]
 mod mapping;
 #[cfg(windows)]
+mod audio_attach;
+#[cfg(windows)]
 pub(crate) mod state;
 #[cfg(windows)]
 mod thumbnail;

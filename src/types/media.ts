@@ -1,9 +1,16 @@
 export const BROWSER_BRIDGE_PORT = 17399;
 
+export type AudioSessionInfoDto = {
+  instanceId: string;
+  volume: number;
+  muted: boolean;
+};
+
 export type GsmtcSnapshot = {
   version: number;
   sessions: MediaSessionDto[];
   browserTabs?: BrowserTabMediaDto[];
+  browserAudio?: Record<string, AudioSessionInfoDto>;
 };
 
 export type BrowserTabMediaDto = {
@@ -41,6 +48,7 @@ export type MediaSessionDto = {
   controls: ControlsDto;
   thumbnailMime: string | null;
   thumbnailBase64: string | null;
+  audio?: AudioSessionInfoDto | null;
 };
 
 export type TimelineDto = {
