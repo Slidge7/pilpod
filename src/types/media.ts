@@ -17,6 +17,14 @@ export type BrowserTabMediaDto = {
   playbackState: string;
   /** Best-effort cover image from MediaSession artwork or video poster */
   artworkUrl?: string;
+  /** Track length in seconds (0 if unknown). */
+  duration?: number;
+  /** Playback position in seconds (0 if unknown). */
+  currentTime?: number;
+  /** Human-readable browser (e.g. Brave, Chrome), injected by the desktop bridge. */
+  browserName?: string;
+  /** Last reported extension↔desktop health: connected | disconnected. */
+  connectionState?: string;
 };
 
 export type MediaSessionDto = {

@@ -1,46 +1,21 @@
-//! Local HTTP endpoint so the Chromium companion extension can POST per-tab media.
-//! Each browser instance sends a stable `browserId`; the backend keeps one slot per
-//! browser so Opera and Chrome never overwrite each other. Slots that haven't been
-//! updated for STALE_SECS seconds are dropped from the merged snapshot.
-//!
-//! Bind: 127.0.0.1 only. See `extensions/pilpod-companion`.
-
 use std::{
-    collections::HashMap,
     io::Read,
     net::{IpAddr, SocketAddr},
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tiny_http::{Header, Method, Response, Server};
 
+use crate::browser_tabs::{
+    BrowserCommandsQueue, BrowserMediaCommand, BrowserSlot, BrowserTabsMap,
+};
 use crate::gsmtc::dto::BrowserTabMediaDto;
 use crate::gsmtc::state::{emit_fast_to_ui, GsmtcState};
 
-pub const BROWSER_BRIDGE_PORT: u16 = 17_399;
-pub const BROWSER_MEDIA_PATH: &str = "/browser-media";
-
-/// How long a browser slot stays in the merged list after its last POST.
-const STALE_SECS: u64 = 10;
-
-/// Key: browserId UUID sent by the extension.
-/// Value: (last_seen, tabs from that browser).
-pub type BrowserTabsMap = Arc<Mutex<HashMap<String, (Instant, Vec<BrowserTabMediaDto>)>>>;
-
-/// Commands the desktop app queues for a browser profile; the companion extension
-/// receives them in the JSON body of its next POST to `/browser-media`.
-pub type BrowserCommandsQueue = Arc<Mutex<HashMap<String, Vec<BrowserMediaCommand>>>>;
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BrowserMediaCommand {
-    pub tab_id: i32,
-    /// `playPause`, `next`, or `previous`
-    pub action: String,
-}
+use super::{BROWSER_BRIDGE_PORT, BROWSER_MEDIA_PATH};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -49,38 +24,16 @@ struct BrowserMediaPostResponse {
     commands: Vec<BrowserMediaCommand>,
 }
 
-pub fn enqueue_browser_command(
-    queue: &BrowserCommandsQueue,
-    browser_id: &str,
-    tab_id: i32,
-    action: &str,
-) {
-    if let Ok(mut q) = queue.lock() {
-        q.entry(browser_id.to_string())
-            .or_default()
-            .push(BrowserMediaCommand {
-                tab_id,
-                action: action.to_string(),
-            });
-    }
-}
-
-/// Build the flat list the snapshot exposes to the UI, dropping stale browser slots.
-pub fn flatten_tabs(map: &HashMap<String, (Instant, Vec<BrowserTabMediaDto>)>) -> Vec<BrowserTabMediaDto> {
-    let now = Instant::now();
-    let stale = Duration::from_secs(STALE_SECS);
-    map.values()
-        .filter(|(last, _)| now.duration_since(*last) < stale)
-        .flat_map(|(_, tabs)| tabs.clone())
-        .collect()
-}
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BrowserMediaPost {
     /// Stable UUID generated once per browser profile by the extension.
     #[serde(default)]
     browser_id: String,
+    #[serde(default)]
+    browser_name: String,
+    #[serde(default)]
+    connection_state: String,
     #[serde(default)]
     tabs: Vec<BrowserTabMediaDto>,
 }
@@ -126,7 +79,7 @@ pub fn spawn(
         .spawn(move || {
             for mut req in server.incoming_requests() {
                 let (is_loop, remote_port) = match req.remote_addr() {
-                    Some(a) => (is_loopback(&a), a.port()),
+                    Some(a) => (is_loopback(a), a.port()),
                     None => {
                         let _ = req.respond(Response::empty(403));
                         continue;
@@ -168,12 +121,17 @@ pub fn spawn(
                             payload.browser_id.clone()
                         };
 
-                        // Tag each tab with its browser_id so the UI can show the source.
+                        let browser_name = payload.browser_name;
+                        let connection_state = payload.connection_state;
+
+                        // Tag each tab with profile metadata so the UI can show the source.
                         let tabs: Vec<BrowserTabMediaDto> = payload
                             .tabs
                             .into_iter()
                             .map(|mut t| {
                                 t.browser_id = browser_id.clone();
+                                t.browser_name = browser_name.clone();
+                                t.connection_state = connection_state.clone();
                                 t
                             })
                             .collect();
@@ -182,7 +140,14 @@ pub fn spawn(
 
                         // Update only this browser's slot — other browsers are untouched.
                         if let Ok(mut map) = browser_tabs.lock() {
-                            map.insert(browser_key.clone(), (Instant::now(), tabs));
+                            map.insert(
+                                browser_key.clone(),
+                                BrowserSlot {
+                                    last_seen: Instant::now(),
+                                    connection_state,
+                                    tabs,
+                                },
+                            );
                         }
 
                         if let Ok(slot) = gsmtc_slot.lock() {
@@ -215,25 +180,4 @@ pub fn spawn(
             }
         })
         .expect("spawn browser-bridge");
-}
-
-#[tauri::command]
-pub fn browser_media_control(
-    queue: tauri::State<'_, BrowserCommandsQueue>,
-    browser_id: String,
-    tab_id: i32,
-    action: String,
-) -> Result<(), String> {
-    if browser_id.is_empty() {
-        return Err("browserId is required".into());
-    }
-    let a = action.trim().to_ascii_lowercase();
-    let normalized = match a.as_str() {
-        "playpause" | "play_pause" | "toggle" => "playPause",
-        "next" | "skipnext" => "next",
-        "previous" | "prev" | "skipprevious" => "previous",
-        _ => return Err(format!("unknown action: {action}")),
-    };
-    enqueue_browser_command(&queue, &browser_id, tab_id, normalized);
-    Ok(())
 }

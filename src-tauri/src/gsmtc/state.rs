@@ -9,7 +9,7 @@ use windows::Media::Control::{
 };
 
 use super::mapping::{apply_extension_gsmtc_dedup, build_snapshot};
-use crate::browser_bridge::{flatten_tabs, BrowserTabsMap};
+use crate::browser_tabs::{flatten_tabs, BrowserTabsMap};
 
 const EVT: &str = "gsmtc://update";
 
@@ -28,7 +28,7 @@ struct GsmtcInner {
 pub struct GsmtcState {
     pub manager: GlobalSystemMediaTransportControlsSessionManager,
     inner: Mutex<GsmtcInner>,
-    /// Per-browser tab data keyed by browserId. Use browser_bridge::flatten_tabs to read.
+    /// Per-browser tab data keyed by browserId. Use `browser_tabs::flatten_tabs` to read.
     pub browser_tabs: BrowserTabsMap,
 }
 

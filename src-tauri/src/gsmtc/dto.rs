@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub const SNAPSHOT_VERSION: u32 = 3;
+pub const SNAPSHOT_VERSION: u32 = 4;
 
 /// Per-tab media reported by the PilPod Chromium companion extension (localhost HTTP).
 /// Windows GSMTC often collapses all browser tabs into one session; this fills the gap.
@@ -24,6 +24,18 @@ pub struct BrowserTabMediaDto {
     pub playback_state: String,
     #[serde(default)]
     pub artwork_url: String,
+    /// Playback length in seconds (0 if unknown).
+    #[serde(default)]
+    pub duration: f64,
+    /// Current position in seconds (0 if unknown).
+    #[serde(default)]
+    pub current_time: f64,
+    /// Human-readable browser (injected from extension POST body; e.g. "Brave", "Chrome").
+    #[serde(default)]
+    pub browser_name: String,
+    /// Last reported connection health for this browser slot (`connected` / `disconnected`).
+    #[serde(default)]
+    pub connection_state: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

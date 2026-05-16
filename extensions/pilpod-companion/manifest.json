@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "PilPod companion",
-  "version": "0.2.2",
-  "description": "Sends per-tab media metadata to the PilPod desktop app over localhost.",
-  "permissions": ["storage", "tabs"],
+  "name": "PilPod Companion",
+  "version": "1.0.0",
+  "description": "Bridge between browser media tabs and the PilPod desktop app.",
+  "permissions": ["storage", "tabs", "scripting"],
   "host_permissions": ["http://127.0.0.1:17399/*"],
   "background": {
     "service_worker": "background.js"
@@ -12,7 +12,8 @@
     {
       "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ]
 }
