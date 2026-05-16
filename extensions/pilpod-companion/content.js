@@ -12,7 +12,7 @@ function dispatchMediaKey(key) {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (!msg || msg.type !== "OMNI_MEDIA_CONTROL") return;
+  if (!msg || msg.type !== "PILPOD_MEDIA_CONTROL") return;
   const action = String(msg.action || "");
   if (action === "playPause") {
     const els = mediaElements();
@@ -35,6 +35,28 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 });
 
+function pickArtworkUrl() {
+  const m = navigator.mediaSession && navigator.mediaSession.metadata;
+  if (m && m.artwork && m.artwork.length) {
+    let bestSrc = "";
+    let bestW = 0;
+    for (const a of m.artwork) {
+      if (!a || !a.src) continue;
+      const src = String(a.src);
+      const raw = a.sizes ? String(a.sizes) : "";
+      const w = parseInt(raw.split(/[x×]/)[0], 10) || 0;
+      if (w >= bestW || !bestSrc) {
+        bestW = w;
+        bestSrc = src;
+      }
+    }
+    if (bestSrc) return bestSrc;
+  }
+  const v = document.querySelector("video");
+  if (v && v.poster) return String(v.poster);
+  return "";
+}
+
 function playbackState() {
   const medias = mediaElements();
   const playing = medias.some(
@@ -54,13 +76,14 @@ function snapshot() {
     album: (m && m.album) || "",
     url: location.href,
     playbackState: playbackState(),
+    artworkUrl: pickArtworkUrl(),
   };
 }
 
 function tick() {
   try {
     chrome.runtime.sendMessage({
-      type: "OMNI_MEDIA_SNAPSHOT",
+      type: "PILPOD_MEDIA_SNAPSHOT",
       payload: snapshot(),
     });
   } catch (_) {}

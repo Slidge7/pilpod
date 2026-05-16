@@ -3,7 +3,7 @@
 //! browser so Opera and Chrome never overwrite each other. Slots that haven't been
 //! updated for STALE_SECS seconds are dropped from the merged snapshot.
 //!
-//! Bind: 127.0.0.1 only. See `extensions/omnimedia-companion`.
+//! Bind: 127.0.0.1 only. See `extensions/pilpod-companion`.
 
 use std::{
     collections::HashMap,

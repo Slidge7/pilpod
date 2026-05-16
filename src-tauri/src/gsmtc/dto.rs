@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub const SNAPSHOT_VERSION: u32 = 3;
 
-/// Per-tab media reported by the OmniMedia Chromium companion extension (localhost HTTP).
+/// Per-tab media reported by the PilPod Chromium companion extension (localhost HTTP).
 /// Windows GSMTC often collapses all browser tabs into one session; this fills the gap.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -22,6 +22,8 @@ pub struct BrowserTabMediaDto {
     pub album: String,
     #[serde(default)]
     pub playback_state: String,
+    #[serde(default)]
+    pub artwork_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

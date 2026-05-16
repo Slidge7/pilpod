@@ -83,25 +83,25 @@ pub fn run() {
 #[cfg(not(windows))]
 #[tauri::command]
 fn gsmtc_refresh() -> Result<gsmtc::dto::GsmtcSnapshot, String> {
-    Err("OmniMedia requires Windows".into())
+    Err("PilPod requires Windows".into())
 }
 
 #[cfg(not(windows))]
 #[tauri::command]
 fn gsmtc_toggle_play_pause(_session_index: u32) -> Result<(), String> {
-    Err("OmniMedia requires Windows".into())
+    Err("PilPod requires Windows".into())
 }
 
 #[cfg(not(windows))]
 #[tauri::command]
 fn gsmtc_skip_next(_session_index: u32) -> Result<(), String> {
-    Err("OmniMedia requires Windows".into())
+    Err("PilPod requires Windows".into())
 }
 
 #[cfg(not(windows))]
 #[tauri::command]
 fn gsmtc_skip_previous(_session_index: u32) -> Result<(), String> {
-    Err("OmniMedia requires Windows".into())
+    Err("PilPod requires Windows".into())
 }
 
 #[cfg(not(windows))]
@@ -111,11 +111,11 @@ fn browser_media_control(
     _tab_id: i32,
     _action: String,
 ) -> Result<(), String> {
-    Err("OmniMedia requires Windows".into())
+    Err("PilPod requires Windows".into())
 }
 
 #[cfg(not(windows))]
 #[tauri::command]
 fn toggle_widget_mode(_is_mini: bool) -> Result<(), String> {
-    Err("OmniMedia requires Windows".into())
+    Err("PilPod requires Windows".into())
 }

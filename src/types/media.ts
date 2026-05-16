@@ -15,6 +15,8 @@ export type BrowserTabMediaDto = {
   artist: string;
   album: string;
   playbackState: string;
+  /** Best-effort cover image from MediaSession artwork or video poster */
+  artworkUrl?: string;
 };
 
 export type MediaSessionDto = {

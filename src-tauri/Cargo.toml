@@ -1,12 +1,12 @@
 [package]
-name = "omnimedia"
+name = "pilpod"
 version = "0.1.0"
-description = "OmniMedia — Windows GSMTC dashboard"
+description = "PilPod — Windows GSMTC dashboard"
 authors = ["you"]
 edition = "2021"
 
 [lib]
-name = "omnimedia_lib"
+name = "pilpod_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

@@ -9,7 +9,7 @@ import type {
 } from "../types/media";
 
 const EVT = "gsmtc://update";
-const ALWAYS_ON_TOP_STORAGE_KEY = "omnimedia-always-on-top";
+const ALWAYS_ON_TOP_STORAGE_KEY = "pilpod-always-on-top";
 const WIDGET_TRANSITION_MS = 230;
 const WIDGET_DRAG_THRESHOLD_PX = 6;
 
@@ -69,6 +69,51 @@ function groupBrowserTabsByProfile(
 
 function browserRowKey(t: BrowserTabMediaDto): string {
   return `b:${t.browserId}:${t.tabId}`;
+}
+
+function faviconFromUrl(pageUrl: string): string | null {
+  try {
+    const u = new URL(pageUrl);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    return `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(u.hostname)}`;
+  } catch {
+    return null;
+  }
+}
+
+function BrowserMediaThumb({ tab }: { tab: BrowserTabMediaDto }) {
+  const art = tab.artworkUrl?.trim() ?? "";
+  const fav = faviconFromUrl(tab.url);
+  const letter = (tab.title?.trim() || "?").slice(0, 1).toUpperCase();
+
+  const [mode, setMode] = useState<"art" | "fav" | "letter">("letter");
+
+  useEffect(() => {
+    if (art) setMode("art");
+    else if (fav) setMode("fav");
+    else setMode("letter");
+  }, [art, fav]);
+
+  if (mode === "letter") {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-950/80 via-zinc-900 to-zinc-950 text-sm font-semibold tracking-tight text-zinc-300">
+        {letter}
+      </div>
+    );
+  }
+
+  const src = mode === "art" ? art : fav!;
+
+  return (
+    <img
+      src={src}
+      alt=""
+      className="h-full w-full object-cover"
+      onError={() =>
+        setMode((m) => (m === "art" && fav ? "fav" : "letter"))
+      }
+    />
+  );
 }
 
 function winRowKey(s: MediaSessionDto): string {
@@ -483,7 +528,7 @@ export function MediaDashboard() {
           className="flex h-full min-h-0 w-full cursor-grab items-center justify-center overflow-hidden active:cursor-grabbing"
           role="button"
           tabIndex={0}
-          aria-label="Open OmniMedia — drag to move"
+          aria-label="Open PilPod — drag to move"
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
@@ -509,7 +554,7 @@ export function MediaDashboard() {
 
   return (
     <div
-      className={`omni-shell-dim flex h-screen min-h-0 flex-col bg-transparent text-zinc-100 ${
+      className={`pilpod-shell-dim flex h-screen min-h-0 flex-col bg-transparent text-zinc-100 ${
         dimmingToWidget ? "is-dimming" : ""
       } ${fullEnterActive ? "is-entering" : ""} ${
         fullEnterVisible ? "is-entered" : ""
@@ -522,7 +567,7 @@ export function MediaDashboard() {
         >
           <div className="flex min-w-0 flex-1 items-center gap-2 px-2">
             <span className="truncate text-[11px] font-medium tracking-tight text-zinc-300">
-              OmniMedia
+              PilPod
             </span>
             <span className="truncate text-[10px] text-zinc-600">
               {browserTabs.length} br · {sessions.length} win
@@ -642,11 +687,11 @@ export function MediaDashboard() {
                 in Chromium.
               </p>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3">
                 {browserProfileGroups.map(([browserId, tabs]) => (
-                  <div key={browserId} className="flex flex-col gap-2">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500 px-0.5">
-                      Browser · {browserId.slice(0, 8)}…
+                  <div key={browserId} className="flex flex-col gap-1.5">
+                    <p className="px-1 font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-600">
+                      {browserId.slice(0, 8)}…
                     </p>
                     <ul className="flex flex-col gap-2">
                       {tabs.map((t) => {
@@ -658,22 +703,40 @@ export function MediaDashboard() {
                         return (
                           <li
                             key={rk}
-                            className="flex items-center gap-2.5 rounded-xl border border-zinc-800/90 bg-zinc-900/35 px-2.5 py-2"
+                            className={`group flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-[background,border-color,box-shadow] ${
+                              playing
+                                ? "border border-emerald-500/25 bg-emerald-950/[0.18] shadow-[0_0_0_1px_rgba(16,185,129,0.12)]"
+                                : "border border-zinc-800/70 bg-zinc-900/30 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] hover:border-zinc-700/90 hover:bg-zinc-900/45"
+                            }`}
                           >
-                            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-zinc-800 flex items-center justify-center">
-                              <span className="text-sm font-medium text-zinc-500">
-                                {(t.title?.trim() || "?").slice(0, 1).toUpperCase()}
-                              </span>
+                            <div
+                              className={`relative h-11 w-11 shrink-0 overflow-hidden rounded-xl ${
+                                playing
+                                  ? "shadow-[0_0_0_1px_rgba(52,211,153,0.35)]"
+                                  : "shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+                              }`}
+                            >
+                              <BrowserMediaThumb tab={t} />
+                              {playing ? (
+                                <span
+                                  className="absolute bottom-0.5 right-0.5 h-2 w-2 rounded-full border border-emerald-950/80 bg-emerald-400"
+                                  title="Playing"
+                                  aria-hidden
+                                />
+                              ) : null}
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium leading-snug line-clamp-2 text-zinc-100">
+                            <div className="min-w-0 flex-1 pr-1">
+                              <p
+                                className="truncate text-[13px] font-semibold leading-tight tracking-tight text-zinc-50"
+                                title={t.title?.trim() || undefined}
+                              >
                                 {t.title?.trim() || "Untitled"}
                               </p>
-                              <div className="mt-0.5 flex flex-wrap gap-x-1.5 text-[11px] text-zinc-500">
-                                {ch ? (
-                                  <span className="truncate">{ch}</span>
-                                ) : null}
-                              </div>
+                              {ch ? (
+                                <p className="mt-0.5 truncate text-[11px] text-zinc-500">
+                                  {ch}
+                                </p>
+                              ) : null}
                             </div>
                             <button
                               type="button"
@@ -681,7 +744,11 @@ export function MediaDashboard() {
                               title={playing ? "Pause" : "Play"}
                               aria-label={playing ? "Pause" : "Play"}
                               onClick={() => void toggleBrowser(t)}
-                              className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-900 enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+                              className={`shrink-0 flex h-10 w-10 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
+                                playing
+                                  ? "bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
+                                  : "bg-zinc-100 text-zinc-900 hover:bg-white"
+                              }`}
                             >
                               {busy ? (
                                 <Spinner />

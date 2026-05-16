@@ -1,4 +1,4 @@
-/** @typedef {{ tabId: number, browserId: string, url: string, title: string, artist: string, album: string, playbackState: string }} TabRow */
+/** @typedef {{ tabId: number, browserId: string, url: string, title: string, artist: string, album: string, playbackState: string, artworkUrl: string }} TabRow */
 
 const PUSH_URL = "http://127.0.0.1:17399/browser-media";
 
@@ -21,17 +21,17 @@ function schedulePushSoon() {
   }, 50);
 }
 
-chrome.storage.local.get(["omniBrowserId"], (result) => {
-  if (result.omniBrowserId) {
-    browserId = result.omniBrowserId;
+chrome.storage.local.get(["pilpodBrowserId"], (result) => {
+  if (result.pilpodBrowserId) {
+    browserId = result.pilpodBrowserId;
   } else {
     browserId = crypto.randomUUID();
-    chrome.storage.local.set({ omniBrowserId: browserId });
+    chrome.storage.local.set({ pilpodBrowserId: browserId });
   }
 });
 
 chrome.runtime.onMessage.addListener((msg, sender) => {
-  if (!msg || msg.type !== "OMNI_MEDIA_SNAPSHOT" || sender.tab == null) return;
+  if (!msg || msg.type !== "PILPOD_MEDIA_SNAPSHOT" || sender.tab == null) return;
   const id = sender.tab.id;
   if (id == null) return;
 
@@ -41,6 +41,7 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
   const album = String(p.album || "");
   const playbackState = String(p.playbackState || "none");
   const url = String(p.url || "");
+  const artworkUrl = String(p.artworkUrl || "");
 
   const hasSignal =
     playbackState === "playing" ||
@@ -63,6 +64,7 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     artist,
     album,
     playbackState,
+    artworkUrl,
   });
   schedulePushSoon();
 });
@@ -91,7 +93,7 @@ async function push() {
       if (tid == null || !action) continue;
       try {
         await chrome.tabs.sendMessage(tid, {
-          type: "OMNI_MEDIA_CONTROL",
+          type: "PILPOD_MEDIA_CONTROL",
           action: String(action),
         });
       } catch (_) {
