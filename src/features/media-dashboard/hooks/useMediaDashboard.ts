@@ -272,14 +272,36 @@ export function useMediaDashboard() {
   }, [alwaysOnTop, isWidget]);
 
   const dismissWidgetAndDisable = useCallback(async () => {
+    if (windowTransitionLock.current || !isWidget) return;
+    windowTransitionLock.current = true;
     try {
-      localStorage.setItem(WIDGET_ENABLED_STORAGE_KEY, "0");
-    } catch {
-      /* ignore */
+      try {
+        localStorage.setItem(WIDGET_ENABLED_STORAGE_KEY, "0");
+      } catch {
+        /* ignore */
+      }
+      setWidgetEnabled(false);
+
+      await invoke("toggle_widget_mode", { isMini: false });
+      void getCurrentWindow()
+        .setAlwaysOnTop(alwaysOnTop)
+        .catch(() => {
+          /* browser dev */
+        });
+
+      await getCurrentWindow()
+        .minimize()
+        .catch(() => {
+          /* e.g. Vite dev in a normal browser */
+        });
+
+      setIsWidget(false);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      windowTransitionLock.current = false;
     }
-    setWidgetEnabled(false);
-    await restoreFromWidget();
-  }, [restoreFromWidget]);
+  }, [alwaysOnTop, isWidget]);
 
   const closeApp = useCallback(() => {
     void getCurrentWindow().close().catch(() => {

@@ -18,8 +18,8 @@ export function WidgetView({ onRestore, onDismissWidget, gestures }: Props) {
       <button
         type="button"
         className="pointer-events-none absolute right-0.5 top-0.5 z-20 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-red-600 text-white opacity-0 shadow-md ring-1 ring-red-800/80 transition-opacity hover:bg-red-500 group-hover:pointer-events-auto group-hover:opacity-100 dark:ring-red-900/70"
-        title="Turn off floating widget — show full window"
-        aria-label="Turn off floating widget and show full window"
+        title="Turn off floating widget — minimize to taskbar"
+        aria-label="Turn off floating widget and minimize to taskbar"
         onPointerDown={(e) => {
           e.stopPropagation();
         }}
