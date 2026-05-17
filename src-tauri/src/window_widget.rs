@@ -2,11 +2,11 @@
 
 use std::sync::Mutex;
 
-use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, PhysicalPosition, PhysicalSize, State};
+use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, PhysicalPosition, State};
 
 const PHONE_W: f64 = 350.0;
 const PHONE_H: f64 = 600.0;
-const WIDGET_PX: u32 = 50;
+const WIDGET_LOGICAL: f64 = 50.0;
 const CORNER_MARGIN_PX: i32 = 12;
 /// Gap between the bottom edge of the restored window and the top of the widget slot (px).
 const ABOVE_WIDGET_GAP_PX: i32 = 0;
@@ -63,20 +63,30 @@ pub fn toggle_widget_mode(
         let wy = wa.position.y;
         let ww = wa.size.width as i32;
         let wh = wa.size.height as i32;
-        let w = WIDGET_PX as i32;
+        let w = WIDGET_LOGICAL;
+        window
+            .set_size(LogicalSize::new(w, w))
+            .map_err(|e| e.to_string())?;
+        let os = window.outer_size().map_err(|e| e.to_string())?;
+        let ow = os.width as i32;
+        let oh = os.height as i32;
 
-        let nx = wx + ww - w - CORNER_MARGIN_PX;
-        let ny = wy + wh - w - CORNER_MARGIN_PX;
+        let nx = wx + ww - ow - CORNER_MARGIN_PX;
+        let ny = wy + wh - oh - CORNER_MARGIN_PX;
 
         window
             .set_position(PhysicalPosition::new(nx, ny))
             .map_err(|e| e.to_string())?;
-        window
-            .set_size(PhysicalSize::new(WIDGET_PX, WIDGET_PX))
-            .map_err(|e| e.to_string())?;
     } else {
+        let sf = window.scale_factor().map_err(|e| e.to_string())?;
         let current_size = window.outer_size().map_err(|e| e.to_string())?;
         let current_pos = window.outer_position().map_err(|e| e.to_string())?;
+
+        let inner_before = window.inner_size().map_err(|e| e.to_string())?;
+        let iw0 = f64::from(inner_before.width) / sf;
+        let ih0 = f64::from(inner_before.height) / sf;
+        // Chip mode uses a ~50×50 logical inner surface; expanded widget uses a larger inner rect.
+        let is_widget_chip = iw0 <= 64.0 && ih0 <= 64.0;
 
         let snapshot = state.0.lock().ok().and_then(|g| (*g).clone());
 
@@ -92,9 +102,7 @@ pub fn toggle_widget_mode(
 
         let actual_outer = window.outer_size().map_err(|e| e.to_string())?;
 
-        let is_widget = current_size.width == WIDGET_PX && current_size.height == WIDGET_PX;
-
-        if is_widget {
+        if is_widget_chip {
             let mon = window
                 .current_monitor()
                 .map_err(|e| e.to_string())?

@@ -2,7 +2,7 @@ import type { PointerEventHandler } from "react";
 import { IconMusicGlyph, IconWidgetClose } from "./icons";
 
 type Props = {
-  onRestore: () => void;
+  onExpand: () => void;
   onDismissWidget: () => void;
   gestures: {
     onPointerDown: PointerEventHandler<HTMLDivElement>;
@@ -12,7 +12,7 @@ type Props = {
   };
 };
 
-export function WidgetView({ onRestore, onDismissWidget, gestures }: Props) {
+export function WidgetView({ onExpand, onDismissWidget, gestures }: Props) {
   return (
     <div className="group relative isolate h-full min-h-0 w-full overflow-hidden touch-none bg-transparent">
       <button
@@ -34,11 +34,11 @@ export function WidgetView({ onRestore, onDismissWidget, gestures }: Props) {
         className="flex h-full min-h-0 w-full cursor-grab items-center justify-center overflow-hidden active:cursor-grabbing"
         role="button"
         tabIndex={0}
-        aria-label="Open PilPod — drag to move"
+        aria-label="Show media list — drag to move"
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            void onRestore();
+            void onExpand();
           }
         }}
         onPointerDown={gestures.onPointerDown}

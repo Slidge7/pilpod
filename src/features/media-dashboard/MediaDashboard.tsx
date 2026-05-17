@@ -1,6 +1,7 @@
 import { DashboardHeader } from "./components/DashboardHeader";
 import { BrowserSessionsPanel } from "./components/BrowserSessionsPanel";
 import { SourceTabBar } from "./components/SourceTabBar";
+import { WidgetMediaPanel } from "./components/WidgetMediaPanel";
 import { WidgetView } from "./components/WidgetView";
 import { WindowsSessionsPanel } from "./components/WindowsSessionsPanel";
 import { useAppearance } from "./hooks/useAppearance";
@@ -19,12 +20,14 @@ export function MediaDashboard() {
     widgetEnabled,
     toggleWidgetEnabled,
     isWidget,
+    isWidgetExpanded,
     dimmingToWidget,
     fullEnterActive,
     fullEnterVisible,
     toggleBrowser,
     focusBrowserTab,
     minimizeApp,
+    expandWidgetPanel,
     restoreFromWidget,
     dismissWidgetAndDisable,
     closeApp,
@@ -38,9 +41,28 @@ export function MediaDashboard() {
   } = useMediaDashboard();
 
   if (isWidget) {
+    if (isWidgetExpanded) {
+      return (
+        <WidgetMediaPanel
+          mainTab={mainTab}
+          onMainTabChange={setMainTab}
+          error={error}
+          pendingKeys={pendingKeys}
+          browserProfileGroups={browserProfileGroups}
+          browserAudio={browserAudio}
+          sessions={sessions}
+          onPlayPauseBrowser={toggleBrowser}
+          onFocusBrowserTab={focusBrowserTab}
+          onToggleWinSession={toggleWinSession}
+          onMixerVolume={(id, v) => void setMixerVolume(id, v)}
+          onOpenFullWindow={() => void restoreFromWidget()}
+          onDismissWidget={() => void dismissWidgetAndDisable()}
+        />
+      );
+    }
     return (
       <WidgetView
-        onRestore={() => void restoreFromWidget()}
+        onExpand={() => void expandWidgetPanel()}
         onDismissWidget={() => void dismissWidgetAndDisable()}
         gestures={widgetGestures}
       />

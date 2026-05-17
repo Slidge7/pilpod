@@ -7,6 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type {
@@ -18,8 +19,12 @@ import {
   ALWAYS_ON_TOP_STORAGE_KEY,
   GSMTC_INIT_ERROR_EVENT,
   GSMTC_UPDATE_EVENT,
+  WIDGET_CHIP_LOGICAL_PX,
   WIDGET_DRAG_THRESHOLD_PX,
   WIDGET_ENABLED_STORAGE_KEY,
+  WIDGET_EXPAND_BLUR_GRACE_MS,
+  WIDGET_EXPANDED_HEIGHT_LOGICAL,
+  WIDGET_EXPANDED_WIDTH_LOGICAL,
   WIDGET_TRANSITION_MS,
 } from "../constants";
 import { browserRowKey, groupBrowserTabsByProfile } from "../lib/browserMedia";
@@ -48,10 +53,15 @@ export function useMediaDashboard() {
     }
   });
   const [isWidget, setIsWidget] = useState(false);
+  const [isWidgetExpanded, setIsWidgetExpanded] = useState(false);
   const [dimmingToWidget, setDimmingToWidget] = useState(false);
   const [fullEnterActive, setFullEnterActive] = useState(false);
   const [fullEnterVisible, setFullEnterVisible] = useState(false);
   const windowTransitionLock = useRef(false);
+  const widgetGeometryLock = useRef(false);
+  const isWidgetExpandedRef = useRef(false);
+  const widgetBlurGraceUntilRef = useRef(0);
+  const collapseWidgetPanelRef = useRef<() => Promise<void>>(async () => {});
 
   // One timeout handle per pending key — auto-clears stale spinners if the
   // backend fails silently and the finally block never fires.
@@ -111,6 +121,17 @@ export function useMediaDashboard() {
         /* e.g. Vite dev in a normal browser */
       });
   }, [alwaysOnTop, isWidget]);
+
+  useEffect(() => {
+    if (!isWidget) return;
+    void getCurrentWindow().setAlwaysOnTop(true).catch(() => {
+      /* e.g. Vite dev in a normal browser */
+    });
+  }, [isWidget]);
+
+  useEffect(() => {
+    isWidgetExpandedRef.current = isWidgetExpanded;
+  }, [isWidgetExpanded]);
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -220,6 +241,7 @@ export function useMediaDashboard() {
     window.setTimeout(async () => {
       try {
         await invoke("toggle_widget_mode", { isMini: true });
+        setIsWidgetExpanded(false);
         setIsWidget(true);
       } catch (e) {
         setError(String(e));
@@ -242,9 +264,93 @@ export function useMediaDashboard() {
     void minimizeToWidgetMode();
   }, [widgetEnabled, minimizeToWidgetMode]);
 
+  const expandWidgetPanel = useCallback(async () => {
+    if (!isWidget || isWidgetExpanded || widgetGeometryLock.current) return;
+    widgetGeometryLock.current = true;
+    try {
+      const win = getCurrentWindow();
+      const sf = await win.scaleFactor();
+      const op = await win.outerPosition();
+      const os = await win.outerSize();
+      const lx = op.x / sf;
+      const ly = op.y / sf;
+      const wL = os.width / sf;
+      const hL = os.height / sf;
+      const brX = lx + wL;
+      const brY = ly + hL;
+
+      await win.setSize(
+        new LogicalSize(WIDGET_EXPANDED_WIDTH_LOGICAL, WIDGET_EXPANDED_HEIGHT_LOGICAL),
+      );
+      const os2 = await win.outerSize();
+      const wL2 = os2.width / sf;
+      const hL2 = os2.height / sf;
+      await win.setPosition(new LogicalPosition(brX - wL2, brY - hL2));
+      void win.setAlwaysOnTop(true).catch(() => {});
+      widgetBlurGraceUntilRef.current = Date.now() + WIDGET_EXPAND_BLUR_GRACE_MS;
+      setIsWidgetExpanded(true);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      widgetGeometryLock.current = false;
+    }
+  }, [isWidget, isWidgetExpanded]);
+
+  const collapseWidgetPanel = useCallback(async () => {
+    if (!isWidget || !isWidgetExpanded || widgetGeometryLock.current) return;
+    widgetGeometryLock.current = true;
+    try {
+      const win = getCurrentWindow();
+      const sf = await win.scaleFactor();
+      const op = await win.outerPosition();
+      const os = await win.outerSize();
+      const lx = op.x / sf;
+      const ly = op.y / sf;
+      const wL = os.width / sf;
+      const hL = os.height / sf;
+      const brX = lx + wL;
+      const brY = ly + hL;
+
+      await win.setSize(new LogicalSize(WIDGET_CHIP_LOGICAL_PX, WIDGET_CHIP_LOGICAL_PX));
+      const os2 = await win.outerSize();
+      const wL2 = os2.width / sf;
+      const hL2 = os2.height / sf;
+      await win.setPosition(new LogicalPosition(brX - wL2, brY - hL2));
+      void win.setAlwaysOnTop(true).catch(() => {});
+      setIsWidgetExpanded(false);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      widgetGeometryLock.current = false;
+    }
+  }, [isWidget, isWidgetExpanded]);
+
+  useEffect(() => {
+    collapseWidgetPanelRef.current = collapseWidgetPanel;
+  }, [collapseWidgetPanel]);
+
+  useEffect(() => {
+    if (!isWidget) return;
+    let unlisten: UnlistenFn | undefined;
+    void getCurrentWindow()
+      .onFocusChanged(({ payload: focused }) => {
+        if (focused) return;
+        if (Date.now() < widgetBlurGraceUntilRef.current) return;
+        if (!isWidgetExpandedRef.current) return;
+        void collapseWidgetPanelRef.current();
+      })
+      .then((u) => {
+        unlisten = u;
+      });
+    return () => {
+      void unlisten?.();
+    };
+  }, [isWidget]);
+
   const restoreFromWidget = useCallback(async () => {
     if (windowTransitionLock.current || !isWidget) return;
     windowTransitionLock.current = true;
+    setIsWidgetExpanded(false);
     try {
       await invoke("toggle_widget_mode", { isMini: false });
       setIsWidget(false);
@@ -274,6 +380,7 @@ export function useMediaDashboard() {
   const dismissWidgetAndDisable = useCallback(async () => {
     if (windowTransitionLock.current || !isWidget) return;
     windowTransitionLock.current = true;
+    setIsWidgetExpanded(false);
     try {
       try {
         localStorage.setItem(WIDGET_ENABLED_STORAGE_KEY, "0");
@@ -365,10 +472,10 @@ export function useMediaDashboard() {
       const dragged = g.dragged;
       widgetGestureRef.current = null;
       if (!dragged && !isCancel && e.button === 0) {
-        void restoreFromWidget();
+        void expandWidgetPanel();
       }
     },
-    [restoreFromWidget],
+    [expandWidgetPanel],
   );
 
   const onWidgetSurfacePointerUp = useCallback(
@@ -431,12 +538,14 @@ export function useMediaDashboard() {
     widgetEnabled,
     toggleWidgetEnabled,
     isWidget,
+    isWidgetExpanded,
     dimmingToWidget,
     fullEnterActive,
     fullEnterVisible,
     toggleBrowser,
     focusBrowserTab,
     minimizeApp,
+    expandWidgetPanel,
     restoreFromWidget,
     dismissWidgetAndDisable,
     closeApp,
