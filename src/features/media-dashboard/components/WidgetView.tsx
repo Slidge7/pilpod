@@ -3,6 +3,7 @@ import { IconMusicGlyph, IconWidgetClose } from "./icons";
 
 type Props = {
   onRestore: () => void;
+  onDismissWidget: () => void;
   gestures: {
     onPointerDown: PointerEventHandler<HTMLDivElement>;
     onPointerMove: PointerEventHandler<HTMLDivElement>;
@@ -11,20 +12,20 @@ type Props = {
   };
 };
 
-export function WidgetView({ onRestore, gestures }: Props) {
+export function WidgetView({ onRestore, onDismissWidget, gestures }: Props) {
   return (
     <div className="group relative isolate h-full min-h-0 w-full overflow-hidden touch-none bg-transparent">
       <button
         type="button"
         className="pointer-events-none absolute right-0.5 top-0.5 z-20 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-red-600 text-white opacity-0 shadow-md ring-1 ring-red-800/80 transition-opacity hover:bg-red-500 group-hover:pointer-events-auto group-hover:opacity-100 dark:ring-red-900/70"
-        title="Exit widget — show full window"
-        aria-label="Exit widget mode and show full window"
+        title="Turn off floating widget — show full window"
+        aria-label="Turn off floating widget and show full window"
         onPointerDown={(e) => {
           e.stopPropagation();
         }}
         onClick={(e) => {
           e.stopPropagation();
-          void onRestore();
+          void onDismissWidget();
         }}
       >
         <IconWidgetClose className="shrink-0" />

@@ -19,6 +19,7 @@ import {
   GSMTC_INIT_ERROR_EVENT,
   GSMTC_UPDATE_EVENT,
   WIDGET_DRAG_THRESHOLD_PX,
+  WIDGET_ENABLED_STORAGE_KEY,
   WIDGET_TRANSITION_MS,
 } from "../constants";
 import { browserRowKey, groupBrowserTabsByProfile } from "../lib/browserMedia";
@@ -35,6 +36,13 @@ export function useMediaDashboard() {
   const [alwaysOnTop, setAlwaysOnTop] = useState(() => {
     try {
       return localStorage.getItem(ALWAYS_ON_TOP_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [widgetEnabled, setWidgetEnabled] = useState(() => {
+    try {
+      return localStorage.getItem(WIDGET_ENABLED_STORAGE_KEY) === "1";
     } catch {
       return false;
     }
@@ -181,6 +189,18 @@ export function useMediaDashboard() {
     }
   }, []);
 
+  const toggleWidgetEnabled = useCallback(() => {
+    setWidgetEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(WIDGET_ENABLED_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
   const toggleAlwaysOnTop = useCallback(() => {
     setAlwaysOnTop((prev) => {
       const next = !prev;
@@ -210,6 +230,18 @@ export function useMediaDashboard() {
     }, WIDGET_TRANSITION_MS);
   }, [isWidget]);
 
+  const minimizeApp = useCallback(() => {
+    if (!widgetEnabled) {
+      void getCurrentWindow()
+        .minimize()
+        .catch(() => {
+          /* e.g. Vite dev in a normal browser */
+        });
+      return;
+    }
+    void minimizeToWidgetMode();
+  }, [widgetEnabled, minimizeToWidgetMode]);
+
   const restoreFromWidget = useCallback(async () => {
     if (windowTransitionLock.current || !isWidget) return;
     windowTransitionLock.current = true;
@@ -238,6 +270,16 @@ export function useMediaDashboard() {
       windowTransitionLock.current = false;
     }
   }, [alwaysOnTop, isWidget]);
+
+  const dismissWidgetAndDisable = useCallback(async () => {
+    try {
+      localStorage.setItem(WIDGET_ENABLED_STORAGE_KEY, "0");
+    } catch {
+      /* ignore */
+    }
+    setWidgetEnabled(false);
+    await restoreFromWidget();
+  }, [restoreFromWidget]);
 
   const closeApp = useCallback(() => {
     void getCurrentWindow().close().catch(() => {
@@ -364,14 +406,17 @@ export function useMediaDashboard() {
     alwaysOnTop,
     toggleAlwaysOnTop,
     refresh,
+    widgetEnabled,
+    toggleWidgetEnabled,
     isWidget,
     dimmingToWidget,
     fullEnterActive,
     fullEnterVisible,
     toggleBrowser,
     focusBrowserTab,
-    minimizeToWidgetMode,
+    minimizeApp,
     restoreFromWidget,
+    dismissWidgetAndDisable,
     closeApp,
     widgetGestures: {
       onPointerDown: onWidgetSurfacePointerDown,

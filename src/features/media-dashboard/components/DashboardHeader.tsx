@@ -1,6 +1,7 @@
 import type { AppearanceMode } from "../../../theme/appearance";
 import {
   IconClose,
+  IconMinimize,
   IconMoon,
   IconRefresh,
   IconStayOnTop,
@@ -13,10 +14,12 @@ type Props = {
   browserTabCount: number;
   sessionCount: number;
   alwaysOnTop: boolean;
+  widgetEnabled: boolean;
   onToggleAlwaysOnTop: () => void;
+  onToggleWidgetEnabled: () => void;
   onToggleAppearance: () => void;
   onRefresh: () => void;
-  onMinimizeToWidget: () => void;
+  onMinimize: () => void;
   onClose: () => void;
 };
 
@@ -25,14 +28,22 @@ export function DashboardHeader({
   browserTabCount,
   sessionCount,
   alwaysOnTop,
+  widgetEnabled,
   onToggleAlwaysOnTop,
+  onToggleWidgetEnabled,
   onToggleAppearance,
   onRefresh,
-  onMinimizeToWidget,
+  onMinimize,
   onClose,
 }: Props) {
   const appearanceTitle =
     appearance === "dark" ? "Use light appearance" : "Use dark appearance";
+  const widgetToggleTitle = widgetEnabled
+    ? "Floating widget on minimize: on (click to turn off)"
+    : "Floating widget on minimize: off (click to turn on)";
+  const minimizeTitle = widgetEnabled
+    ? "Minimize to floating widget"
+    : "Minimize to taskbar";
 
   return (
     <header
@@ -80,11 +91,26 @@ export function DashboardHeader({
         </button>
         <button
           type="button"
-          onClick={() => void onMinimizeToWidget()}
-          className="flex h-8 min-w-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-          title="Minimize to floating widget"
+          onClick={onToggleWidgetEnabled}
+          className={`flex h-8 min-w-8 items-center justify-center rounded-md transition-colors ${
+            widgetEnabled
+              ? "bg-amber-50 text-amber-700 ring-1 ring-amber-300 dark:bg-amber-950/70 dark:text-amber-400 dark:ring-amber-700/50"
+              : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          }`}
+          title={widgetToggleTitle}
+          aria-label={widgetToggleTitle}
+          aria-pressed={widgetEnabled}
         >
           <IconWidgetMinimize />
+        </button>
+        <button
+          type="button"
+          onClick={onMinimize}
+          className="flex h-8 min-w-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          title={minimizeTitle}
+          aria-label={minimizeTitle}
+        >
+          <IconMinimize />
         </button>
         <button
           type="button"

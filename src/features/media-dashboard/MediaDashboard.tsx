@@ -16,14 +16,17 @@ export function MediaDashboard() {
     alwaysOnTop,
     toggleAlwaysOnTop,
     refresh,
+    widgetEnabled,
+    toggleWidgetEnabled,
     isWidget,
     dimmingToWidget,
     fullEnterActive,
     fullEnterVisible,
     toggleBrowser,
     focusBrowserTab,
-    minimizeToWidgetMode,
+    minimizeApp,
     restoreFromWidget,
+    dismissWidgetAndDisable,
     closeApp,
     widgetGestures,
     toggleWinSession,
@@ -36,7 +39,11 @@ export function MediaDashboard() {
 
   if (isWidget) {
     return (
-      <WidgetView onRestore={() => void restoreFromWidget()} gestures={widgetGestures} />
+      <WidgetView
+        onRestore={() => void restoreFromWidget()}
+        onDismissWidget={() => void dismissWidgetAndDisable()}
+        gestures={widgetGestures}
+      />
     );
   }
 
@@ -54,10 +61,12 @@ export function MediaDashboard() {
           browserTabCount={browserTabs.length}
           sessionCount={sessions.length}
           alwaysOnTop={alwaysOnTop}
+          widgetEnabled={widgetEnabled}
           onToggleAlwaysOnTop={toggleAlwaysOnTop}
+          onToggleWidgetEnabled={toggleWidgetEnabled}
           onToggleAppearance={toggle}
           onRefresh={refresh}
-          onMinimizeToWidget={minimizeToWidgetMode}
+          onMinimize={minimizeApp}
           onClose={closeApp}
         />
 
