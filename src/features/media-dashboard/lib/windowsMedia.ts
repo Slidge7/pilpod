@@ -7,7 +7,7 @@ export function thumbSrc(s: MediaSessionDto): string | null {
 }
 
 export function winRowKey(s: MediaSessionDto): string {
-  return `w:${s.sessionIndex}`;
+  return `w:${s.sourceAppUserModelId}`;
 }
 
 export function channelSession(s: MediaSessionDto): string | null {

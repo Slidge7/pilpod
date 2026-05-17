@@ -16,6 +16,7 @@ import type {
 } from "../../../types/media";
 import {
   ALWAYS_ON_TOP_STORAGE_KEY,
+  GSMTC_INIT_ERROR_EVENT,
   GSMTC_UPDATE_EVENT,
   WIDGET_DRAG_THRESHOLD_PX,
   WIDGET_TRANSITION_MS,
@@ -44,17 +45,41 @@ export function useMediaDashboard() {
   const [fullEnterVisible, setFullEnterVisible] = useState(false);
   const windowTransitionLock = useRef(false);
 
-  const markPending = useCallback((key: string) => {
-    setPendingKeys((prev) => new Set(prev).add(key));
-  }, []);
+  // One timeout handle per pending key — auto-clears stale spinners if the
+  // backend fails silently and the finally block never fires.
+  const pendingTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
 
   const clearPending = useCallback((key: string) => {
+    const id = pendingTimeouts.current.get(key);
+    if (id !== undefined) {
+      clearTimeout(id);
+      pendingTimeouts.current.delete(key);
+    }
     setPendingKeys((prev) => {
       const next = new Set(prev);
       next.delete(key);
       return next;
     });
   }, []);
+
+  const markPending = useCallback(
+    (key: string) => {
+      // Cancel any pre-existing timeout for this key before arming a new one.
+      const existing = pendingTimeouts.current.get(key);
+      if (existing !== undefined) clearTimeout(existing);
+
+      const id = setTimeout(() => {
+        pendingTimeouts.current.delete(key);
+        clearPending(key);
+      }, 8_000);
+      pendingTimeouts.current.set(key, id);
+
+      setPendingKeys((prev) => new Set(prev).add(key));
+    },
+    [clearPending],
+  );
 
   const refresh = useCallback(async (retries = 12) => {
     try {
@@ -81,15 +106,25 @@ export function useMediaDashboard() {
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
+    let unlistenInitError: UnlistenFn | undefined;
+
     void listen<GsmtcSnapshot>(GSMTC_UPDATE_EVENT, (ev) => {
       setSnapshot(ev.payload);
       setError(null);
     }).then((u) => {
       unlisten = u;
     });
+
+    void listen<{ message: string }>(GSMTC_INIT_ERROR_EVENT, (ev) => {
+      setError(ev.payload.message);
+    }).then((u) => {
+      unlistenInitError = u;
+    });
+
     void refresh();
     return () => {
       void unlisten?.();
+      void unlistenInitError?.();
     };
   }, [refresh]);
 
@@ -293,7 +328,7 @@ export function useMediaDashboard() {
       setError(null);
       try {
         await invoke("gsmtc_toggle_play_pause", {
-          sessionIndex: s.sessionIndex,
+          aumid: s.sourceAppUserModelId,
         });
       } catch (e) {
         setError(String(e));

@@ -29,8 +29,12 @@ pub type BrowserCommandsQueue = Arc<Mutex<HashMap<String, Vec<BrowserMediaComman
 #[serde(rename_all = "camelCase")]
 pub struct BrowserMediaCommand {
     pub tab_id: i32,
-    /// `playPause`, `next`, or `previous`
+    /// `playPause`, `next`, `previous`, or `focusTab`
     pub action: String,
+    /// Timestamp of when the command was enqueued; used to drop stale entries.
+    /// Not sent to the extension.
+    #[serde(skip)]
+    pub enqueued_at: Instant,
 }
 
 pub fn enqueue_browser_command(
@@ -45,6 +49,7 @@ pub fn enqueue_browser_command(
             .push(BrowserMediaCommand {
                 tab_id,
                 action: action.to_string(),
+                enqueued_at: Instant::now(),
             });
     }
 }

@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 
 use tauri::{AppHandle, Emitter};
 use windows::Foundation::TypedEventHandler;
@@ -31,16 +34,32 @@ pub struct GsmtcState {
     inner: Mutex<GsmtcInner>,
     /// Per-browser tab data keyed by browserId. Use `browser_tabs::flatten_tabs` to read.
     pub browser_tabs: BrowserTabsMap,
+    /// Set by every WinRT callback; consumed by the single debounce task.
+    emit_dirty: AtomicBool,
+    /// True while a debounce task is sleeping; guards against spawning duplicates.
+    emit_scheduled: AtomicBool,
 }
 
 pub(crate) fn emit_fast_to_ui(app: &AppHandle, state: &Arc<GsmtcState>) {
-    // Build snapshot + emit on a worker thread so we never block the STA / WinRT
-    // callback thread. `emit` in Tauri 2 is Send-safe.
+    // Mark that fresh data is waiting. Any concurrent WinRT callbacks that
+    // arrive while the debounce task is already sleeping will just flip the
+    // flag and return — no extra WASAPI calls, no thundering herd.
+    state.emit_dirty.store(true, Ordering::Relaxed);
+
+    // Only one debounce task may be in flight at a time.
+    if state.emit_scheduled.swap(true, Ordering::AcqRel) {
+        return;
+    }
+
     let app = app.clone();
     let state = Arc::clone(state);
     std::thread::Builder::new()
         .name("gsmtc-emit".into())
         .spawn(move || {
+            // Trailing-edge: wait for the burst to settle before hitting WASAPI.
+            std::thread::sleep(std::time::Duration::from_millis(80));
+            state.emit_dirty.store(false, Ordering::Relaxed);
+
             let mut snap = build_snapshot(&state.manager, false);
             if let Ok(map) = state.browser_tabs.lock() {
                 snap.browser_tabs = flatten_tabs(&map);
@@ -50,6 +69,10 @@ pub(crate) fn emit_fast_to_ui(app: &AppHandle, state: &Arc<GsmtcState>) {
             if let Err(e) = app.emit(EVT, snap) {
                 eprintln!("[gsmtc] emit failed: {e}");
             }
+
+            // Release the guard only after all work is done so a new burst
+            // that arrives during the WASAPI call schedules its own task.
+            state.emit_scheduled.store(false, Ordering::Release);
         })
         .ok();
 }
@@ -77,6 +100,8 @@ impl GsmtcState {
                 session_hooks: Vec::new(),
             }),
             browser_tabs,
+            emit_dirty: AtomicBool::new(false),
+            emit_scheduled: AtomicBool::new(false),
         });
 
         let arc_for_sessions = Arc::clone(&state);
@@ -186,9 +211,12 @@ impl GsmtcState {
         Ok(snap)
     }
 
-    pub fn session_at_index(
+    /// Find a session by its stable AUMID rather than its volatile list index.
+    /// If multiple sessions share the same AUMID the first match is returned,
+    /// which is the correct behaviour for the common single-instance case.
+    pub fn session_by_aumid(
         &self,
-        session_index: u32,
+        aumid: &str,
     ) -> Result<GlobalSystemMediaTransportControlsSession, String> {
         let sessions = self
             .manager
@@ -197,14 +225,19 @@ impl GsmtcState {
         let n = sessions
             .Size()
             .map_err(|e| e.message().to_string())?;
-        if session_index >= n {
-            return Err(format!(
-                "No session at index {session_index} (session count: {n})"
-            ));
+        for i in 0..n {
+            let session = sessions
+                .GetAt(i)
+                .map_err(|e| e.message().to_string())?;
+            let id = session
+                .SourceAppUserModelId()
+                .map(|s| s.to_string())
+                .unwrap_or_default();
+            if id == aumid {
+                return Ok(session);
+            }
         }
-        sessions
-            .GetAt(session_index)
-            .map_err(|e| e.message().to_string())
+        Err(format!("No session found with AUMID '{aumid}'"))
     }
 }
 

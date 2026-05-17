@@ -2,7 +2,7 @@ use std::{
     io::Read,
     net::{IpAddr, SocketAddr},
     sync::{Arc, Mutex},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use serde::{Deserialize, Serialize};
@@ -156,8 +156,17 @@ pub fn spawn(
                             }
                         }
 
+                        // Drain commands for this browser and discard any that
+                        // have been sitting in the queue for more than 5 seconds
+                        // (e.g. because the extension was reloading or offline).
                         let drained = if let Ok(mut q) = command_queue.lock() {
-                            q.remove(&browser_key).unwrap_or_default()
+                            let now = Instant::now();
+                            let cmd_ttl = Duration::from_secs(5);
+                            q.remove(&browser_key)
+                                .unwrap_or_default()
+                                .into_iter()
+                                .filter(|c| now.duration_since(c.enqueued_at) < cmd_ttl)
+                                .collect()
                         } else {
                             Vec::new()
                         };

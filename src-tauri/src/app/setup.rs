@@ -1,4 +1,11 @@
-use tauri::Manager;
+use serde::Serialize;
+use tauri::{Emitter, Manager};
+
+/// Payload emitted on `gsmtc://init-error` when GSMTC cannot start.
+#[derive(Serialize, Clone)]
+struct GsmtcInitError {
+    message: String,
+}
 
 pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let handle = app.handle().clone();
@@ -34,6 +41,15 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Err(err) => {
                     eprintln!("[gsmtc] init failed: {err:?}");
+                    let message = format!(
+                        "Windows Media Controls could not start: {}. \
+                         PilPod requires Windows 10 build 1809 (October 2018 Update) or later.",
+                        err.message()
+                    );
+                    let _ = handle.emit(
+                        "gsmtc://init-error",
+                        GsmtcInitError { message },
+                    );
                 }
             }
         })

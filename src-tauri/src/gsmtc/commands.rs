@@ -6,6 +6,10 @@ use crate::audio_mixer::set_session_volume_by_instance_id;
 use super::dto::GsmtcSnapshot;
 use super::state::{emit_fast_to_ui, GsmtcState};
 
+// All media-control commands identify sessions by their stable AUMID
+// (sourceAppUserModelId) rather than a volatile list index that can shift
+// whenever any media app opens or closes.
+
 // NOTE: All commands are `async fn` on purpose. In Tauri 2 a plain `fn`
 // command runs on the **main thread**, and the WinRT `.get()` calls below
 // (and thumbnail reads inside `snapshot()`) block. Blocking the STA UI
@@ -31,11 +35,11 @@ pub async fn gsmtc_refresh(state: State<'_, Arc<GsmtcState>>) -> Result<GsmtcSna
 #[tauri::command]
 pub async fn gsmtc_toggle_play_pause(
     state: State<'_, Arc<GsmtcState>>,
-    session_index: u32,
+    aumid: String,
 ) -> Result<(), String> {
     let state = Arc::clone(&state);
     run_blocking(move || {
-        let session = state.session_at_index(session_index)?;
+        let session = state.session_by_aumid(&aumid)?;
         session
             .TryTogglePlayPauseAsync()
             .map_err(|e| e.message().to_string())?
@@ -50,11 +54,11 @@ pub async fn gsmtc_toggle_play_pause(
 #[tauri::command]
 pub async fn gsmtc_skip_next(
     state: State<'_, Arc<GsmtcState>>,
-    session_index: u32,
+    aumid: String,
 ) -> Result<(), String> {
     let state = Arc::clone(&state);
     run_blocking(move || {
-        let session = state.session_at_index(session_index)?;
+        let session = state.session_by_aumid(&aumid)?;
         session
             .TrySkipNextAsync()
             .map_err(|e| e.message().to_string())?
@@ -69,11 +73,11 @@ pub async fn gsmtc_skip_next(
 #[tauri::command]
 pub async fn gsmtc_skip_previous(
     state: State<'_, Arc<GsmtcState>>,
-    session_index: u32,
+    aumid: String,
 ) -> Result<(), String> {
     let state = Arc::clone(&state);
     run_blocking(move || {
-        let session = state.session_at_index(session_index)?;
+        let session = state.session_by_aumid(&aumid)?;
         session
             .TrySkipPreviousAsync()
             .map_err(|e| e.message().to_string())?
