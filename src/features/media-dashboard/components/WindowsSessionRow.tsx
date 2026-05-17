@@ -1,3 +1,4 @@
+import "./WindowsSessionRow.css";
 import type { MediaSessionDto } from "../../../types/media";
 import { sessionDurationLabel } from "../lib/format";
 import {
@@ -16,8 +17,6 @@ type Props = {
   onMixerVolume: (instanceId: string, volume: number) => void;
 };
 
-const iconSm = "h-3 w-3";
-
 export function WindowsSessionRow({
   session,
   busy,
@@ -30,29 +29,39 @@ export function WindowsSessionRow({
   const dur = sessionDurationLabel(session);
   const thumbnail = thumbSrc(session);
 
+  const rowClass = [
+    "pilpod-win-session-row",
+    playing ? "pilpod-win-session-row--playing" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const playClass = [
+    "pilpod-win-session-row__play",
+    playing ? "pilpod-win-session-row__play--playing" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <li
-      className={`flex items-center gap-2 px-2 py-1 transition-colors ${
-        playing
-          ? "bg-emerald-50/85 dark:bg-emerald-950/18"
-          : "bg-transparent hover:bg-zinc-50/90 dark:hover:bg-zinc-900/55"
-      }`}
-    >
-      <div className="h-8 w-8 shrink-0 overflow-hidden rounded-sm bg-zinc-100 ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-700">
+    <li className={rowClass}>
+      <div className="pilpod-win-session-row__thumb">
         {thumbnail ? (
-          <img src={thumbnail} alt="" className="h-full w-full object-cover" />
+          <img
+            src={thumbnail}
+            alt=""
+            className="pilpod-win-session-row__thumb-img"
+          />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-[9px] text-zinc-500 dark:text-zinc-600">
-            —
-          </div>
+          <div className="pilpod-win-session-row__thumb-placeholder">—</div>
         )}
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium leading-none text-[12px] text-zinc-900 dark:text-zinc-100">
+      <div className="pilpod-win-session-row__body">
+        <p className="pilpod-win-session-row__title">
           {session.title?.trim() || "Unknown title"}
         </p>
         {(ch ?? dur) ? (
-          <div className="truncate pt-px text-[10px] leading-snug text-zinc-600 dark:text-zinc-500">
+          <div className="pilpod-win-session-row__meta">
             {[ch, dur].filter(Boolean).join(" | ")}
           </div>
         ) : null}
@@ -70,18 +79,14 @@ export function WindowsSessionRow({
         title={playing ? "Pause" : "Play"}
         aria-label={playing ? "Pause" : "Play"}
         onClick={() => void onPlayPause(session)}
-        className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-sm border disabled:cursor-not-allowed disabled:opacity-45 ${
-          playing
-            ? "border-emerald-600 bg-emerald-600 text-white hover:border-emerald-700 hover:bg-emerald-700 dark:border-emerald-500 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-            : "border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-        }`}
+        className={playClass}
       >
         {busy ? (
           <Spinner />
         ) : playing ? (
-          <IconPause className={iconSm} />
+          <IconPause className="pilpod-icon--sm" />
         ) : (
-          <IconPlay className={iconSm} />
+          <IconPlay className="pilpod-icon--sm" />
         )}
       </button>
     </li>

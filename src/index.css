@@ -1,6 +1,113 @@
-@import "tailwindcss";
+/* PilPod design tokens — plain CSS (no Tailwind). Dark mode: html.dark */
 
-@custom-variant dark (&:where(.dark, .dark *));
+:root {
+  color-scheme: light;
+
+  --pilpod-text: #18181b;
+  --pilpod-text-secondary: #3f3f46;
+  --pilpod-text-muted: #71717a;
+  --pilpod-text-subtle: #a1a1aa;
+
+  --pilpod-bg-transparent: transparent;
+  --pilpod-bg-shell: #f4f4f5;
+  --pilpod-bg-elevated: #ffffff;
+  --pilpod-bg-muted: #fafafa;
+  --pilpod-bg-tab-track: #fafafa;
+  --pilpod-bg-tab-active: #ffffff;
+  --pilpod-bg-row-hover: rgb(244 244 245 / 0.9);
+  --pilpod-bg-thumb: #f4f4f5;
+  --pilpod-bg-thumb-letter: #e4e4e7;
+  --pilpod-bg-overlay-open: rgb(244 244 245 / 0.93);
+
+  --pilpod-border: rgb(212 212 216 / 0.9);
+  --pilpod-border-strong: #d4d4d8;
+  --pilpod-border-muted: #e4e4e7;
+  --pilpod-ring-icon: rgb(228 228 231 / 0.7);
+
+  --pilpod-amber-active-bg: #fffbeb;
+  --pilpod-amber-active-text: #b45309;
+  --pilpod-amber-active-ring: #fcd34d;
+
+  --pilpod-emerald-row: rgb(236 253 245 / 0.85);
+  --pilpod-emerald-border: #059669;
+  --pilpod-emerald-bg: #059669;
+  --pilpod-emerald-bg-hover: #047857;
+  --pilpod-emerald-focus-ring: #059669;
+
+  --pilpod-red-close-hover-bg: #fef2f2;
+  --pilpod-red-close-hover-text: #dc2626;
+
+  --pilpod-error-border: #fca5a5;
+  --pilpod-error-bg: #fef2f2;
+  --pilpod-error-text: #991b1b;
+
+  --pilpod-widget-chip-bg: rgb(255 255 255 / 0.95);
+  --pilpod-widget-chip-shadow: rgb(212 212 216 / 0.35);
+  --pilpod-widget-chip-ring: #e4e4e7;
+
+  --pilpod-dismiss-bg: #dc2626;
+  --pilpod-dismiss-hover: #ef4444;
+  --pilpod-dismiss-ring: rgb(153 27 27 / 0.8);
+
+  --pilpod-slider-track: #e4e4e7;
+  --pilpod-slider-thumb: #059669;
+}
+
+html.dark {
+  color-scheme: dark;
+
+  --pilpod-text: #fafafa;
+  --pilpod-text-secondary: #e4e4e7;
+  --pilpod-text-muted: #a1a1aa;
+  --pilpod-text-subtle: #71717a;
+
+  --pilpod-bg-shell: #09090b;
+  --pilpod-bg-elevated: rgb(9 9 11 / 0.5);
+  --pilpod-bg-muted: #18181b;
+  --pilpod-bg-tab-track: #18181b;
+  --pilpod-bg-tab-active: #09090b;
+  --pilpod-bg-row-hover: rgb(24 24 27 / 0.55);
+  --pilpod-bg-thumb: #18181b;
+  --pilpod-bg-thumb-letter: #09090b;
+  --pilpod-bg-overlay-open: rgb(24 24 27 / 0.93);
+
+  --pilpod-border: rgb(63 63 70 / 0.9);
+  --pilpod-border-strong: #52525b;
+  --pilpod-border-muted: #3f3f46;
+  --pilpod-ring-icon: rgb(63 63 70 / 0.7);
+
+  --pilpod-amber-active-bg: rgb(69 26 3 / 0.7);
+  --pilpod-amber-active-text: #fbbf24;
+  --pilpod-amber-active-ring: rgb(180 83 9 / 0.5);
+
+  --pilpod-emerald-row: rgb(6 78 59 / 0.18);
+  --pilpod-emerald-border: #10b981;
+  --pilpod-emerald-bg: #059669;
+  --pilpod-emerald-bg-hover: #10b981;
+  --pilpod-emerald-focus-ring: #10b981;
+
+  --pilpod-red-close-hover-bg: rgb(127 29 29 / 0.6);
+  --pilpod-red-close-hover-text: #fca5a5;
+
+  --pilpod-error-border: rgb(127 29 29 / 0.6);
+  --pilpod-error-bg: rgb(127 29 29 / 0.25);
+  --pilpod-error-text: #fecaca;
+
+  --pilpod-widget-chip-bg: rgb(39 39 42 / 0.95);
+  --pilpod-widget-chip-shadow: rgb(0 0 0 / 0.4);
+  --pilpod-widget-chip-ring: rgb(82 82 91 / 0.8);
+
+  --pilpod-dismiss-ring: rgb(127 29 29 / 0.7);
+
+  --pilpod-slider-track: #27272a;
+  --pilpod-slider-thumb: #10b981;
+}
+
+@keyframes pilpod-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 html,
 body,

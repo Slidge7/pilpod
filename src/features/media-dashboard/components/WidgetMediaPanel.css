@@ -1,0 +1,148 @@
+.pilpod-widget-panel-root {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  flex-direction: column;
+  touch-action: none;
+  background: transparent;
+  padding: 0.375rem;
+}
+
+.pilpod-widget-panel-root__dismiss {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+  z-index: 20;
+  display: flex;
+  height: 18px;
+  width: 18px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: none;
+  background: var(--pilpod-dismiss-bg);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgb(0 0 0 / 0.12);
+  outline: 1px solid var(--pilpod-dismiss-ring);
+  transition: background-color 0.15s ease;
+}
+
+.pilpod-widget-panel-root__dismiss:hover {
+  background: var(--pilpod-dismiss-hover);
+}
+
+.pilpod-widget-panel-root__dismiss-icon {
+  flex-shrink: 0;
+}
+
+.pilpod-widget-panel-card {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(228 228 231 / 0.8);
+  background: var(--pilpod-bg-shell);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.12),
+    0 4px 6px -4px rgb(0 0 0 / 0.08);
+}
+
+html.dark .pilpod-widget-panel-card {
+  border-color: rgb(63 63 70 / 0.8);
+  background: var(--pilpod-bg-tab-active);
+}
+
+.pilpod-widget-panel-toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.375rem;
+  padding-top: 0.5rem;
+  padding-right: 2rem;
+  padding-left: 0.5rem;
+}
+
+.pilpod-widget-panel-tabs {
+  display: flex;
+  flex: 1;
+  border-radius: 0.375rem;
+  background: rgb(228 228 231 / 0.7);
+  padding: 1px;
+}
+
+html.dark .pilpod-widget-panel-tabs {
+  background: rgb(39 39 42 / 0.9);
+}
+
+.pilpod-widget-panel-tabs__btn {
+  flex: 1;
+  border-radius: 5px;
+  border: none;
+  padding: 2px 0.5rem;
+  font-size: 10px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+html.dark .pilpod-widget-panel-tabs__btn {
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-widget-panel-tabs__btn--active {
+  background: var(--pilpod-bg-tab-active);
+  color: var(--pilpod-text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+html.dark .pilpod-widget-panel-tabs__btn--active {
+  background: var(--pilpod-border-strong);
+  color: var(--pilpod-text);
+}
+
+.pilpod-widget-panel-full {
+  flex-shrink: 0;
+  border-radius: 0.375rem;
+  border: 1px solid rgb(212 212 216 / 0.9);
+  background: rgb(255 255 255 / 0.9);
+  padding: 2px 0.5rem;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--pilpod-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.pilpod-widget-panel-full:hover {
+  background: var(--pilpod-bg-muted);
+}
+
+html.dark .pilpod-widget-panel-full {
+  border-color: var(--pilpod-border-strong);
+  background: rgb(39 39 42 / 0.9);
+  color: var(--pilpod-text-secondary);
+}
+
+html.dark .pilpod-widget-panel-full:hover {
+  background: var(--pilpod-bg-muted);
+}
+
+.pilpod-widget-panel-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.5rem;
+}
+
+.pilpod-widget-panel-root .pilpod-alert-error {
+  font-size: 10px;
+}

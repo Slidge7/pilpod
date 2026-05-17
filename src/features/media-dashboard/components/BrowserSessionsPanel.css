@@ -1,0 +1,70 @@
+.pilpod-browser-panel__empty {
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.375;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-browser-panel__groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pilpod-browser-profile {
+  overflow: hidden;
+  border-radius: 0.125rem;
+  border: 1px solid var(--pilpod-border-strong);
+  background: var(--pilpod-bg-tab-active);
+}
+
+html.dark .pilpod-browser-profile {
+  background: rgb(9 9 11 / 0.5);
+}
+
+.pilpod-browser-profile__head {
+  display: flex;
+  min-height: 26px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--pilpod-border-strong);
+  background: var(--pilpod-bg-muted);
+  padding: 2px 0.5rem;
+}
+
+html.dark .pilpod-browser-profile__head {
+  border-bottom-color: var(--pilpod-border-strong);
+  background: var(--pilpod-bg-muted);
+}
+
+.pilpod-browser-profile__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pilpod-text-muted);
+}
+
+html.dark .pilpod-browser-profile__label {
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-browser-profile__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pilpod-browser-profile__list > li + li {
+  border-top: 1px solid var(--pilpod-border-muted);
+}
+
+html.dark .pilpod-browser-profile__list > li + li {
+  border-top-color: var(--pilpod-bg-muted);
+}

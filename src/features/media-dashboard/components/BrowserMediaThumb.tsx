@@ -1,3 +1,4 @@
+import "./BrowserMediaThumb.css";
 import { useEffect, useState } from "react";
 import type { BrowserTabMediaDto } from "../../../types/media";
 import { faviconFromUrl } from "../lib/browserMedia";
@@ -19,9 +20,7 @@ export function BrowserMediaThumb({ tab }: Props) {
 
   if (mode === "letter") {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-zinc-200 text-[11px] font-semibold uppercase text-zinc-700 dark:bg-zinc-950 dark:text-zinc-400">
-        {letter}
-      </div>
+      <div className="pilpod-browser-thumb-letter">{letter}</div>
     );
   }
 
@@ -31,7 +30,7 @@ export function BrowserMediaThumb({ tab }: Props) {
     <img
       src={src}
       alt=""
-      className="h-full w-full object-cover"
+      className="pilpod-browser-thumb-img"
       onError={() =>
         setMode((m) => (m === "art" && fav ? "fav" : "letter"))
       }

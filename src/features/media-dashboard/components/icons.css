@@ -1,0 +1,22 @@
+.pilpod-icon--sm {
+  display: block;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+.pilpod-spinner {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 2px solid var(--pilpod-border-strong);
+  border-top-color: var(--pilpod-text-muted);
+  animation: pilpod-spin 0.7s linear infinite;
+}
+
+html.dark .pilpod-spinner {
+  border-color: var(--pilpod-border-strong);
+  border-top-color: var(--pilpod-text-secondary);
+}

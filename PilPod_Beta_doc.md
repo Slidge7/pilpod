@@ -1,6 +1,6 @@
 # React project — structure and file roles
 
-Here is a concise map of the **React (Vite) UI** in this repo. The app is a **Tauri 2** desktop shell: the frontend is **React 19**, **TypeScript**, **Vite 7**, and **Tailwind 4**.
+Here is a concise map of the **React (Vite) UI** in this repo. The app is a **Tauri 2** desktop shell: the frontend is **React 19**, **TypeScript**, **Vite 7**, and **plain CSS** (design tokens in `index.css`, component styles in co-located `.css` files).
 
 ---
 
@@ -10,11 +10,11 @@ Here is a concise map of the **React (Vite) UI** in this repo. The app is a **Ta
 
 | File | Role |
 |------|------|
-| `package.json` | NPM scripts (`dev`, `build`, `tauri`) and deps: React, Tauri API, Vite, Tailwind. |
+| `package.json` | NPM scripts (`dev`, `build`, `tauri`) and deps: React, Tauri API, Vite. |
 | `package-lock.json` | Locked dependency versions. |
 | `tsconfig.json` | TypeScript settings for the app source. |
 | `tsconfig.node.json` | TypeScript settings for Node-side configs (e.g. Vite). |
-| `vite.config.ts` | Vite + React plugin + Tailwind plugin; dev server on port **1420** for Tauri; ignores watching `src-tauri`. |
+| `vite.config.ts` | Vite + React plugin; dev server on port **1420** for Tauri; ignores watching `src-tauri`. |
 | `index.html` | HTML shell: `#root` mount, **`pilpod-theme`** flash script to avoid light/dark FOUC, favicon, title **PilPod**. |
 | `.vscode/extensions.json` | Suggested VS Code extensions for the workspace. |
 
@@ -26,7 +26,7 @@ Here is a concise map of the **React (Vite) UI** in this repo. The app is a **Ta
 |------|------|
 | `main.tsx` | Boots React: applies stored appearance, mounts `<App />` into `#root`, `StrictMode`. |
 | `App.tsx` | Top-level component; renders only `MediaDashboard`. |
-| `index.css` | Global styles (Tailwind layers / app-wide CSS). |
+| `index.css` | Global design tokens (`:root` / `html.dark`), shell transitions, scrollbar hiding; imported by `main.tsx`. |
 | `vite-env.d.ts` | Vite/client TypeScript reference declarations. |
 
 ---
@@ -51,7 +51,8 @@ Here is a concise map of the **React (Vite) UI** in this repo. The app is a **Ta
 
 | File | Role |
 |------|------|
-| `MediaDashboard.tsx` | **Main screen**: composes header, source tabs, browser/Windows panels, error banner; **widget mode** delegates to `WidgetView`; wires `useMediaDashboard` + `useAppearance`. |
+| `MediaDashboard.tsx` | **Main screen**: composes header, footer, source tabs, browser/Windows panels, error banner; **widget mode** delegates to `WidgetView`; wires `useMediaDashboard` + `useAppearance`. Imports `MediaDashboard.css`. |
+| `MediaDashboard.css` | Layout shell classes for full-window dashboard (inner column, scroll main). |
 | `model.ts` | Small domain model: `MediaMainTab` (`"browser"` \| `"windows"`). |
 | `index.ts` | Barrel export: `MediaDashboard`, `MediaMainTab`. |
 | `constants.ts` | Event name (`gsmtc://update`), always-on-top storage key, widget transition/drag constants. |
@@ -60,16 +61,18 @@ Here is a concise map of the **React (Vite) UI** in this repo. The app is a **Ta
 
 | File | Role |
 |------|------|
-| `DashboardHeader.tsx` | Top bar: theme, refresh, counts, always-on-top, minimize-to-widget, close, etc. |
-| `SourceTabBar.tsx` | Switches main view between **Browser** and **Windows** sources. |
-| `BrowserSessionsPanel.tsx` | Lists browser media sessions (grouped UI, uses profile groups from hook). |
-| `BrowserTabRow.tsx` | Single browser tab row (metadata, actions, connection state, etc.). |
-| `BrowserMediaThumb.tsx` | Artwork/thumbnail for a browser tab. |
-| `WindowsSessionsPanel.tsx` | Lists Windows GSMTC sessions. |
-| `WindowsSessionRow.tsx` | Single Windows session row (playback, thumb, mixer/volume wiring). |
-| `AppVolumeSlider.tsx` | Per-app/session volume UI (ties into mixer backend via dashboard state). |
-| `WidgetView.tsx` | **Compact “widget” window** UI and gestures when app is minimized to widget mode. |
-| `icons.tsx` | Shared SVG/icon components for the dashboard. |
+| `DashboardHeader.tsx` | Top bar: logo, counts, always-on-top, minimize, close; co-located `DashboardHeader.css`. |
+| `DashboardFooter.tsx` | Bottom bar: attribution, appearance toggle, refresh, widget toggle; co-located `DashboardFooter.css`. |
+| `SourceTabBar.tsx` | Switches main view between **Browser** and **Windows** sources; co-located `SourceTabBar.css`. |
+| `BrowserSessionsPanel.tsx` | Lists browser media sessions (grouped UI); co-located `BrowserSessionsPanel.css`. |
+| `BrowserTabRow.tsx` | Single browser tab row; co-located `BrowserTabRow.css`. |
+| `BrowserMediaThumb.tsx` | Artwork/thumbnail for a browser tab; co-located `BrowserMediaThumb.css`. |
+| `WindowsSessionsPanel.tsx` | Lists Windows GSMTC sessions; co-located `WindowsSessionsPanel.css`. |
+| `WindowsSessionRow.tsx` | Single Windows session row; co-located `WindowsSessionRow.css`. |
+| `AppVolumeSlider.tsx` | Per-app/session volume UI; co-located `AppVolumeSlider.css`. |
+| `WidgetMediaPanel.tsx` | Expanded widget panel UI; co-located `WidgetMediaPanel.css`. |
+| `WidgetView.tsx` | **Compact “widget” window** UI and gestures; co-located `WidgetView.css`. |
+| `icons.tsx` | Shared SVG/icon components + spinner; imports `icons.css`. |
 
 #### `src/features/media-dashboard/hooks/`
 
@@ -128,10 +131,10 @@ Pure composition: returns `<MediaDashboard />` with no routing or extra provider
 
 ## `src/index.css`
 
-- Pulls in **Tailwind v4** via `@import "tailwindcss"`.
-- Defines **`dark`** as “ancestor has class `.dark`” (`@custom-variant dark`), matching `appearance.ts` toggling `classList` on `<html>`.
+- Defines **design tokens** on `:root` and **`html.dark`** (semantic zinc/emerald palette), consumed by component stylesheets via `var(--pilpod-…)`.
 - Makes `html`, `body`, `#root` full height, **transparent** background, **no overflow** — fits a frameless/transparent Tauri window.
 - **`.pilpod-shell-dim`** and `.is-dimming` / `.is-entering` / `.is-entered`: CSS transitions for shrinking/fading when minimizing to widget and for the short “enter” animation when restoring from widget (driven by classes from `MediaDashboard`).
+- **`@keyframes pilpod-spin`** for loading spinners (`icons.css`).
 - Hides scrollbars globally while keeping scroll behavior (wheel, etc.).
 
 ---

@@ -1,0 +1,34 @@
+.pilpod-windows-panel__empty {
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.375;
+  color: var(--pilpod-text-muted);
+}
+
+html.dark .pilpod-windows-panel__empty {
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-windows-panel__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  border-radius: 0.125rem;
+  border: 1px solid var(--pilpod-border-strong);
+  background: var(--pilpod-bg-tab-active);
+}
+
+html.dark .pilpod-windows-panel__list {
+  border-color: var(--pilpod-border-strong);
+  background: rgb(9 9 11 / 0.5);
+}
+
+.pilpod-windows-panel__list > li + li {
+  border-top: 1px solid var(--pilpod-border-muted);
+}
+
+html.dark .pilpod-windows-panel__list > li + li {
+  border-top-color: var(--pilpod-bg-muted);
+}

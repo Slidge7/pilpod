@@ -1,3 +1,4 @@
+import "./WidgetMediaPanel.css";
 import type {
   AudioSessionInfoDto,
   BrowserTabMediaDto,
@@ -42,38 +43,38 @@ export function WidgetMediaPanel({
   onDismissWidget,
 }: Props) {
   return (
-    <div className="relative isolate flex h-full min-h-0 w-full flex-col bg-transparent p-1.5 touch-none">
+    <div className="pilpod-widget-panel-root">
       <button
         type="button"
-        className="absolute right-2 top-2 z-20 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-red-600 text-white shadow-md ring-1 ring-red-800/80 hover:bg-red-500 dark:ring-red-900/70"
+        className="pilpod-widget-panel-root__dismiss"
         title="Turn off floating widget — minimize to taskbar"
         aria-label="Turn off floating widget and minimize to taskbar"
         onClick={() => void onDismissWidget()}
       >
-        <IconWidgetClose className="shrink-0" />
+        <IconWidgetClose className="pilpod-widget-panel-root__dismiss-icon" />
       </button>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-100 shadow-lg dark:border-zinc-700/80 dark:bg-zinc-950">
-        <div className="flex shrink-0 items-center gap-1.5 pr-8 pt-2 pl-2">
-          <div className="flex flex-1 rounded-md bg-zinc-200/70 p-px dark:bg-zinc-800/90">
+      <div className="pilpod-widget-panel-card">
+        <div className="pilpod-widget-panel-toolbar">
+          <div className="pilpod-widget-panel-tabs">
             <button
               type="button"
-              className={`flex-1 rounded-[5px] px-2 py-0.5 text-[10px] font-medium transition-colors ${
+              className={
                 mainTab === "browser"
-                  ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-100"
-                  : "text-zinc-500 dark:text-zinc-400"
-              }`}
+                  ? "pilpod-widget-panel-tabs__btn pilpod-widget-panel-tabs__btn--active"
+                  : "pilpod-widget-panel-tabs__btn"
+              }
               onClick={() => onMainTabChange("browser")}
             >
               Browser
             </button>
             <button
               type="button"
-              className={`flex-1 rounded-[5px] px-2 py-0.5 text-[10px] font-medium transition-colors ${
+              className={
                 mainTab === "windows"
-                  ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-100"
-                  : "text-zinc-500 dark:text-zinc-400"
-              }`}
+                  ? "pilpod-widget-panel-tabs__btn pilpod-widget-panel-tabs__btn--active"
+                  : "pilpod-widget-panel-tabs__btn"
+              }
               onClick={() => onMainTabChange("windows")}
             >
               Windows
@@ -81,7 +82,7 @@ export function WidgetMediaPanel({
           </div>
           <button
             type="button"
-            className="shrink-0 rounded-md border border-zinc-300/90 bg-white/90 px-2 py-0.5 text-[10px] font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800/90 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className="pilpod-widget-panel-full"
             title="Open full PilPod window"
             onClick={() => void onOpenFullWindow()}
           >
@@ -89,11 +90,9 @@ export function WidgetMediaPanel({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
+        <div className="pilpod-widget-panel-scroll">
           {error ? (
-            <div className="mb-2 border border-red-300 bg-red-50 px-2 py-1.5 text-[10px] text-red-800 dark:border-red-900/60 dark:bg-red-950/25 dark:text-red-200">
-              {error}
-            </div>
+            <div className="pilpod-alert-error">{error}</div>
           ) : null}
 
           {mainTab === "browser" ? (

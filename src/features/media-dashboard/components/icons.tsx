@@ -1,3 +1,5 @@
+import "./icons.css";
+
 export function IconPlay({ className }: { className?: string }) {
   return (
     <svg
@@ -221,10 +223,6 @@ export function IconRefresh() {
 }
 
 export function Spinner({ className }: { className?: string }) {
-  return (
-    <span
-      className={`inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-500 dark:border-t-zinc-200 ${className ?? ""}`}
-      aria-hidden
-    />
-  );
+  const cn = ["pilpod-spinner", className].filter(Boolean).join(" ");
+  return <span className={cn} aria-hidden />;
 }

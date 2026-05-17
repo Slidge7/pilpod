@@ -1,0 +1,178 @@
+.pilpod-browser-tab-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  transition: background-color 0.15s ease;
+  background: transparent;
+}
+
+.pilpod-browser-tab-row:hover:not(.pilpod-browser-tab-row--playing) {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.pilpod-browser-tab-row--playing {
+  background: var(--pilpod-emerald-row);
+}
+
+.pilpod-browser-tab-row__thumb-wrap {
+  position: relative;
+  height: 2rem;
+  width: 2rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 0.125rem;
+  background: var(--pilpod-bg-thumb);
+  outline: 1px solid var(--pilpod-border-muted);
+}
+
+html.dark .pilpod-browser-tab-row__thumb-wrap {
+  background: var(--pilpod-bg-thumb);
+  outline-color: var(--pilpod-border-strong);
+}
+
+.pilpod-browser-tab-row__open-tab {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: inline-flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.125rem;
+  border: none;
+  background: var(--pilpod-bg-overlay-open);
+  color: var(--pilpod-text-muted);
+  opacity: 0;
+  outline: 1px solid var(--pilpod-border-strong);
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.pilpod-browser-tab-row__open-tab:hover {
+  background: var(--pilpod-border-muted);
+  color: var(--pilpod-text);
+  opacity: 1;
+}
+
+html.dark .pilpod-browser-tab-row__open-tab {
+  background: var(--pilpod-bg-overlay-open);
+  color: var(--pilpod-text-muted);
+  outline-color: var(--pilpod-border-strong);
+}
+
+html.dark .pilpod-browser-tab-row__open-tab:hover {
+  background: var(--pilpod-bg-muted);
+  color: var(--pilpod-text);
+}
+
+.pilpod-browser-tab-row__open-tab:focus-visible {
+  opacity: 1;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--pilpod-emerald-focus-ring);
+}
+
+html.dark .pilpod-browser-tab-row__open-tab:focus-visible {
+  box-shadow: 0 0 0 2px var(--pilpod-emerald-focus-ring);
+}
+
+.pilpod-browser-tab-row__thumb-wrap:hover .pilpod-browser-tab-row__open-tab,
+.pilpod-browser-tab-row__open-tab:hover {
+  opacity: 1;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .pilpod-browser-tab-row__open-tab {
+    opacity: 1;
+  }
+}
+
+.pilpod-browser-tab-row__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.pilpod-browser-tab-row__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  line-height: 1;
+  font-size: 12px;
+  color: var(--pilpod-text);
+}
+
+html.dark .pilpod-browser-tab-row__title {
+  color: #fafafa;
+}
+
+.pilpod-browser-tab-row__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-top: 1px;
+  font-size: 10px;
+  line-height: 1.375;
+  color: var(--pilpod-text-muted);
+}
+
+html.dark .pilpod-browser-tab-row__meta {
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-browser-tab-row__meta-sep {
+  margin-left: 0.25rem;
+  margin-right: 0.25rem;
+  color: var(--pilpod-text-subtle);
+}
+
+html.dark .pilpod-browser-tab-row__meta-sep {
+  color: var(--pilpod-border-strong);
+}
+
+.pilpod-browser-tab-row__play {
+  display: inline-flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  flex-shrink: 0;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.125rem;
+  border: 1px solid var(--pilpod-border-strong);
+  background: var(--pilpod-bg-tab-active);
+  color: var(--pilpod-text);
+}
+
+.pilpod-browser-tab-row__play:hover:not(:disabled) {
+  background: var(--pilpod-bg-muted);
+}
+
+html.dark .pilpod-browser-tab-row__play:hover:not(:disabled) {
+  background: var(--pilpod-bg-muted);
+}
+
+html.dark .pilpod-browser-tab-row__play:not(.pilpod-browser-tab-row__play--playing) {
+  border-color: var(--pilpod-border-strong);
+  background: var(--pilpod-bg-thumb);
+  color: var(--pilpod-text-secondary);
+}
+
+.pilpod-browser-tab-row__play--playing {
+  border-color: var(--pilpod-emerald-border);
+  background: var(--pilpod-emerald-bg);
+  color: #fff;
+}
+
+.pilpod-browser-tab-row__play--playing:hover:not(:disabled) {
+  border-color: var(--pilpod-emerald-bg-hover);
+  background: var(--pilpod-emerald-bg-hover);
+}
+
+html.dark .pilpod-browser-tab-row__play--playing:hover:not(:disabled) {
+  background: var(--pilpod-emerald-bg-hover);
+}
+
+.pilpod-browser-tab-row__play:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}

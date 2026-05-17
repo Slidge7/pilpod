@@ -1,3 +1,4 @@
+import "./MediaDashboard.css";
 import { DashboardFooter } from "./components/DashboardFooter";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { BrowserSessionsPanel } from "./components/BrowserSessionsPanel";
@@ -70,15 +71,19 @@ export function MediaDashboard() {
     );
   }
 
+  const shellClass = [
+    "pilpod-shell-dim",
+    "pilpod-dashboard-shell",
+    dimmingToWidget ? "is-dimming" : "",
+    fullEnterActive ? "is-entering" : "",
+    fullEnterVisible ? "is-entered" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div
-      className={`pilpod-shell-dim flex h-screen min-h-0 flex-col bg-transparent text-zinc-900 dark:text-zinc-100 ${
-        dimmingToWidget ? "is-dimming" : ""
-      } ${fullEnterActive ? "is-entering" : ""} ${
-        fullEnterVisible ? "is-entered" : ""
-      }`}
-    >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-zinc-100 dark:bg-zinc-950">
+    <div className={shellClass}>
+      <div className="pilpod-dashboard-shell__inner">
         <DashboardHeader
           browserTabCount={browserTabs.length}
           sessionCount={sessions.length}
@@ -96,11 +101,9 @@ export function MediaDashboard() {
           sessionCount={sessions.length}
         />
 
-        <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 py-2">
+        <main className="pilpod-dashboard-shell__main">
           {error ? (
-            <div className="mb-2 border border-red-300 bg-red-50 px-2 py-1.5 text-[11px] text-red-800 dark:border-red-900/60 dark:bg-red-950/25 dark:text-red-200">
-              {error}
-            </div>
+            <div className="pilpod-alert-error">{error}</div>
           ) : null}
 
           {mainTab === "browser" ? (

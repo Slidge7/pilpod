@@ -1,3 +1,4 @@
+import "./DashboardFooter.css";
 import type { AppearanceMode } from "../../../theme/appearance";
 import {
   IconMoon,
@@ -27,16 +28,21 @@ export function DashboardFooter({
     ? "Floating widget on minimize: on (click to turn off)"
     : "Floating widget on minimize: off (click to turn on)";
 
+  const widgetBtnClass = [
+    "pilpod-dash-footer__btn",
+    widgetEnabled ? "pilpod-dash-footer__btn--amber" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <footer className="flex min-h-7 shrink-0 items-center justify-between gap-2 border-t border-zinc-200/90 bg-white/95 px-2 py-0.5 dark:border-zinc-800/90 dark:bg-zinc-950/95">
-      <p className="min-w-0 truncate text-[10px] leading-tight text-zinc-500 dark:text-zinc-500">
-        Provided by s7.ma
-      </p>
-      <div className="flex shrink-0 items-center gap-px">
+    <footer className="pilpod-dash-footer">
+      <p className="pilpod-dash-footer__credit">Provided by s7.ma</p>
+      <div className="pilpod-dash-footer__actions">
         <button
           type="button"
           onClick={onToggleAppearance}
-          className="flex h-7 min-w-7 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          className="pilpod-dash-footer__btn"
           title={appearanceTitle}
           aria-label={appearanceTitle}
         >
@@ -45,7 +51,7 @@ export function DashboardFooter({
         <button
           type="button"
           onClick={() => void onRefresh()}
-          className="flex h-7 min-w-7 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          className="pilpod-dash-footer__btn"
           title="Refresh"
           aria-label="Refresh"
         >
@@ -54,11 +60,7 @@ export function DashboardFooter({
         <button
           type="button"
           onClick={onToggleWidgetEnabled}
-          className={`flex h-7 min-w-7 items-center justify-center rounded-md transition-colors ${
-            widgetEnabled
-              ? "bg-amber-50 text-amber-700 ring-1 ring-amber-300 dark:bg-amber-950/70 dark:text-amber-400 dark:ring-amber-700/50"
-              : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-          }`}
+          className={widgetBtnClass}
           title={widgetToggleTitle}
           aria-label={widgetToggleTitle}
           aria-pressed={widgetEnabled}

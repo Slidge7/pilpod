@@ -1,0 +1,88 @@
+.pilpod-widget-view {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  touch-action: none;
+  background: transparent;
+}
+
+.pilpod-widget-view__dismiss {
+  pointer-events: none;
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  z-index: 20;
+  display: flex;
+  height: 18px;
+  width: 18px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: none;
+  background: var(--pilpod-dismiss-bg);
+  color: #fff;
+  opacity: 0;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgb(0 0 0 / 0.12);
+  outline: 1px solid var(--pilpod-dismiss-ring);
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.pilpod-widget-view:hover .pilpod-widget-view__dismiss {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.pilpod-widget-view__dismiss:hover {
+  background: var(--pilpod-dismiss-hover);
+}
+
+.pilpod-widget-view__hit {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  cursor: grab;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.pilpod-widget-view__hit:active {
+  cursor: grabbing;
+}
+
+.pilpod-widget-chip {
+  pointer-events: none;
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  user-select: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background: var(--pilpod-widget-chip-bg);
+  color: #d97706;
+  box-shadow:
+    0 10px 15px -3px var(--pilpod-widget-chip-shadow),
+    0 4px 6px -4px var(--pilpod-widget-chip-shadow);
+  outline: 1px solid var(--pilpod-widget-chip-ring);
+}
+
+html.dark .pilpod-widget-chip {
+  color: #fbbf24;
+}
+
+.pilpod-widget-chip__music {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.pilpod-widget-view__dismiss-icon {
+  flex-shrink: 0;
+}
