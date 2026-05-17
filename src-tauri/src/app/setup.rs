@@ -1,10 +1,21 @@
 use serde::Serialize;
-use tauri::{Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 /// Payload emitted on `gsmtc://init-error` when GSMTC cannot start.
 #[derive(Serialize, Clone)]
 struct GsmtcInitError {
     message: String,
+}
+
+/// Taskbar / window icon: `bundle.icon` does not reliably update the native
+/// window icon in `tauri dev` on Windows; set it explicitly once the event
+/// loop is up ([`tauri::RunEvent::Ready`]).
+pub fn apply_main_window_icon(handle: &AppHandle) {
+    if let Some(window) = handle.get_webview_window("main") {
+        if let Err(e) = window.set_icon(tauri::include_image!("icons/icon.ico")) {
+            eprintln!("[pilpod] window icon: {e}");
+        }
+    }
 }
 
 pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {

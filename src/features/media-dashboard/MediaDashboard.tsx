@@ -1,3 +1,4 @@
+import { DashboardFooter } from "./components/DashboardFooter";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { BrowserSessionsPanel } from "./components/BrowserSessionsPanel";
 import { SourceTabBar } from "./components/SourceTabBar";
@@ -79,15 +80,11 @@ export function MediaDashboard() {
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-zinc-100 dark:bg-zinc-950">
         <DashboardHeader
-          appearance={appearance}
           browserTabCount={browserTabs.length}
           sessionCount={sessions.length}
           alwaysOnTop={alwaysOnTop}
           widgetEnabled={widgetEnabled}
           onToggleAlwaysOnTop={toggleAlwaysOnTop}
-          onToggleWidgetEnabled={toggleWidgetEnabled}
-          onToggleAppearance={toggle}
-          onRefresh={refresh}
           onMinimize={minimizeApp}
           onClose={closeApp}
         />
@@ -124,6 +121,14 @@ export function MediaDashboard() {
             />
           )}
         </main>
+
+        <DashboardFooter
+          appearance={appearance}
+          widgetEnabled={widgetEnabled}
+          onToggleAppearance={toggle}
+          onRefresh={refresh}
+          onToggleWidgetEnabled={toggleWidgetEnabled}
+        />
       </div>
     </div>
   );

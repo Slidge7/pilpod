@@ -1,46 +1,28 @@
-import type { AppearanceMode } from "../../../theme/appearance";
 import {
   IconClose,
   IconMinimize,
-  IconMoon,
-  IconRefresh,
   IconStayOnTop,
-  IconSun,
-  IconWidgetMinimize,
 } from "./icons";
 
 type Props = {
-  appearance: AppearanceMode;
   browserTabCount: number;
   sessionCount: number;
   alwaysOnTop: boolean;
   widgetEnabled: boolean;
   onToggleAlwaysOnTop: () => void;
-  onToggleWidgetEnabled: () => void;
-  onToggleAppearance: () => void;
-  onRefresh: () => void;
   onMinimize: () => void;
   onClose: () => void;
 };
 
 export function DashboardHeader({
-  appearance,
   browserTabCount,
   sessionCount,
   alwaysOnTop,
   widgetEnabled,
   onToggleAlwaysOnTop,
-  onToggleWidgetEnabled,
-  onToggleAppearance,
-  onRefresh,
   onMinimize,
   onClose,
 }: Props) {
-  const appearanceTitle =
-    appearance === "dark" ? "Use light appearance" : "Use dark appearance";
-  const widgetToggleTitle = widgetEnabled
-    ? "Floating widget on minimize: on (click to turn off)"
-    : "Floating widget on minimize: off (click to turn on)";
   const minimizeTitle = widgetEnabled
     ? "Minimize to floating widget"
     : "Minimize to taskbar";
@@ -51,6 +33,14 @@ export function DashboardHeader({
       data-tauri-drag-region="deep"
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 px-2">
+        <img
+          src="/pilpod-icon.png"
+          alt=""
+          width={22}
+          height={22}
+          className="pointer-events-none size-[22px] shrink-0 rounded-md object-cover shadow-sm ring-1 ring-zinc-200/70 dark:ring-zinc-700/70"
+          aria-hidden
+        />
         <span className="truncate text-[11px] font-medium tracking-tight text-zinc-700 dark:text-zinc-300">
           PilPod
         </span>
@@ -71,37 +61,6 @@ export function DashboardHeader({
           aria-pressed={alwaysOnTop}
         >
           <IconStayOnTop />
-        </button>
-        <button
-          type="button"
-          onClick={onToggleAppearance}
-          className="flex h-8 min-w-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-          title={appearanceTitle}
-          aria-label={appearanceTitle}
-        >
-          {appearance === "dark" ? <IconSun /> : <IconMoon />}
-        </button>
-        <button
-          type="button"
-          onClick={() => void onRefresh()}
-          className="flex h-8 min-w-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-          title="Refresh"
-        >
-          <IconRefresh />
-        </button>
-        <button
-          type="button"
-          onClick={onToggleWidgetEnabled}
-          className={`flex h-8 min-w-8 items-center justify-center rounded-md transition-colors ${
-            widgetEnabled
-              ? "bg-amber-50 text-amber-700 ring-1 ring-amber-300 dark:bg-amber-950/70 dark:text-amber-400 dark:ring-amber-700/50"
-              : "text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-          }`}
-          title={widgetToggleTitle}
-          aria-label={widgetToggleTitle}
-          aria-pressed={widgetEnabled}
-        >
-          <IconWidgetMinimize />
         </button>
         <button
           type="button"

@@ -14,7 +14,23 @@ pub fn run() {
 
     builder = handlers::with_invoke_handler(builder);
 
+    let context = tauri::generate_context!();
+
+    #[cfg(windows)]
+    {
+        let app = builder
+            .build(context)
+            .expect("error while building tauri application");
+        app.run(|app_handle, event| {
+            if matches!(event, tauri::RunEvent::Ready) {
+                setup::apply_main_window_icon(app_handle);
+            }
+        });
+        return;
+    }
+
+    #[cfg(not(windows))]
     builder
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running tauri application");
 }
