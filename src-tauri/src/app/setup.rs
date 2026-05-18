@@ -35,6 +35,18 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let detected_browsers: crate::browser_detector::DetectedBrowsersState =
         std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
 
+    // Persisted extension-installed flags: survives missed heartbeats + app restarts.
+    let ext_store: crate::browser_detector::ExtensionInstalledState =
+        std::sync::Arc::new(std::sync::Mutex::new(
+            crate::browser_detector::ExtensionInstalledStore::load(&handle),
+        ));
+
+    // Sync-requested flag: set by `request_browser_sync` so the bridge includes
+    // `syncNow: true` in the next extension POST response.
+    let sync_flag: crate::browser_bridge::SyncRequestedFlag = std::sync::Arc::new(
+        std::sync::atomic::AtomicBool::new(false),
+    );
+
     // GSMTC state slot: filled once the WinRT manager is ready.
     let gsmtc_slot: std::sync::Arc<
         std::sync::Mutex<Option<std::sync::Arc<crate::gsmtc::GsmtcState>>>,
@@ -44,6 +56,8 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let _ = app.manage(std::sync::Arc::clone(&browser_commands));
     let _ = app.manage(std::sync::Arc::clone(&detected_browsers));
     let _ = app.manage(std::sync::Arc::clone(&browser_slots));
+    let _ = app.manage(std::sync::Arc::clone(&ext_store));
+    let _ = app.manage(std::sync::Arc::clone(&sync_flag));
 
     // ── Spawn HTTP bridge ────────────────────────────────────────────────────
     crate::browser_bridge::spawn(
@@ -52,12 +66,15 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         handle.clone(),
         std::sync::Arc::clone(&gsmtc_slot),
         std::sync::Arc::clone(&detected_browsers),
+        std::sync::Arc::clone(&ext_store),
+        std::sync::Arc::clone(&sync_flag),
     );
 
     // ── Spawn OS browser detector ────────────────────────────────────────────
     crate::browser_detector::spawn_detector(
         std::sync::Arc::clone(&detected_browsers),
         std::sync::Arc::clone(&browser_slots),
+        std::sync::Arc::clone(&ext_store),
         handle.clone(),
     );
 

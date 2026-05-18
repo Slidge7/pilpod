@@ -28,10 +28,21 @@ pub struct DetectedBrowser {
     pub display_name: String,
     /// True when the browser process is currently running (from OS scan).
     pub running: bool,
-    /// True when the extension sent a POST within the last 3 seconds.
+    /// True when the extension has ever successfully connected to PilPod for
+    /// this browser.  Persisted across app restarts; does NOT flip off just
+    /// because a heartbeat was missed.
     pub extension_installed: bool,
+    /// True when the extension sent a POST within the last 3 seconds.
+    /// Separate from `extension_installed` so the UI can distinguish
+    /// "installed but currently disconnected" from "never installed".
+    pub extension_connected: bool,
     pub tab_count: u32,
     pub tabs: Vec<BrowserTab>,
+    /// Seconds elapsed since the last successful POST from this browser's extension.
+    /// `None` if no POST has ever been received for this browser in the current session.
+    /// Used by the UI to display "Offline · cached 2 min ago" hints.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_sync_secs: Option<u64>,
 }
 
 /// Unified tab representation — replaces the old `BrowserTabMediaDto` + `TabMeta` split.

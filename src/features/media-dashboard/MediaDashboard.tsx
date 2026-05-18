@@ -39,6 +39,7 @@ export function MediaDashboard() {
     widgetGestures,
     toggleWinSession,
     setMixerVolume,
+    refreshBrowserConnection,
     sessions,
     browsers,
     browserAudio,
@@ -128,6 +129,7 @@ export function MediaDashboard() {
               onClose={closeBrowserTab}
               onReactivate={reactivateBrowserTab}
               onMixerVolume={(id, v) => void setMixerVolume(id, v)}
+              onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
             />
           ) : (
             <WindowsSessionsPanel

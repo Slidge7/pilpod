@@ -61,10 +61,26 @@ export type DetectedBrowser = {
   displayName: string;
   /** True when the browser process is currently running. */
   running: boolean;
-  /** True when the extension sent a heartbeat in the last 3 seconds. */
+  /**
+   * True when the companion extension has ever successfully connected to
+   * PilPod for this browser.  Persisted across app restarts; does NOT flip
+   * off just because a heartbeat was missed.
+   */
   extensionInstalled: boolean;
+  /**
+   * True when the extension sent a heartbeat in the last 3 seconds.
+   * Separate from `extensionInstalled` so the UI can distinguish
+   * "installed but currently disconnected" from "never installed".
+   */
+  extensionConnected: boolean;
   tabCount: number;
   tabs: BrowserTab[];
+  /**
+   * Seconds since the last successful POST from this browser's extension,
+   * or `null` if no POST has been received in the current session.
+   * Use this to display "Offline · cached 2 min ago" style hints.
+   */
+  lastSyncSecs: number | null;
 };
 
 /**

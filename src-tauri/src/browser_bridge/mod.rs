@@ -14,3 +14,8 @@ pub use http::spawn;
 
 pub const BROWSER_BRIDGE_PORT: u16 = 17_399;
 pub const BROWSER_MEDIA_PATH: &str = "/browser-tabs";
+
+/// Shared atomic flag: set by `request_browser_sync` to tell the bridge to
+/// include `syncNow: true` in the next POST response so the extension pushes
+/// a fresh snapshot immediately.
+pub type SyncRequestedFlag = std::sync::Arc<std::sync::atomic::AtomicBool>;

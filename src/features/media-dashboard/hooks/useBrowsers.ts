@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { DetectedBrowser } from "../../../types/media";
@@ -9,9 +9,13 @@ import { BROWSERS_UPDATE_EVENT } from "../constants";
  *
  * - Browsers are detected at the OS level (registry + process scan) and are
  *   always present even when no extension is installed.
- * - `browser.extensionInstalled` is true when the companion extension recently
- *   sent a POST.
- * - `browser.tabs` is populated only when the extension is installed and active.
+ * - `browser.extensionInstalled` persists across app sessions.
+ * - `browser.extensionConnected` is true only when the extension sent a POST
+ *   in the last 3 seconds.
+ * - `browser.tabs` is cached from the last POST and shown even when offline.
+ *
+ * On window focus, calls `request_browser_sync` so Rust re-emits from cache
+ * immediately and signals the extension to push a fresh snapshot.
  */
 export function useBrowsers() {
   const [browsers, setBrowsers] = useState<DetectedBrowser[]>([]);
@@ -26,6 +30,9 @@ export function useBrowsers() {
     }
   }, []);
 
+  // Debounce focus events so rapid alt-tab doesn't flood the backend.
+  const focusDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
 
@@ -37,8 +44,24 @@ export function useBrowsers() {
 
     void refresh();
 
+    const onFocus = () => {
+      if (focusDebounceRef.current !== null) return;
+      focusDebounceRef.current = setTimeout(() => {
+        focusDebounceRef.current = null;
+        void invoke("request_browser_sync").catch(() => {
+          // Non-Windows or command not yet registered — ignore.
+        });
+      }, 200);
+    };
+
+    window.addEventListener("focus", onFocus);
+
     return () => {
       void unlisten?.();
+      window.removeEventListener("focus", onFocus);
+      if (focusDebounceRef.current !== null) {
+        clearTimeout(focusDebounceRef.current);
+      }
     };
   }, [refresh]);
 

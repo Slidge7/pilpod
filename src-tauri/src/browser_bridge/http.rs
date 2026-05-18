@@ -1,7 +1,7 @@
 use std::{
     io::Read,
     net::{IpAddr, SocketAddr},
-    sync::{Arc, Mutex},
+    sync::{atomic::Ordering, Arc, Mutex},
     time::{Duration, Instant},
 };
 
@@ -9,7 +9,10 @@ use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tiny_http::{Header, Method, Response, Server};
 
-use crate::browser_detector::{emit_browsers_to_ui, DetectedBrowsersState};
+use crate::browser_detector::{
+    browser_name_to_id, emit_browsers_to_ui, DetectedBrowsersState, ExtensionInstalledState,
+};
+use super::SyncRequestedFlag;
 use crate::browser_tabs::{
     BrowserCommandsQueue, BrowserMediaCommand, BrowserSlot, BrowserSlotsMap,
 };
@@ -25,6 +28,9 @@ use super::{BROWSER_BRIDGE_PORT, BROWSER_MEDIA_PATH};
 struct BrowserTabsPostResponse {
     ok: bool,
     commands: Vec<BrowserMediaCommand>,
+    /// When `true`, the extension should push a fresh snapshot immediately.
+    /// Set by `request_browser_sync` (e.g. on window focus).
+    sync_now: bool,
 }
 
 /// Incoming POST body from the companion extension.
@@ -162,6 +168,8 @@ pub fn spawn(
     app: AppHandle,
     gsmtc_slot: Arc<Mutex<Option<Arc<GsmtcState>>>>,
     detected_browsers: DetectedBrowsersState,
+    ext_store: ExtensionInstalledState,
+    sync_flag: SyncRequestedFlag,
 ) {
     let addr = format!("127.0.0.1:{BROWSER_BRIDGE_PORT}");
     let server = match Server::http(&addr) {
@@ -236,10 +244,17 @@ pub fn spawn(
                                 BrowserSlot {
                                     last_seen: Instant::now(),
                                     browser_id: browser_id.clone(),
-                                    browser_name,
+                                    browser_name: browser_name.clone(),
                                     tabs,
                                 },
                             );
+                        }
+
+                        // Persist the extension-installed flag for this browser so it
+                        // survives missed heartbeats and app restarts.
+                        let os_id = browser_name_to_id(&browser_name);
+                        if let Ok(mut store) = ext_store.lock() {
+                            store.mark_installed(&os_id);
                         }
 
                         // Notify GSMTC so it can refresh the dedup decision.
@@ -250,7 +265,7 @@ pub fn spawn(
                         }
 
                         // Emit the merged browser list to the frontend.
-                        emit_browsers_to_ui(&app, &detected_browsers, &browser_slots);
+                        emit_browsers_to_ui(&app, &detected_browsers, &browser_slots, &ext_store);
 
                         // Drain pending commands for this browser (TTL = 5 s).
                         let drained = if let Ok(mut q) = command_queue.lock() {
@@ -265,11 +280,15 @@ pub fn spawn(
                             Vec::new()
                         };
 
+                        // Drain the sync flag: if set, ask extension to push immediately.
+                        let sync_now = sync_flag.swap(false, Ordering::Relaxed);
+
                         let reply = serde_json::to_string(&BrowserTabsPostResponse {
                             ok: true,
                             commands: drained,
+                            sync_now,
                         })
-                        .unwrap_or_else(|_| r#"{"ok":true,"commands":[]}"#.to_string());
+                        .unwrap_or_else(|_| r#"{"ok":true,"commands":[],"syncNow":false}"#.to_string());
 
                         let _ = req.respond(with_cors(
                             Response::from_data(reply.into_bytes())

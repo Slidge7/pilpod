@@ -45,3 +45,9 @@ pub fn toggle_widget_mode(_is_mini: bool) -> Result<(), String> {
 pub fn get_browsers() -> Vec<DetectedBrowser> {
     Vec::new()
 }
+
+#[tauri::command]
+pub fn refresh_browser_connection(_browser_id: String) {}
+
+#[tauri::command]
+pub fn request_browser_sync() {}

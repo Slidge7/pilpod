@@ -593,6 +593,20 @@ export function useMediaDashboard() {
     }
   }, []);
 
+  /**
+   * Drop the active extension slot for a browser so `extensionConnected` resets
+   * to false immediately, then let the extension's next heartbeat restore it.
+   * The persisted `extensionInstalled` flag is left unchanged.
+   */
+  const refreshBrowserConnection = useCallback(async (browserId: string) => {
+    setError(null);
+    try {
+      await invoke("refresh_browser_connection", { browserId });
+    } catch (e) {
+      setError(String(e));
+    }
+  }, []);
+
   const sessions = snapshot?.sessions ?? [];
   const browserAudio: Record<string, AudioSessionInfoDto> =
     snapshot?.browserAudio ?? {};
@@ -631,6 +645,7 @@ export function useMediaDashboard() {
     },
     toggleWinSession,
     setMixerVolume,
+    refreshBrowserConnection,
     sessions,
     browsers,
     browserAudio,

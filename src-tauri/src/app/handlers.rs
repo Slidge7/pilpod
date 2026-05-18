@@ -11,6 +11,8 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::gsmtc::commands::mixer_set_volume,
         crate::window_widget::toggle_widget_mode,
         crate::gsmtc::commands::get_browsers,
+        crate::gsmtc::commands::refresh_browser_connection,
+        crate::gsmtc::commands::request_browser_sync,
     ])
 }
 
@@ -25,5 +27,7 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::platform::stub_commands::mixer_set_volume,
         crate::platform::stub_commands::toggle_widget_mode,
         crate::platform::stub_commands::get_browsers,
+        crate::platform::stub_commands::refresh_browser_connection,
+        crate::platform::stub_commands::request_browser_sync,
     ])
 }

@@ -6,10 +6,12 @@
 //! `DetectedBrowser` when it receives a POST from that browser.
 
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use tauri::{AppHandle, Emitter};
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::browser_tabs::{BrowserSlot, BrowserSlotsMap};
 use crate::gsmtc::dto::{DetectedBrowser, DetectedBrowserInfo};
@@ -32,6 +34,71 @@ const KNOWN_BROWSERS: &[(&str, &str, &str)] = &[
 
 /// Shared OS-detected browser list (updated by the detector background thread).
 pub type DetectedBrowsersState = Arc<Mutex<Vec<DetectedBrowserInfo>>>;
+
+// ── Persistent extension-installed store ─────────────────────────────────────
+
+/// Persisted map of OS browser ID → whether the companion extension has ever
+/// successfully connected.  Written to the app data directory as JSON.
+///
+/// This decouples "extension is installed" from "extension heartbeat arrived in
+/// the last 3 s", preventing the false-negative flicker that occurred when a
+/// heartbeat was briefly missed.
+#[derive(Default, Serialize, Deserialize)]
+pub struct ExtensionInstalledStore {
+    #[serde(flatten)]
+    installed: HashMap<String, bool>,
+
+    #[serde(skip)]
+    path: PathBuf,
+}
+
+impl ExtensionInstalledStore {
+    /// Load from `{app_data_dir}/browser_ext_state.json`, or start empty.
+    pub fn load(app: &AppHandle) -> Self {
+        let path = app
+            .path()
+            .app_data_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join("browser_ext_state.json");
+
+        let installed: HashMap<String, bool> = std::fs::read_to_string(&path)
+            .ok()
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or_default();
+
+        Self { installed, path }
+    }
+
+    pub fn is_installed(&self, browser_id: &str) -> bool {
+        self.installed.get(browser_id).copied().unwrap_or(false)
+    }
+
+    /// Mark `browser_id` as having the extension installed.
+    /// Returns `true` if the state changed (and the file was written).
+    pub fn mark_installed(&mut self, browser_id: &str) -> bool {
+        if self.installed.get(browser_id).copied().unwrap_or(false) {
+            return false; // already known — skip the write
+        }
+        self.installed.insert(browser_id.to_string(), true);
+        self.save();
+        true
+    }
+
+    fn save(&self) {
+        // Serialize only the map, not the path.
+        if let Ok(json) = serde_json::to_string_pretty(&self.installed) {
+            if let Some(dir) = self.path.parent() {
+                let _ = std::fs::create_dir_all(dir);
+            }
+            if let Err(e) = std::fs::write(&self.path, json) {
+                eprintln!("[browser-detector] failed to persist state: {e}");
+            }
+        }
+    }
+}
+
+/// Shared, thread-safe handle to the persistence store.
+pub type ExtensionInstalledState = Arc<Mutex<ExtensionInstalledStore>>;
 
 // ── Stable-id helpers ────────────────────────────────────────────────────────
 
@@ -131,57 +198,77 @@ pub fn build_detected_browsers() -> Vec<DetectedBrowserInfo> {
 
 // ── Merging ──────────────────────────────────────────────────────────────────
 
-/// Merge OS-detected browsers with active extension slots into the frontend view.
+/// Merge OS-detected browsers with extension slots into the frontend view.
 ///
-/// - Browsers detected by the OS but with no recent extension POST →
-///   `extension_installed: false`, `tabs: []`
-/// - Browsers detected only via extension (not in the OS scan) →
-///   still shown (treated as running, e.g. a browser not in the known list)
+/// **Design principles (Phase 2a):**
+///
+/// - `extension_installed` — persisted flag; never flips off on missed heartbeats.
+/// - `extension_connected` — live freshness flag (last POST < 3 s ago).
+/// - **Cached tabs are always shown** for OS-detected browsers that have a slot,
+///   regardless of slot freshness.  Tabs are only replaced when a newer POST arrives.
+/// - `last_sync_secs` — seconds since last POST, so the UI can render
+///   "Offline · cached 2 min ago" without clearing the list.
+/// - For extension-only browsers (not in OS registry), the row is only added while
+///   freshly connected; they do not have a stable OS identity to fall back on.
 pub fn merge_detected_and_slots(
     detected: &[DetectedBrowserInfo],
     slots: &HashMap<String, BrowserSlot>,
+    ext_store: &ExtensionInstalledStore,
 ) -> Vec<DetectedBrowser> {
     let slot_active_cutoff = Duration::from_secs(3);
     let now = std::time::Instant::now();
 
-    // Start with one entry per OS-detected browser.
+    // Start with one entry per OS-detected browser (always visible).
     let mut result: Vec<DetectedBrowser> = detected
         .iter()
         .map(|d| DetectedBrowser {
             id: d.id.clone(),
             display_name: d.display_name.clone(),
             running: d.running,
-            extension_installed: false,
+            extension_installed: ext_store.is_installed(&d.id),
+            extension_connected: false,
             tab_count: 0,
             tabs: Vec::new(),
+            last_sync_secs: None,
         })
         .collect();
 
     let mut seen_ids: HashSet<String> =
         detected.iter().map(|d| d.id.clone()).collect();
 
-    // Overlay extension slot data onto matching detected entries.
     for slot in slots.values() {
-        if now.duration_since(slot.last_seen) >= slot_active_cutoff {
-            continue; // stale slot — extension disconnected or browser closed
-        }
-
+        let is_fresh = now.duration_since(slot.last_seen) < slot_active_cutoff;
         let slot_id = browser_name_to_id(&slot.browser_name);
+        let slot_age_secs = now.duration_since(slot.last_seen).as_secs();
 
         if let Some(entry) = result.iter_mut().find(|b| b.id == slot_id) {
-            entry.extension_installed = true;
-            entry.tabs = slot.tabs.clone();
-            entry.tab_count = slot.tabs.len() as u32;
-        } else if !seen_ids.contains(&slot_id) {
-            // Browser reported by extension but not found in OS scan.
+            if is_fresh {
+                entry.extension_connected = true;
+            }
+
+            // Always attach cached tabs, regardless of freshness.  If multiple
+            // slots resolve to the same OS browser (rare), keep the most recent.
+            let is_newer = entry
+                .last_sync_secs
+                .map_or(true, |existing| slot_age_secs < existing);
+
+            if is_newer {
+                entry.tabs = slot.tabs.clone();
+                entry.tab_count = slot.tabs.len() as u32;
+                entry.last_sync_secs = Some(slot_age_secs);
+            }
+        } else if !seen_ids.contains(&slot_id) && is_fresh {
+            // Extension-only browser (not in OS registry scan) — visible while connected.
             seen_ids.insert(slot_id.clone());
             result.push(DetectedBrowser {
-                id: slot_id,
+                id: slot_id.clone(),
                 display_name: slot.browser_name.clone(),
                 running: true,
-                extension_installed: true,
+                extension_installed: ext_store.is_installed(&slot_id),
+                extension_connected: true,
                 tab_count: slot.tabs.len() as u32,
                 tabs: slot.tabs.clone(),
+                last_sync_secs: Some(slot_age_secs),
             });
         }
     }
@@ -196,14 +283,16 @@ pub fn emit_browsers_to_ui(
     app: &AppHandle,
     detected: &DetectedBrowsersState,
     slots: &BrowserSlotsMap,
+    ext_store: &ExtensionInstalledState,
 ) {
     let detected_list = detected
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .clone();
     let slots_map = slots.lock().unwrap_or_else(|e| e.into_inner());
+    let store = ext_store.lock().unwrap_or_else(|e| e.into_inner());
 
-    let browsers = merge_detected_and_slots(&detected_list, &*slots_map);
+    let browsers = merge_detected_and_slots(&detected_list, &*slots_map, &*store);
 
     if let Err(e) = app.emit(BROWSERS_UPDATE_EVENT, &browsers) {
         eprintln!("[browser-detector] emit failed: {e}");
@@ -217,6 +306,7 @@ pub fn emit_browsers_to_ui(
 pub fn spawn_detector(
     detected: DetectedBrowsersState,
     slots: BrowserSlotsMap,
+    ext_store: ExtensionInstalledState,
     app: AppHandle,
 ) {
     std::thread::Builder::new()
@@ -228,7 +318,7 @@ pub fn spawn_detector(
                 let mut lock = detected.lock().unwrap_or_else(|e| e.into_inner());
                 *lock = initial;
             }
-            emit_browsers_to_ui(&app, &detected, &slots);
+            emit_browsers_to_ui(&app, &detected, &slots, &ext_store);
 
             loop {
                 std::thread::sleep(Duration::from_secs(2));
@@ -244,7 +334,7 @@ pub fn spawn_detector(
                     }
                 };
                 if changed {
-                    emit_browsers_to_ui(&app, &detected, &slots);
+                    emit_browsers_to_ui(&app, &detected, &slots, &ext_store);
                 }
             }
         })

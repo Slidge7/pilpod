@@ -77,5 +77,9 @@ export class Transport {
 
     const commands = Array.isArray(data?.commands) ? data.commands : [];
     if (commands.length > 0) await this.#onCommands(commands);
+
+    // Backend requested an immediate fresh push (e.g. PilPod window focused).
+    // Calling push() here sends one extra POST so Rust gets up-to-date tab data.
+    if (data?.syncNow === true) void this.#push();
   }
 }
