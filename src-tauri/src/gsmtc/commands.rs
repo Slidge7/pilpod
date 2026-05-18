@@ -2,6 +2,9 @@ use std::sync::Arc;
 use tauri::{AppHandle, State};
 
 use crate::audio_mixer::set_session_volume_by_instance_id;
+use crate::browser_detector::{merge_detected_and_slots, DetectedBrowsersState};
+use crate::browser_tabs::BrowserSlotsMap;
+use crate::gsmtc::dto::DetectedBrowser;
 
 use super::dto::GsmtcSnapshot;
 use super::state::{emit_fast_to_ui, GsmtcState};
@@ -87,6 +90,22 @@ pub async fn gsmtc_skip_previous(
     })
     .await
     .map_err(|e| format!("join error: {e}"))?
+}
+
+/// Return the current merged browser list (OS-detected + extension slots) synchronously.
+/// The frontend also listens to `"browsers://update"` for live updates; this command
+/// provides the initial snapshot on mount.
+#[tauri::command]
+pub fn get_browsers(
+    detected: State<'_, DetectedBrowsersState>,
+    slots: State<'_, BrowserSlotsMap>,
+) -> Vec<DetectedBrowser> {
+    let detected_list = detected
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone();
+    let slots_map = slots.lock().unwrap_or_else(|e| e.into_inner());
+    merge_detected_and_slots(&detected_list, &*slots_map)
 }
 
 #[tauri::command]

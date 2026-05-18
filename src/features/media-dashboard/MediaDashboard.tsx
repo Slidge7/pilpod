@@ -26,8 +26,11 @@ export function MediaDashboard() {
     dimmingToWidget,
     fullEnterActive,
     fullEnterVisible,
-    toggleBrowser,
+    toggleBrowserTab,
     focusBrowserTab,
+    reactivateBrowserTab,
+    reloadBrowserTab,
+    closeBrowserTab,
     minimizeApp,
     expandWidgetPanel,
     restoreFromWidget,
@@ -37,10 +40,15 @@ export function MediaDashboard() {
     toggleWinSession,
     setMixerVolume,
     sessions,
-    browserTabs,
+    browsers,
     browserAudio,
-    browserProfileGroups,
   } = useMediaDashboard();
+
+  // Count running browsers that have tabs reported by the extension.
+  const browserTabCount = browsers.reduce(
+    (sum, b) => sum + (b.extensionInstalled ? b.tabCount : 0),
+    0,
+  );
 
   if (isWidget) {
     if (isWidgetExpanded) {
@@ -50,11 +58,14 @@ export function MediaDashboard() {
           onMainTabChange={setMainTab}
           error={error}
           pendingKeys={pendingKeys}
-          browserProfileGroups={browserProfileGroups}
+          browsers={browsers}
           browserAudio={browserAudio}
           sessions={sessions}
-          onPlayPauseBrowser={toggleBrowser}
+          onPlayPauseBrowser={toggleBrowserTab}
           onFocusBrowserTab={focusBrowserTab}
+          onReloadBrowserTab={reloadBrowserTab}
+          onCloseBrowserTab={closeBrowserTab}
+          onReactivateBrowserTab={reactivateBrowserTab}
           onToggleWinSession={toggleWinSession}
           onMixerVolume={(id, v) => void setMixerVolume(id, v)}
           onOpenFullWindow={() => void restoreFromWidget()}
@@ -85,7 +96,7 @@ export function MediaDashboard() {
     <div className={shellClass}>
       <div className="pilpod-dashboard-shell__inner">
         <DashboardHeader
-          browserTabCount={browserTabs.length}
+          browserTabCount={browserTabCount}
           sessionCount={sessions.length}
           alwaysOnTop={alwaysOnTop}
           widgetEnabled={widgetEnabled}
@@ -97,7 +108,7 @@ export function MediaDashboard() {
         <SourceTabBar
           mainTab={mainTab}
           onMainTabChange={setMainTab}
-          browserTabCount={browserTabs.length}
+          browserTabCount={browserTabCount}
           sessionCount={sessions.length}
         />
 
@@ -108,11 +119,14 @@ export function MediaDashboard() {
 
           {mainTab === "browser" ? (
             <BrowserSessionsPanel
-              groups={browserProfileGroups}
+              browsers={browsers}
               pendingKeys={pendingKeys}
               browserAudio={browserAudio}
-              onPlayPauseBrowser={toggleBrowser}
-              onFocusBrowserTab={focusBrowserTab}
+              onPlayPause={toggleBrowserTab}
+              onFocusTab={focusBrowserTab}
+              onReload={reloadBrowserTab}
+              onClose={closeBrowserTab}
+              onReactivate={reactivateBrowserTab}
               onMixerVolume={(id, v) => void setMixerVolume(id, v)}
             />
           ) : (

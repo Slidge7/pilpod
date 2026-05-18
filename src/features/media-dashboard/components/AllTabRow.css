@@ -1,0 +1,120 @@
+.pilpod-all-tab-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.35rem;
+  background: transparent;
+}
+
+.pilpod-all-tab-row--inactive {
+  opacity: 0.75;
+}
+
+.pilpod-all-tab-row:hover {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.pilpod-all-tab-row__fav-wrap {
+  flex-shrink: 0;
+  height: 1rem;
+  width: 1rem;
+}
+
+.pilpod-all-tab-row__fav {
+  display: block;
+  height: 1rem;
+  width: 1rem;
+  border-radius: 0.0625rem;
+  object-fit: cover;
+}
+
+.pilpod-all-tab-row__fav-fallback {
+  display: block;
+  height: 1rem;
+  width: 1rem;
+  border-radius: 0.0625rem;
+  background: var(--pilpod-bg-thumb);
+  outline: 1px solid var(--pilpod-border-muted);
+}
+
+.pilpod-all-tab-row__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.pilpod-all-tab-row__title-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.pilpod-all-tab-row__title {
+  overflow: hidden;
+  flex: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--pilpod-text);
+}
+
+html.dark .pilpod-all-tab-row__title {
+  color: #fafafa;
+}
+
+.pilpod-all-tab-row__badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.pilpod-all-tab-row__url {
+  overflow: hidden;
+  margin: 1px 0 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-all-tab-row__actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.pilpod-all-tab-row__btn {
+  cursor: pointer;
+  border-radius: 0.125rem;
+  border: 1px solid var(--pilpod-border-strong);
+  background: var(--pilpod-bg-muted);
+  padding: 1px 0.35rem;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pilpod-text);
+}
+
+.pilpod-all-tab-row__btn:hover:not(:disabled) {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.pilpod-all-tab-row__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.pilpod-all-tab-row__btn--danger:not(:disabled) {
+  border-color: rgb(239 68 68 / 0.45);
+}
+
+.pilpod-all-tab-row__btn--danger:hover:not(:disabled) {
+  border-color: rgb(239 68 68 / 0.85);
+}

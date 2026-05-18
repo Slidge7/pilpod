@@ -21,6 +21,9 @@ pub fn browser_media_control(
         "next" | "skipnext" => "next",
         "previous" | "prev" | "skipprevious" => "previous",
         "focustab" | "focus_tab" | "focus" => "focusTab",
+        "reactivatetab" | "reactivate_tab" => "reactivateTab",
+        "reloadtab" | "reload_tab" => "reloadTab",
+        "closetab" | "close_tab" => "closeTab",
         _ => return Err(format!("unknown action: {action}")),
     };
     enqueue_browser_command(&queue, &browser_id, tab_id, normalized);

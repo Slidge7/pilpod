@@ -6,12 +6,14 @@
   "permissions": ["storage", "tabs", "scripting"],
   "host_permissions": ["http://127.0.0.1:17399/*"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
+      "js": ["src/content.js"],
+      "type": "module",
       "run_at": "document_idle",
       "all_frames": false
     }

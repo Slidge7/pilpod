@@ -1,4 +1,4 @@
-use crate::gsmtc::dto::GsmtcSnapshot;
+use crate::gsmtc::dto::{DetectedBrowser, GsmtcSnapshot};
 
 #[tauri::command]
 pub fn gsmtc_refresh() -> Result<GsmtcSnapshot, String> {
@@ -39,4 +39,9 @@ pub fn browser_media_control(
 #[tauri::command]
 pub fn toggle_widget_mode(_is_mini: bool) -> Result<(), String> {
     Err("PilPod requires Windows".into())
+}
+
+#[tauri::command]
+pub fn get_browsers() -> Vec<DetectedBrowser> {
+    Vec::new()
 }

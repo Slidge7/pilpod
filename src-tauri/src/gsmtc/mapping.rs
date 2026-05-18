@@ -10,8 +10,10 @@ use windows::{
     },
 };
 
+use std::collections::HashMap;
+
 use super::dto::{
-    ControlsDto, MediaSessionDto, TimelineDto, GsmtcSnapshot, SNAPSHOT_VERSION,
+    ControlsDto, GsmtcSnapshot, MediaSessionDto, TimelineDto, SNAPSHOT_VERSION,
 };
 use super::thumbnail::read_thumbnail_b64;
 
@@ -33,10 +35,13 @@ fn aumid_is_chromium_browser_media_source(aumid: &str) -> bool {
     CHROMIUM_FAMILY_AUMID_MARKERS.iter().any(|m| a.contains(m))
 }
 
-/// Drops Chromium-family system sessions from `sessions` when the extension supplies tab data,
-/// so the same media is not listed under both Browsers and Windows.
-pub fn apply_extension_gsmtc_dedup(mut snap: GsmtcSnapshot) -> GsmtcSnapshot {
-    if snap.browser_tabs.is_empty() {
+/// Drops Chromium-family system sessions from `sessions` when the extension is active,
+/// so the same media is not listed under both Browsers and Windows Media.
+pub fn apply_extension_gsmtc_dedup(
+    mut snap: GsmtcSnapshot,
+    extension_active: bool,
+) -> GsmtcSnapshot {
+    if !extension_active {
         return snap;
     }
     snap.sessions
@@ -216,7 +221,6 @@ pub fn build_snapshot(
     GsmtcSnapshot {
         version: SNAPSHOT_VERSION,
         sessions,
-        browser_tabs: Vec::new(),
-        browser_audio: Default::default(),
+        browser_audio: HashMap::new(),
     }
 }

@@ -11,9 +11,9 @@ use windows::Media::Control::{
     SessionsChangedEventArgs,
 };
 
-use super::mapping::{apply_extension_gsmtc_dedup, build_snapshot};
 use super::audio_attach::enrich_snapshot_with_audio;
-use crate::browser_tabs::{flatten_tabs, BrowserTabsMap};
+use super::mapping::{apply_extension_gsmtc_dedup, build_snapshot};
+use crate::browser_tabs::{has_active_extension, BrowserSlotsMap};
 
 const EVT: &str = "gsmtc://update";
 
@@ -32,21 +32,16 @@ struct GsmtcInner {
 pub struct GsmtcState {
     pub manager: GlobalSystemMediaTransportControlsSessionManager,
     inner: Mutex<GsmtcInner>,
-    /// Per-browser tab data keyed by browserId. Use `browser_tabs::flatten_tabs` to read.
-    pub browser_tabs: BrowserTabsMap,
-    /// Set by every WinRT callback; consumed by the single debounce task.
+    /// Per-browser tab data keyed by `browserId` UUID.
+    /// Used to decide whether to suppress duplicate Chromium GSMTC sessions.
+    pub browser_tabs: BrowserSlotsMap,
     emit_dirty: AtomicBool,
-    /// True while a debounce task is sleeping; guards against spawning duplicates.
     emit_scheduled: AtomicBool,
 }
 
 pub(crate) fn emit_fast_to_ui(app: &AppHandle, state: &Arc<GsmtcState>) {
-    // Mark that fresh data is waiting. Any concurrent WinRT callbacks that
-    // arrive while the debounce task is already sleeping will just flip the
-    // flag and return — no extra WASAPI calls, no thundering herd.
     state.emit_dirty.store(true, Ordering::Relaxed);
 
-    // Only one debounce task may be in flight at a time.
     if state.emit_scheduled.swap(true, Ordering::AcqRel) {
         return;
     }
@@ -56,22 +51,23 @@ pub(crate) fn emit_fast_to_ui(app: &AppHandle, state: &Arc<GsmtcState>) {
     std::thread::Builder::new()
         .name("gsmtc-emit".into())
         .spawn(move || {
-            // Trailing-edge: wait for the burst to settle before hitting WASAPI.
             std::thread::sleep(std::time::Duration::from_millis(80));
             state.emit_dirty.store(false, Ordering::Relaxed);
 
             let mut snap = build_snapshot(&state.manager, false);
-            if let Ok(map) = state.browser_tabs.lock() {
-                snap.browser_tabs = flatten_tabs(&map);
-            }
-            enrich_snapshot_with_audio(&mut snap);
-            snap = apply_extension_gsmtc_dedup(snap);
+            let extension_active = if let Ok(slots) = state.browser_tabs.lock() {
+                let active = has_active_extension(&slots);
+                enrich_snapshot_with_audio(&mut snap, &*slots);
+                active
+            } else {
+                false
+            };
+            snap = apply_extension_gsmtc_dedup(snap, extension_active);
+
             if let Err(e) = app.emit(EVT, snap) {
                 eprintln!("[gsmtc] emit failed: {e}");
             }
 
-            // Release the guard only after all work is done so a new burst
-            // that arrives during the WASAPI call schedules its own task.
             state.emit_scheduled.store(false, Ordering::Release);
         })
         .ok();
@@ -88,7 +84,7 @@ fn clear_session_hooks(hooks: Vec<SessionHooks>) {
 impl GsmtcState {
     pub fn create(
         app: AppHandle,
-        browser_tabs: BrowserTabsMap,
+        browser_tabs: BrowserSlotsMap,
     ) -> windows::core::Result<Arc<Self>> {
         eprintln!("[gsmtc] requesting manager...");
         let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()?.get()?;
@@ -149,6 +145,7 @@ impl GsmtcState {
             let session = sessions
                 .GetAt(i)
                 .map_err(|e| e.message().to_string())?;
+
             let me = Arc::clone(self);
             let app_p = app.clone();
             let t_play = session
@@ -201,19 +198,18 @@ impl GsmtcState {
 
     pub fn snapshot(&self) -> Result<super::dto::GsmtcSnapshot, String> {
         let mut snap = build_snapshot(&self.manager, true);
-        snap.browser_tabs = self
-            .browser_tabs
-            .lock()
-            .map(|map| flatten_tabs(&map))
-            .unwrap_or_default();
-        enrich_snapshot_with_audio(&mut snap);
-        snap = apply_extension_gsmtc_dedup(snap);
+        let extension_active = if let Ok(slots) = self.browser_tabs.lock() {
+            let active = has_active_extension(&slots);
+            enrich_snapshot_with_audio(&mut snap, &*slots);
+            active
+        } else {
+            false
+        };
+        snap = apply_extension_gsmtc_dedup(snap, extension_active);
         Ok(snap)
     }
 
     /// Find a session by its stable AUMID rather than its volatile list index.
-    /// If multiple sessions share the same AUMID the first match is returned,
-    /// which is the correct behaviour for the common single-instance case.
     pub fn session_by_aumid(
         &self,
         aumid: &str,

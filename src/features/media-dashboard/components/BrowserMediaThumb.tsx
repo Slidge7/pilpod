@@ -1,12 +1,12 @@
 import "./BrowserMediaThumb.css";
 import { useEffect, useState } from "react";
-import type { BrowserTabMediaDto } from "../../../types/media";
+import type { BrowserTab } from "../../../types/media";
 import { faviconFromUrl } from "../lib/browserMedia";
 
-type Props = { tab: BrowserTabMediaDto };
+type Props = { tab: BrowserTab };
 
 export function BrowserMediaThumb({ tab }: Props) {
-  const art = tab.artworkUrl?.trim() ?? "";
+  const art = tab.media?.artworkUrl?.trim() ?? "";
   const fav = faviconFromUrl(tab.url);
   const letter = (tab.title?.trim() || "?").slice(0, 1).toUpperCase();
 

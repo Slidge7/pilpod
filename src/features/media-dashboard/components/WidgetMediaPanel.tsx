@@ -1,7 +1,8 @@
 import "./WidgetMediaPanel.css";
 import type {
   AudioSessionInfoDto,
-  BrowserTabMediaDto,
+  BrowserTab,
+  DetectedBrowser,
   MediaSessionDto,
 } from "../../../types/media";
 import type { MediaMainTab } from "../model";
@@ -9,18 +10,19 @@ import { BrowserSessionsPanel } from "./BrowserSessionsPanel";
 import { IconWidgetClose } from "./icons";
 import { WindowsSessionsPanel } from "./WindowsSessionsPanel";
 
-type BrowserProfileGroups = [string, BrowserTabMediaDto[]][];
-
 type Props = {
   mainTab: MediaMainTab;
   onMainTabChange: (t: MediaMainTab) => void;
   error: string | null;
   pendingKeys: Set<string>;
-  browserProfileGroups: BrowserProfileGroups;
+  browsers: DetectedBrowser[];
   browserAudio: Readonly<Record<string, AudioSessionInfoDto>>;
   sessions: MediaSessionDto[];
-  onPlayPauseBrowser: (t: BrowserTabMediaDto) => void;
-  onFocusBrowserTab: (t: BrowserTabMediaDto) => void;
+  onPlayPauseBrowser: (tab: BrowserTab, browserId: string) => void;
+  onFocusBrowserTab: (tab: BrowserTab, browserId: string, displayName: string) => void | Promise<void>;
+  onReloadBrowserTab: (tab: BrowserTab, browserId: string) => void | Promise<void>;
+  onCloseBrowserTab: (tab: BrowserTab, browserId: string) => void | Promise<void>;
+  onReactivateBrowserTab: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onToggleWinSession: (s: MediaSessionDto) => void;
   onMixerVolume: (instanceId: string, volume: number) => void;
   onOpenFullWindow: () => void;
@@ -32,11 +34,14 @@ export function WidgetMediaPanel({
   onMainTabChange,
   error,
   pendingKeys,
-  browserProfileGroups,
+  browsers,
   browserAudio,
   sessions,
   onPlayPauseBrowser,
   onFocusBrowserTab,
+  onReloadBrowserTab,
+  onCloseBrowserTab,
+  onReactivateBrowserTab,
   onToggleWinSession,
   onMixerVolume,
   onOpenFullWindow,
@@ -97,11 +102,14 @@ export function WidgetMediaPanel({
 
           {mainTab === "browser" ? (
             <BrowserSessionsPanel
-              groups={browserProfileGroups}
+              browsers={browsers}
               pendingKeys={pendingKeys}
               browserAudio={browserAudio}
-              onPlayPauseBrowser={onPlayPauseBrowser}
-              onFocusBrowserTab={onFocusBrowserTab}
+              onPlayPause={onPlayPauseBrowser}
+              onFocusTab={onFocusBrowserTab}
+              onReload={onReloadBrowserTab}
+              onClose={onCloseBrowserTab}
+              onReactivate={onReactivateBrowserTab}
               onMixerVolume={(id, v) => void onMixerVolume(id, v)}
             />
           ) : (

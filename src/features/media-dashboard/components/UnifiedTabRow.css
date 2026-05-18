@@ -1,0 +1,272 @@
+.pilpod-unified-tab-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  transition: background-color 0.15s ease;
+  background: transparent;
+}
+
+.pilpod-unified-tab-row:hover:not(.pilpod-unified-tab-row--playing) {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.pilpod-unified-tab-row--playing {
+  background: var(--pilpod-emerald-row);
+}
+
+.pilpod-unified-tab-row--inactive:not(.pilpod-unified-tab-row--playing) {
+  opacity: 0.72;
+}
+
+.pilpod-unified-tab-row--hidden-page:not(.pilpod-unified-tab-row--playing) {
+  opacity: 0.85;
+}
+
+/* ── Thumbnail / favicon wrap ─────────────────────────────────────────────── */
+
+.pilpod-unified-tab-row__thumb-wrap {
+  position: relative;
+  height: 2rem;
+  width: 2rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 0.125rem;
+  background: var(--pilpod-bg-thumb);
+  outline: 1px solid var(--pilpod-border-muted);
+}
+
+html.dark .pilpod-unified-tab-row__thumb-wrap {
+  outline-color: var(--pilpod-border-strong);
+}
+
+.pilpod-unified-tab-row__fav-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.pilpod-unified-tab-row__fav {
+  object-fit: contain;
+  border-radius: 1px;
+}
+
+.pilpod-unified-tab-row__fav-fallback {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pilpod-border-strong);
+}
+
+/* ── Open-tab hover button ────────────────────────────────────────────────── */
+
+.pilpod-unified-tab-row__open-tab {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: inline-flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.125rem;
+  border: none;
+  background: var(--pilpod-bg-overlay-open);
+  color: var(--pilpod-text-muted);
+  opacity: 0;
+  outline: 1px solid var(--pilpod-border-strong);
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.pilpod-unified-tab-row__open-tab:hover {
+  background: var(--pilpod-border-muted);
+  color: var(--pilpod-text);
+  opacity: 1;
+}
+
+html.dark .pilpod-unified-tab-row__open-tab {
+  background: var(--pilpod-bg-overlay-open);
+  color: var(--pilpod-text-muted);
+}
+
+html.dark .pilpod-unified-tab-row__open-tab:hover {
+  background: var(--pilpod-bg-muted);
+  color: var(--pilpod-text);
+}
+
+.pilpod-unified-tab-row__open-tab:focus-visible {
+  opacity: 1;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--pilpod-emerald-focus-ring);
+}
+
+.pilpod-unified-tab-row__thumb-wrap:hover .pilpod-unified-tab-row__open-tab,
+.pilpod-unified-tab-row__open-tab:hover {
+  opacity: 1;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .pilpod-unified-tab-row__open-tab {
+    opacity: 1;
+  }
+}
+
+/* ── Body ─────────────────────────────────────────────────────────────────── */
+
+.pilpod-unified-tab-row__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.pilpod-unified-tab-row__title-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pilpod-unified-tab-row__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  line-height: 1;
+  font-size: 12px;
+  color: var(--pilpod-text);
+}
+
+html.dark .pilpod-unified-tab-row__title {
+  color: #fafafa;
+}
+
+.pilpod-unified-tab-row__audible,
+.pilpod-unified-tab-row__state-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.pilpod-unified-tab-row__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-top: 1px;
+  font-size: 10px;
+  line-height: 1.375;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-unified-tab-row__meta-sep {
+  margin-left: 0.25rem;
+  margin-right: 0.25rem;
+  color: var(--pilpod-text-subtle);
+}
+
+html.dark .pilpod-unified-tab-row__meta-sep {
+  color: var(--pilpod-border-strong);
+}
+
+.pilpod-unified-tab-row__idle-hint {
+  font-style: italic;
+  color: var(--pilpod-text-subtle);
+}
+
+html.dark .pilpod-unified-tab-row__idle-hint {
+  color: var(--pilpod-border-strong);
+}
+
+.pilpod-unified-tab-row__url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-top: 1px;
+  font-size: 10px;
+  line-height: 1.375;
+  color: var(--pilpod-text-muted);
+}
+
+/* ── Actions ──────────────────────────────────────────────────────────────── */
+
+.pilpod-unified-tab-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.pilpod-unified-tab-row__btn {
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: 0.125rem;
+  border: 1px solid var(--pilpod-border-strong);
+  background: var(--pilpod-bg-muted);
+  padding: 0.125rem 0.35rem;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pilpod-text);
+}
+
+.pilpod-unified-tab-row__btn:hover:not(:disabled) {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.pilpod-unified-tab-row__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.pilpod-unified-tab-row__btn--danger {
+  border-color: var(--pilpod-accent-danger-border, #f87171);
+  color: var(--pilpod-accent-danger, #ef4444);
+}
+
+.pilpod-unified-tab-row__btn--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--pilpod-accent-danger, #ef4444) 10%, transparent);
+}
+
+/* Play/pause button */
+.pilpod-unified-tab-row__play {
+  display: inline-flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  flex-shrink: 0;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.125rem;
+  border: 1px solid var(--pilpod-border-strong);
+  background: var(--pilpod-bg-tab-active);
+  color: var(--pilpod-text);
+}
+
+.pilpod-unified-tab-row__play:hover:not(:disabled) {
+  background: var(--pilpod-bg-muted);
+}
+
+html.dark .pilpod-unified-tab-row__play:not(.pilpod-unified-tab-row__play--playing) {
+  border-color: var(--pilpod-border-strong);
+  background: var(--pilpod-bg-thumb);
+  color: var(--pilpod-text-secondary);
+}
+
+.pilpod-unified-tab-row__play--playing {
+  border-color: var(--pilpod-emerald-border);
+  background: var(--pilpod-emerald-bg);
+  color: #fff;
+}
+
+.pilpod-unified-tab-row__play--playing:hover:not(:disabled) {
+  border-color: var(--pilpod-emerald-bg-hover);
+  background: var(--pilpod-emerald-bg-hover);
+}
+
+.pilpod-unified-tab-row__play:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}

@@ -13,4 +13,4 @@ mod http;
 pub use http::spawn;
 
 pub const BROWSER_BRIDGE_PORT: u16 = 17_399;
-pub const BROWSER_MEDIA_PATH: &str = "/browser-media";
+pub const BROWSER_MEDIA_PATH: &str = "/browser-tabs";

@@ -68,3 +68,94 @@ html.dark .pilpod-browser-profile__label {
 html.dark .pilpod-browser-profile__list > li + li {
   border-top-color: var(--pilpod-bg-muted);
 }
+
+.pilpod-browser-profile__other {
+  border-top: 1px solid var(--pilpod-border-strong);
+}
+
+.pilpod-browser-profile__other-summary {
+  cursor: pointer;
+  display: flex;
+  min-height: 24px;
+  align-items: center;
+  gap: 0.35rem;
+  list-style: none;
+  padding: 0.2rem 0.5rem;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pilpod-text-muted);
+  user-select: none;
+}
+
+.pilpod-browser-profile__other-summary::-webkit-details-marker {
+  display: none;
+}
+
+.pilpod-browser-profile__other-summary:hover {
+  color: var(--pilpod-text);
+}
+
+.pilpod-browser-profile__other-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.125rem;
+  border-radius: 999px;
+  background: var(--pilpod-bg-muted);
+  padding: 0 0.35rem;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.pilpod-browser-profile__other-list {
+  margin: 0;
+  padding: 0;
+  padding-bottom: 0.25rem;
+  list-style: none;
+}
+
+.pilpod-browser-profile__other-list > li + li {
+  border-top: 1px solid var(--pilpod-border-muted);
+}
+
+html.dark .pilpod-browser-profile__other-list > li + li {
+  border-top-color: var(--pilpod-bg-muted);
+}
+
+.pilpod-browser-profile__label-offline {
+  opacity: 0.55;
+  font-weight: 400;
+}
+
+.pilpod-browser-profile__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.4rem;
+  border-radius: 2px;
+  padding: 1px 4px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pilpod-browser-profile__badge--warn {
+  background: color-mix(in srgb, var(--pilpod-accent-warn, #f59e0b) 18%, transparent);
+  color: var(--pilpod-accent-warn, #f59e0b);
+}
+
+.pilpod-browser-profile__tab-count {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--pilpod-text-muted);
+  margin-right: auto;
+  margin-left: 0.4rem;
+}
+
+.pilpod-browser-panel__empty--inline {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+}

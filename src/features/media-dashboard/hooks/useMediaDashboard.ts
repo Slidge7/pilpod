@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -11,7 +10,8 @@ import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type {
-  BrowserTabMediaDto,
+  AudioSessionInfoDto,
+  BrowserTab,
   GsmtcSnapshot,
   MediaSessionDto,
 } from "../../../types/media";
@@ -27,11 +27,13 @@ import {
   WIDGET_EXPANDED_WIDTH_LOGICAL,
   WIDGET_TRANSITION_MS,
 } from "../constants";
-import { browserRowKey, groupBrowserTabsByProfile } from "../lib/browserMedia";
+import { tabRowKey } from "../lib/browserMedia";
 import { winRowKey } from "../lib/windowsMedia";
 import type { MediaMainTab } from "../model";
+import { useBrowsers } from "./useBrowsers";
 
 export function useMediaDashboard() {
+  const { browsers, refresh: refreshBrowsers } = useBrowsers();
   const [snapshot, setSnapshot] = useState<GsmtcSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mainTab, setMainTab] = useState<MediaMainTab>("browser");
@@ -104,6 +106,7 @@ export function useMediaDashboard() {
       setError(null);
       const snap = await invoke<GsmtcSnapshot>("gsmtc_refresh");
       setSnapshot(snap);
+      void refreshBrowsers();
     } catch (e) {
       if (retries > 0) {
         await new Promise((r) => setTimeout(r, 120));
@@ -111,7 +114,7 @@ export function useMediaDashboard() {
       }
       setError(String(e));
     }
-  }, []);
+  }, [refreshBrowsers]);
 
   useEffect(() => {
     if (isWidget) return;
@@ -157,31 +160,7 @@ export function useMediaDashboard() {
     };
   }, [refresh]);
 
-  const toggleBrowser = useCallback(
-    async (t: BrowserTabMediaDto) => {
-      const key = browserRowKey(t);
-      markPending(key);
-      setError(null);
-      try {
-        await invoke("browser_media_control", {
-          browserId: t.browserId,
-          tabId: t.tabId,
-          action: "playPause",
-        });
-      } catch (e) {
-        setError(String(e));
-      } finally {
-        clearPending(key);
-      }
-    },
-    [clearPending, markPending],
-  );
-
-  const focusBrowserTab = useCallback(async (t: BrowserTabMediaDto) => {
-    setError(null);
-    // If PilPod stays above other windows, the browser cannot appear in front —
-    // Windows may only flash the taskbar. Lower PilPod first; user can re-pin
-    // from the header (or widget close) when they want the dashboard on top again.
+  const lowerPilPodForExternalFocus = useCallback(async () => {
     const win = getCurrentWindow();
     try {
       await win.setAlwaysOnTop(false);
@@ -194,21 +173,116 @@ export function useMediaDashboard() {
     } catch {
       /* ignore */
     }
-    // Let the window manager apply z-order before the browser asks for focus
-    // (extension runs shortly after the next heartbeat).
     await new Promise((r) => setTimeout(r, 50));
-    try {
-      await invoke("browser_media_control", {
-        browserId: t.browserId,
-        tabId: t.tabId,
-        action: "focusTab",
-        tabTitleForFocus: t.title?.trim() ?? "",
-        browserWindowHint: t.browserName?.trim() ?? "",
-      });
-    } catch (e) {
-      setError(String(e));
-    }
   }, []);
+
+  /** Toggle play/pause on a tab with active media. */
+  const toggleBrowserTab = useCallback(
+    async (t: BrowserTab, browserId: string) => {
+      const key = tabRowKey(t);
+      markPending(key);
+      setError(null);
+      try {
+        await invoke("browser_media_control", {
+          browserId,
+          tabId: t.tabId,
+          action: "playPause",
+        });
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        clearPending(key);
+      }
+    },
+    [clearPending, markPending],
+  );
+
+  /** Focus a browser tab (brings its window to the foreground). */
+  const focusBrowserTab = useCallback(
+    async (t: BrowserTab, browserId: string, browserDisplayName: string) => {
+      setError(null);
+      await lowerPilPodForExternalFocus();
+      const key = tabRowKey(t);
+      markPending(key);
+      try {
+        await invoke("browser_media_control", {
+          browserId,
+          tabId: t.tabId,
+          action: "focusTab",
+          tabTitleForFocus: t.title?.trim() ?? "",
+          browserWindowHint: browserDisplayName,
+        });
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        clearPending(key);
+      }
+    },
+    [clearPending, lowerPilPodForExternalFocus, markPending],
+  );
+
+  /** Reload a tab (clears sleeping/crashed state). */
+  const reloadBrowserTab = useCallback(
+    async (t: BrowserTab, browserId: string) => {
+      const key = tabRowKey(t);
+      markPending(key);
+      setError(null);
+      try {
+        await invoke("browser_media_control", {
+          browserId,
+          tabId: t.tabId,
+          action: "reloadTab",
+        });
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        clearPending(key);
+      }
+    },
+    [clearPending, markPending],
+  );
+
+  /** Close a browser tab. */
+  const closeBrowserTab = useCallback(
+    async (t: BrowserTab, browserId: string) => {
+      const key = tabRowKey(t);
+      markPending(key);
+      setError(null);
+      try {
+        await invoke("browser_media_control", {
+          browserId,
+          tabId: t.tabId,
+          action: "closeTab",
+        });
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        clearPending(key);
+      }
+    },
+    [clearPending, markPending],
+  );
+
+  /** Wake a sleeping or crashed tab. */
+  const reactivateBrowserTab = useCallback(
+    async (t: BrowserTab, browserId: string) => {
+      const key = tabRowKey(t);
+      markPending(key);
+      setError(null);
+      try {
+        await invoke("browser_media_control", {
+          browserId,
+          tabId: t.tabId,
+          action: "reactivateTab",
+        });
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        clearPending(key);
+      }
+    },
+    [clearPending, markPending],
+  );
 
   const toggleWidgetEnabled = useCallback(() => {
     setWidgetEnabled((prev) => {
@@ -520,12 +594,8 @@ export function useMediaDashboard() {
   }, []);
 
   const sessions = snapshot?.sessions ?? [];
-  const browserTabs = snapshot?.browserTabs ?? [];
-  const browserAudio = snapshot?.browserAudio ?? {};
-  const browserProfileGroups = useMemo(
-    () => groupBrowserTabsByProfile(browserTabs),
-    [browserTabs],
-  );
+  const browserAudio: Record<string, AudioSessionInfoDto> =
+    snapshot?.browserAudio ?? {};
 
   return {
     error,
@@ -542,8 +612,12 @@ export function useMediaDashboard() {
     dimmingToWidget,
     fullEnterActive,
     fullEnterVisible,
-    toggleBrowser,
+    // Browser actions (unified — work on any tab via BrowserTab + browserId)
+    toggleBrowserTab,
     focusBrowserTab,
+    reactivateBrowserTab,
+    reloadBrowserTab,
+    closeBrowserTab,
     minimizeApp,
     expandWidgetPanel,
     restoreFromWidget,
@@ -558,8 +632,7 @@ export function useMediaDashboard() {
     toggleWinSession,
     setMixerVolume,
     sessions,
-    browserTabs,
+    browsers,
     browserAudio,
-    browserProfileGroups,
   };
 }

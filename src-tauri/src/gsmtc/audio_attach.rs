@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::audio_mixer::{enumerate_sessions, MixerSessionRow};
+use crate::browser_tabs::BrowserSlot;
 
-use super::dto::{AudioSessionInfoDto, BrowserTabMediaDto, GsmtcSnapshot, MediaSessionDto};
+use super::dto::{AudioSessionInfoDto, GsmtcSnapshot, MediaSessionDto};
 
 fn normalize_path(p: &str) -> String {
     let s = p.trim().replace('/', "\\").to_lowercase();
@@ -405,37 +406,34 @@ fn chromium_sessions_for_profile<'a>(
     }
 }
 
-fn match_browser_profiles(
-    tabs: &[BrowserTabMediaDto],
+/// Match browser profiles to WASAPI sessions using the new unified `BrowserSlot` map.
+/// Groups tabs by `browser_id` (slot key), uses media tab titles as matching hints.
+fn match_browser_profiles_from_slots(
+    slots: &HashMap<String, BrowserSlot>,
     mixer: &[MixerSessionRow],
 ) -> HashMap<String, AudioSessionInfoDto> {
-    let mut groups: HashMap<String, Vec<&BrowserTabMediaDto>> = HashMap::new();
-    for t in tabs {
-        groups.entry(t.browser_id.clone()).or_default().push(t);
-    }
     let mut out = HashMap::new();
-    for (browser_id, group) in groups {
-        let titles: Vec<String> = group
+
+    for (browser_id, slot) in slots {
+        // Collect titles from tabs that currently have active media.
+        let titles: Vec<String> = slot
+            .tabs
             .iter()
-            .filter_map(|t| {
-                let n = normalize_title(&t.title);
-                if n.is_empty() {
-                    None
-                } else {
-                    Some(n)
-                }
+            .filter_map(|t| t.media.as_ref())
+            .filter_map(|m| {
+                let n = normalize_title(&m.title);
+                if n.is_empty() { None } else { Some(n) }
             })
             .collect();
 
-        let hint = group.first().map(|t| t.browser_name.as_str()).unwrap_or("");
-        let chromium = chromium_sessions_for_profile(mixer, hint);
-
+        let chromium = chromium_sessions_for_profile(mixer, &slot.browser_name);
         if chromium.is_empty() {
             continue;
         }
 
         let mut chosen: Option<&MixerSessionRow> = None;
 
+        // Try exact title match first.
         let mut exact: Vec<&MixerSessionRow> = Vec::new();
         for m in &chromium {
             let d = normalize_title(&m.display_name);
@@ -446,9 +444,11 @@ fn match_browser_profiles(
                 exact.push(*m);
             }
         }
+
         if exact.len() == 1 {
             chosen = Some(exact[0]);
         } else if exact.is_empty() {
+            // Substring match fallback.
             let mut sub: Vec<&MixerSessionRow> = Vec::new();
             for m in &chromium {
                 let d = normalize_title(&m.display_name);
@@ -470,13 +470,17 @@ fn match_browser_profiles(
         }
 
         if let Some(row) = chosen {
-            out.insert(browser_id, row_to_dto(row));
+            out.insert(browser_id.clone(), row_to_dto(row));
         }
     }
     out
 }
 
-pub fn enrich_snapshot_with_audio(snap: &mut GsmtcSnapshot) {
+/// Enrich a `GsmtcSnapshot` with per-session and per-browser WASAPI audio info.
+pub fn enrich_snapshot_with_audio(
+    snap: &mut GsmtcSnapshot,
+    slots: &HashMap<String, BrowserSlot>,
+) {
     let mixer = match enumerate_sessions() {
         Ok(m) => m,
         Err(e) => {
@@ -487,5 +491,5 @@ pub fn enrich_snapshot_with_audio(snap: &mut GsmtcSnapshot) {
     for session in &mut snap.sessions {
         session.audio = match_gsmtc_audio(session, &mixer);
     }
-    snap.browser_audio = match_browser_profiles(&snap.browser_tabs, &mixer);
+    snap.browser_audio = match_browser_profiles_from_slots(slots, &mixer);
 }
