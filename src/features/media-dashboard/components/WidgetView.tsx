@@ -1,6 +1,6 @@
 import "./WidgetView.css";
 import type { PointerEventHandler } from "react";
-import { IconMusicGlyph, IconWidgetClose } from "./icons";
+import { IconMusicGlyph, IconWidgetClose } from "../../../shared/ui/icons";
 
 type Props = {
   onExpand: () => void;

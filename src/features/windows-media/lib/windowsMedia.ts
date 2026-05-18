@@ -6,6 +6,7 @@ export function thumbSrc(s: MediaSessionDto): string | null {
   return `data:${mime};base64,${s.thumbnailBase64}`;
 }
 
+/** Stable pending key for a Windows media session row. */
 export function winRowKey(s: MediaSessionDto): string {
   return `w:${s.sourceAppUserModelId}`;
 }

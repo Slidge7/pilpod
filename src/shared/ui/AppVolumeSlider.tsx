@@ -1,6 +1,6 @@
 import "./AppVolumeSlider.css";
 import { useEffect, useRef, useState } from "react";
-import type { AudioSessionInfoDto } from "../../../types/media";
+import type { AudioSessionInfoDto } from "../../types/media";
 
 type Props = {
   ariaLabel: string;

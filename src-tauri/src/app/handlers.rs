@@ -3,16 +3,19 @@ use tauri::Wry;
 #[cfg(windows)]
 pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> {
     builder.invoke_handler(tauri::generate_handler![
+        // GSMTC / Windows media commands
         crate::gsmtc::commands::gsmtc_refresh,
         crate::gsmtc::commands::gsmtc_toggle_play_pause,
         crate::gsmtc::commands::gsmtc_skip_next,
         crate::gsmtc::commands::gsmtc_skip_previous,
-        crate::browser_bridge::command::browser_media_control,
         crate::gsmtc::commands::mixer_set_volume,
+        // Browser / extension commands
+        crate::browser_bridge::command::browser_media_control,
+        crate::browser_commands::get_browsers,
+        crate::browser_commands::refresh_browser_connection,
+        crate::browser_commands::request_browser_sync,
+        // Window / widget commands
         crate::window_widget::toggle_widget_mode,
-        crate::gsmtc::commands::get_browsers,
-        crate::gsmtc::commands::refresh_browser_connection,
-        crate::gsmtc::commands::request_browser_sync,
     ])
 }
 

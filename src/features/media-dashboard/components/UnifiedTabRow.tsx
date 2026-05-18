@@ -15,7 +15,7 @@ import {
   IconPause,
   IconPlay,
   Spinner,
-} from "./icons";
+} from "../../../shared/ui/icons";
 
 type Props = {
   tab: BrowserTab;

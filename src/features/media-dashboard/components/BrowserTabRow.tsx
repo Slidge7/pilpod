@@ -6,7 +6,7 @@ import "./BrowserTabRow.css";
 import type { BrowserTab } from "../../../types/media";
 import { isTabPlaying, mediaArtist, mediaTimeLabel, tabStateBadge, USER_IDLE_WARN_MS } from "../lib/browserMedia";
 import { BrowserMediaThumb } from "./BrowserMediaThumb";
-import { IconOpenInTab, IconPause, IconPlay, Spinner } from "./icons";
+import { IconOpenInTab, IconPause, IconPlay, Spinner } from "../../../shared/ui/icons";
 
 type Props = {
   tab: BrowserTab;

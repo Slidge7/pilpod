@@ -98,7 +98,7 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                          PilPod requires Windows 10 build 1809 (October 2018 Update) or later.",
                         err.message()
                     );
-                    let _ = handle.emit("gsmtc://init-error", GsmtcInitError { message });
+                    let _ = handle.emit(crate::gsmtc::EVT_INIT_ERROR, GsmtcInitError { message });
                 }
             }
         })

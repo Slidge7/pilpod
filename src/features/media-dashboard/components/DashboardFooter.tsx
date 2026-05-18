@@ -5,7 +5,7 @@ import {
   IconRefresh,
   IconSun,
   IconWidgetMinimize,
-} from "./icons";
+} from "../../../shared/ui/icons";
 
 type Props = {
   appearance: AppearanceMode;

@@ -276,6 +276,24 @@ pub fn merge_detected_and_slots(
     result
 }
 
+/// Returns the set of browser stable IDs (e.g. `"chrome"`, `"brave"`) for every
+/// browser whose companion extension sent a POST within the last 3 seconds.
+///
+/// This is intentionally narrower than [`crate::browser_tabs::has_active_extension`],
+/// which returns a single bool for *any* browser.  The GSMTC dedup uses these IDs
+/// to suppress only the specific browsers that are represented by the extension,
+/// leaving browsers without the extension (e.g. Brave when only Chrome is connected)
+/// visible in the Windows section.
+pub fn active_extension_browser_ids(slots: &HashMap<String, BrowserSlot>) -> HashSet<String> {
+    let cutoff = Duration::from_secs(3);
+    let now = std::time::Instant::now();
+    slots
+        .values()
+        .filter(|slot| now.duration_since(slot.last_seen) < cutoff)
+        .map(|slot| browser_name_to_id(&slot.browser_name))
+        .collect()
+}
+
 // ── Emission ─────────────────────────────────────────────────────────────────
 
 /// Build and emit the merged browser list to the frontend on `"browsers://update"`.

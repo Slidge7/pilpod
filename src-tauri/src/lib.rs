@@ -3,6 +3,8 @@ mod browser_tabs;
 #[cfg(windows)]
 mod browser_bridge;
 #[cfg(windows)]
+mod browser_commands;
+#[cfg(windows)]
 mod browser_detector;
 #[cfg(windows)]
 mod browser_focus_win;

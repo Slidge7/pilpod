@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import "./BrowserSessionsPanel.css";
 import type { AudioSessionInfoDto, BrowserTab, DetectedBrowser } from "../../../types/media";
 import { tabRowKey, tabHasMedia } from "../lib/browserMedia";
-import { AppVolumeSlider } from "./AppVolumeSlider";
+import { AppVolumeSlider } from "../../../shared/ui/AppVolumeSlider";
 import { UnifiedTabRow } from "./UnifiedTabRow";
 
 /** Format an age in seconds as a compact human-readable string. */

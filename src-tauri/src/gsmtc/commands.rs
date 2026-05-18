@@ -1,26 +1,19 @@
+//! Tauri commands for the Windows GSMTC (Global System Media Transport Controls)
+//! and WASAPI mixer subsystem.
+//!
+//! All commands here operate exclusively on Windows media sessions and app volumes.
+//! Browser detection / tab commands live in `crate::browser_commands`.
+
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
-use std::time::{Duration, Instant};
 use tauri::{AppHandle, State};
 
 use crate::audio_mixer::set_session_volume_by_instance_id;
-use crate::browser_bridge::SyncRequestedFlag;
-use crate::browser_detector::{
-    browser_name_to_id, emit_browsers_to_ui, merge_detected_and_slots,
-    DetectedBrowsersState, ExtensionInstalledState,
-};
-use crate::browser_tabs::BrowserSlotsMap;
-use crate::gsmtc::dto::DetectedBrowser;
 
 use super::dto::GsmtcSnapshot;
 use super::state::{emit_fast_to_ui, GsmtcState};
 
-// All media-control commands identify sessions by their stable AUMID
-// (sourceAppUserModelId) rather than a volatile list index that can shift
-// whenever any media app opens or closes.
-
 // NOTE: All commands are `async fn` on purpose. In Tauri 2 a plain `fn`
-// command runs on the **main thread**, and the WinRT `.get()` calls below
+// command runs on the main thread, and the WinRT `.get()` calls below
 // (and thumbnail reads inside `snapshot()`) block. Blocking the STA UI
 // thread shows the window as "Not Responding". `async fn` dispatches the
 // command onto Tauri's async runtime instead.
@@ -33,6 +26,9 @@ where
     tauri::async_runtime::spawn_blocking(f)
 }
 
+/// Return the current GSMTC snapshot (full, including thumbnails).
+/// The frontend also listens to `"gsmtc://update"` for live pushes; this
+/// command provides the initial snapshot on mount.
 #[tauri::command]
 pub async fn gsmtc_refresh(state: State<'_, Arc<GsmtcState>>) -> Result<GsmtcSnapshot, String> {
     let state = Arc::clone(&state);
@@ -98,70 +94,8 @@ pub async fn gsmtc_skip_previous(
     .map_err(|e| format!("join error: {e}"))?
 }
 
-/// Return the current merged browser list (OS-detected + extension slots) synchronously.
-/// The frontend also listens to `"browsers://update"` for live updates; this command
-/// provides the initial snapshot on mount.
-#[tauri::command]
-pub fn get_browsers(
-    detected: State<'_, DetectedBrowsersState>,
-    slots: State<'_, BrowserSlotsMap>,
-    ext_store: State<'_, ExtensionInstalledState>,
-) -> Vec<DetectedBrowser> {
-    let detected_list = detected
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .clone();
-    let slots_map = slots.lock().unwrap_or_else(|e| e.into_inner());
-    let store = ext_store.lock().unwrap_or_else(|e| e.into_inner());
-    merge_detected_and_slots(&detected_list, &*slots_map, &*store)
-}
-
-/// Re-probe the extension connection for a single browser.
-///
-/// Marks the slot as stale (forces `extension_connected` to `false`) without
-/// removing it, so the **cached tab list is preserved**.  If the extension is
-/// running, it will POST within ~250 ms and restore `extension_connected`.
-///
-/// The persisted `extension_installed` flag is intentionally left unchanged.
-#[tauri::command]
-pub fn refresh_browser_connection(
-    browser_id: String,
-    detected: State<'_, DetectedBrowsersState>,
-    slots: State<'_, BrowserSlotsMap>,
-    ext_store: State<'_, ExtensionInstalledState>,
-    app: AppHandle,
-) {
-    if let Ok(mut map) = slots.lock() {
-        for slot in map.values_mut() {
-            if browser_name_to_id(&slot.browser_name) == browser_id {
-                // Push last_seen back 60 s so extension_connected flips to false.
-                // Cached tabs are kept so the UI does not go blank.
-                slot.last_seen = Instant::now() - Duration::from_secs(60);
-            }
-        }
-    }
-    emit_browsers_to_ui(&app, &detected, &slots, &ext_store);
-}
-
-/// Emit the current cached browser/tab list to the frontend immediately, and
-/// signal the bridge to request a fresh push from the extension on its next POST.
-///
-/// Called on PilPod window focus so the UI gets up-to-date tabs without waiting
-/// for the 2-second OS detector tick or the next 250 ms extension heartbeat.
-#[tauri::command]
-pub fn request_browser_sync(
-    detected: State<'_, DetectedBrowsersState>,
-    slots: State<'_, BrowserSlotsMap>,
-    ext_store: State<'_, ExtensionInstalledState>,
-    sync_flag: State<'_, SyncRequestedFlag>,
-    app: AppHandle,
-) {
-    // Tell the bridge: next POST response should carry syncNow=true.
-    sync_flag.store(true, Ordering::Relaxed);
-    // Immediately push the current cache to the frontend (no blank flash).
-    emit_browsers_to_ui(&app, &detected, &slots, &ext_store);
-}
-
+/// Set WASAPI volume for an app audio session linked to a GSMTC session.
+/// Triggers a live snapshot re-emit so the UI volume slider updates immediately.
 #[tauri::command]
 pub async fn mixer_set_volume(
     app: AppHandle,

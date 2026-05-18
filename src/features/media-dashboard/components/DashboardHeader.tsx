@@ -3,7 +3,7 @@ import {
   IconClose,
   IconMinimize,
   IconStayOnTop,
-} from "./icons";
+} from "../../../shared/ui/icons";
 
 type Props = {
   browserTabCount: number;

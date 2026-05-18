@@ -7,18 +7,10 @@ import {
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import type {
-  AudioSessionInfoDto,
-  BrowserTab,
-  GsmtcSnapshot,
-  MediaSessionDto,
-} from "../../../types/media";
+import type { BrowserTab } from "../../../types/media";
 import {
   ALWAYS_ON_TOP_STORAGE_KEY,
-  GSMTC_INIT_ERROR_EVENT,
-  GSMTC_UPDATE_EVENT,
   WIDGET_CHIP_LOGICAL_PX,
   WIDGET_DRAG_THRESHOLD_PX,
   WIDGET_ENABLED_STORAGE_KEY,
@@ -28,16 +20,17 @@ import {
   WIDGET_TRANSITION_MS,
 } from "../constants";
 import { tabRowKey } from "../lib/browserMedia";
-import { winRowKey } from "../lib/windowsMedia";
 import type { MediaMainTab } from "../model";
+import { useWindowsSessions } from "../../windows-media";
 import { useBrowsers } from "./useBrowsers";
 
 export function useMediaDashboard() {
   const { browsers, refresh: refreshBrowsers } = useBrowsers();
-  const [snapshot, setSnapshot] = useState<GsmtcSnapshot | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const windowsSessions = useWindowsSessions();
+
+  const [browserError, setBrowserError] = useState<string | null>(null);
   const [mainTab, setMainTab] = useState<MediaMainTab>("browser");
-  const [pendingKeys, setPendingKeys] = useState<Set<string>>(
+  const [browserPendingKeys, setBrowserPendingKeys] = useState<Set<string>>(
     () => new Set(),
   );
   const [alwaysOnTop, setAlwaysOnTop] = useState(() => {
@@ -65,107 +58,65 @@ export function useMediaDashboard() {
   const widgetBlurGraceUntilRef = useRef(0);
   const collapseWidgetPanelRef = useRef<() => Promise<void>>(async () => {});
 
-  // One timeout handle per pending key — auto-clears stale spinners if the
-  // backend fails silently and the finally block never fires.
-  const pendingTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
+  const browserPendingTimeouts = useRef<
+    Map<string, ReturnType<typeof setTimeout>>
+  >(new Map());
 
-  const clearPending = useCallback((key: string) => {
-    const id = pendingTimeouts.current.get(key);
+  const clearBrowserPending = useCallback((key: string) => {
+    const id = browserPendingTimeouts.current.get(key);
     if (id !== undefined) {
       clearTimeout(id);
-      pendingTimeouts.current.delete(key);
+      browserPendingTimeouts.current.delete(key);
     }
-    setPendingKeys((prev) => {
+    setBrowserPendingKeys((prev) => {
       const next = new Set(prev);
       next.delete(key);
       return next;
     });
   }, []);
 
-  const markPending = useCallback(
+  const markBrowserPending = useCallback(
     (key: string) => {
-      // Cancel any pre-existing timeout for this key before arming a new one.
-      const existing = pendingTimeouts.current.get(key);
+      const existing = browserPendingTimeouts.current.get(key);
       if (existing !== undefined) clearTimeout(existing);
-
       const id = setTimeout(() => {
-        pendingTimeouts.current.delete(key);
-        clearPending(key);
+        browserPendingTimeouts.current.delete(key);
+        clearBrowserPending(key);
       }, 8_000);
-      pendingTimeouts.current.set(key, id);
-
-      setPendingKeys((prev) => new Set(prev).add(key));
+      browserPendingTimeouts.current.set(key, id);
+      setBrowserPendingKeys((prev) => new Set(prev).add(key));
     },
-    [clearPending],
+    [clearBrowserPending],
   );
 
-  const refresh = useCallback(async (retries = 12) => {
-    try {
-      setError(null);
-      const snap = await invoke<GsmtcSnapshot>("gsmtc_refresh");
-      setSnapshot(snap);
-      void refreshBrowsers();
-    } catch (e) {
-      if (retries > 0) {
-        await new Promise((r) => setTimeout(r, 120));
-        return refresh(retries - 1);
-      }
-      setError(String(e));
-    }
-  }, [refreshBrowsers]);
+  /** Trigger a full refresh: GSMTC snapshot + browser list. */
+  const refresh = useCallback(async () => {
+    void windowsSessions.refresh();
+    void refreshBrowsers();
+  }, [windowsSessions.refresh, refreshBrowsers]);
 
   useEffect(() => {
     if (isWidget) return;
     void getCurrentWindow()
       .setAlwaysOnTop(alwaysOnTop)
-      .catch(() => {
-        /* e.g. Vite dev in a normal browser */
-      });
+      .catch(() => {});
   }, [alwaysOnTop, isWidget]);
 
   useEffect(() => {
     if (!isWidget) return;
-    void getCurrentWindow().setAlwaysOnTop(true).catch(() => {
-      /* e.g. Vite dev in a normal browser */
-    });
+    void getCurrentWindow().setAlwaysOnTop(true).catch(() => {});
   }, [isWidget]);
 
   useEffect(() => {
     isWidgetExpandedRef.current = isWidgetExpanded;
   }, [isWidgetExpanded]);
 
-  useEffect(() => {
-    let unlisten: UnlistenFn | undefined;
-    let unlistenInitError: UnlistenFn | undefined;
-
-    void listen<GsmtcSnapshot>(GSMTC_UPDATE_EVENT, (ev) => {
-      setSnapshot(ev.payload);
-      setError(null);
-    }).then((u) => {
-      unlisten = u;
-    });
-
-    void listen<{ message: string }>(GSMTC_INIT_ERROR_EVENT, (ev) => {
-      setError(ev.payload.message);
-    }).then((u) => {
-      unlistenInitError = u;
-    });
-
-    void refresh();
-    return () => {
-      void unlisten?.();
-      void unlistenInitError?.();
-    };
-  }, [refresh]);
-
   const lowerPilPodForExternalFocus = useCallback(async () => {
     const win = getCurrentWindow();
     try {
       await win.setAlwaysOnTop(false);
     } catch {
-      /* e.g. running in normal browser */
+      /* running in normal browser */
     }
     setAlwaysOnTop(false);
     try {
@@ -176,12 +127,11 @@ export function useMediaDashboard() {
     await new Promise((r) => setTimeout(r, 50));
   }, []);
 
-  /** Toggle play/pause on a tab with active media. */
   const toggleBrowserTab = useCallback(
     async (t: BrowserTab, browserId: string) => {
       const key = tabRowKey(t);
-      markPending(key);
-      setError(null);
+      markBrowserPending(key);
+      setBrowserError(null);
       try {
         await invoke("browser_media_control", {
           browserId,
@@ -189,21 +139,20 @@ export function useMediaDashboard() {
           action: "playPause",
         });
       } catch (e) {
-        setError(String(e));
+        setBrowserError(String(e));
       } finally {
-        clearPending(key);
+        clearBrowserPending(key);
       }
     },
-    [clearPending, markPending],
+    [clearBrowserPending, markBrowserPending],
   );
 
-  /** Focus a browser tab (brings its window to the foreground). */
   const focusBrowserTab = useCallback(
     async (t: BrowserTab, browserId: string, browserDisplayName: string) => {
-      setError(null);
+      setBrowserError(null);
       await lowerPilPodForExternalFocus();
       const key = tabRowKey(t);
-      markPending(key);
+      markBrowserPending(key);
       try {
         await invoke("browser_media_control", {
           browserId,
@@ -213,20 +162,19 @@ export function useMediaDashboard() {
           browserWindowHint: browserDisplayName,
         });
       } catch (e) {
-        setError(String(e));
+        setBrowserError(String(e));
       } finally {
-        clearPending(key);
+        clearBrowserPending(key);
       }
     },
-    [clearPending, lowerPilPodForExternalFocus, markPending],
+    [clearBrowserPending, lowerPilPodForExternalFocus, markBrowserPending],
   );
 
-  /** Reload a tab (clears sleeping/crashed state). */
   const reloadBrowserTab = useCallback(
     async (t: BrowserTab, browserId: string) => {
       const key = tabRowKey(t);
-      markPending(key);
-      setError(null);
+      markBrowserPending(key);
+      setBrowserError(null);
       try {
         await invoke("browser_media_control", {
           browserId,
@@ -234,20 +182,19 @@ export function useMediaDashboard() {
           action: "reloadTab",
         });
       } catch (e) {
-        setError(String(e));
+        setBrowserError(String(e));
       } finally {
-        clearPending(key);
+        clearBrowserPending(key);
       }
     },
-    [clearPending, markPending],
+    [clearBrowserPending, markBrowserPending],
   );
 
-  /** Close a browser tab. */
   const closeBrowserTab = useCallback(
     async (t: BrowserTab, browserId: string) => {
       const key = tabRowKey(t);
-      markPending(key);
-      setError(null);
+      markBrowserPending(key);
+      setBrowserError(null);
       try {
         await invoke("browser_media_control", {
           browserId,
@@ -255,20 +202,19 @@ export function useMediaDashboard() {
           action: "closeTab",
         });
       } catch (e) {
-        setError(String(e));
+        setBrowserError(String(e));
       } finally {
-        clearPending(key);
+        clearBrowserPending(key);
       }
     },
-    [clearPending, markPending],
+    [clearBrowserPending, markBrowserPending],
   );
 
-  /** Wake a sleeping or crashed tab. */
   const reactivateBrowserTab = useCallback(
     async (t: BrowserTab, browserId: string) => {
       const key = tabRowKey(t);
-      markPending(key);
-      setError(null);
+      markBrowserPending(key);
+      setBrowserError(null);
       try {
         await invoke("browser_media_control", {
           browserId,
@@ -276,12 +222,12 @@ export function useMediaDashboard() {
           action: "reactivateTab",
         });
       } catch (e) {
-        setError(String(e));
+        setBrowserError(String(e));
       } finally {
-        clearPending(key);
+        clearBrowserPending(key);
       }
     },
-    [clearPending, markPending],
+    [clearBrowserPending, markBrowserPending],
   );
 
   const toggleWidgetEnabled = useCallback(() => {
@@ -318,7 +264,7 @@ export function useMediaDashboard() {
         setIsWidgetExpanded(false);
         setIsWidget(true);
       } catch (e) {
-        setError(String(e));
+        setBrowserError(String(e));
       } finally {
         setDimmingToWidget(false);
         windowTransitionLock.current = false;
@@ -328,11 +274,7 @@ export function useMediaDashboard() {
 
   const minimizeApp = useCallback(() => {
     if (!widgetEnabled) {
-      void getCurrentWindow()
-        .minimize()
-        .catch(() => {
-          /* e.g. Vite dev in a normal browser */
-        });
+      void getCurrentWindow().minimize().catch(() => {});
       return;
     }
     void minimizeToWidgetMode();
@@ -354,7 +296,10 @@ export function useMediaDashboard() {
       const brY = ly + hL;
 
       await win.setSize(
-        new LogicalSize(WIDGET_EXPANDED_WIDTH_LOGICAL, WIDGET_EXPANDED_HEIGHT_LOGICAL),
+        new LogicalSize(
+          WIDGET_EXPANDED_WIDTH_LOGICAL,
+          WIDGET_EXPANDED_HEIGHT_LOGICAL,
+        ),
       );
       const os2 = await win.outerSize();
       const wL2 = os2.width / sf;
@@ -364,7 +309,7 @@ export function useMediaDashboard() {
       widgetBlurGraceUntilRef.current = Date.now() + WIDGET_EXPAND_BLUR_GRACE_MS;
       setIsWidgetExpanded(true);
     } catch (e) {
-      setError(String(e));
+      setBrowserError(String(e));
     } finally {
       widgetGeometryLock.current = false;
     }
@@ -385,7 +330,9 @@ export function useMediaDashboard() {
       const brX = lx + wL;
       const brY = ly + hL;
 
-      await win.setSize(new LogicalSize(WIDGET_CHIP_LOGICAL_PX, WIDGET_CHIP_LOGICAL_PX));
+      await win.setSize(
+        new LogicalSize(WIDGET_CHIP_LOGICAL_PX, WIDGET_CHIP_LOGICAL_PX),
+      );
       const os2 = await win.outerSize();
       const wL2 = os2.width / sf;
       const hL2 = os2.height / sf;
@@ -393,7 +340,7 @@ export function useMediaDashboard() {
       void win.setAlwaysOnTop(true).catch(() => {});
       setIsWidgetExpanded(false);
     } catch (e) {
-      setError(String(e));
+      setBrowserError(String(e));
     } finally {
       widgetGeometryLock.current = false;
     }
@@ -405,7 +352,7 @@ export function useMediaDashboard() {
 
   useEffect(() => {
     if (!isWidget) return;
-    let unlisten: UnlistenFn | undefined;
+    let unlisten: (() => void) | undefined;
     void getCurrentWindow()
       .onFocusChanged(({ payload: focused }) => {
         if (focused) return;
@@ -428,11 +375,7 @@ export function useMediaDashboard() {
     try {
       await invoke("toggle_widget_mode", { isMini: false });
       setIsWidget(false);
-      void getCurrentWindow()
-        .setAlwaysOnTop(alwaysOnTop)
-        .catch(() => {
-          /* browser dev */
-        });
+      void getCurrentWindow().setAlwaysOnTop(alwaysOnTop).catch(() => {});
       setFullEnterActive(true);
       setFullEnterVisible(false);
       requestAnimationFrame(() => {
@@ -446,7 +389,7 @@ export function useMediaDashboard() {
         });
       });
     } catch (e) {
-      setError(String(e));
+      setBrowserError(String(e));
       windowTransitionLock.current = false;
     }
   }, [alwaysOnTop, isWidget]);
@@ -462,32 +405,19 @@ export function useMediaDashboard() {
         /* ignore */
       }
       setWidgetEnabled(false);
-
       await invoke("toggle_widget_mode", { isMini: false });
-      void getCurrentWindow()
-        .setAlwaysOnTop(alwaysOnTop)
-        .catch(() => {
-          /* browser dev */
-        });
-
-      await getCurrentWindow()
-        .minimize()
-        .catch(() => {
-          /* e.g. Vite dev in a normal browser */
-        });
-
+      void getCurrentWindow().setAlwaysOnTop(alwaysOnTop).catch(() => {});
+      await getCurrentWindow().minimize().catch(() => {});
       setIsWidget(false);
     } catch (e) {
-      setError(String(e));
+      setBrowserError(String(e));
     } finally {
       windowTransitionLock.current = false;
     }
   }, [alwaysOnTop, isWidget]);
 
   const closeApp = useCallback(() => {
-    void getCurrentWindow().close().catch(() => {
-      /* browser dev */
-    });
+    void getCurrentWindow().close().catch(() => {});
   }, []);
 
   const widgetGestureRef = useRef<{
@@ -566,56 +496,21 @@ export function useMediaDashboard() {
     [endWidgetSurfacePointer],
   );
 
-  const toggleWinSession = useCallback(
-    async (s: MediaSessionDto) => {
-      const key = winRowKey(s);
-      markPending(key);
-      setError(null);
-      try {
-        await invoke("gsmtc_toggle_play_pause", {
-          aumid: s.sourceAppUserModelId,
-        });
-      } catch (e) {
-        setError(String(e));
-      } finally {
-        clearPending(key);
-      }
-    },
-    [clearPending, markPending],
-  );
-
-  const setMixerVolume = useCallback(async (instanceId: string, volume: number) => {
-    setError(null);
-    try {
-      await invoke("mixer_set_volume", { instanceId, volume });
-    } catch (e) {
-      setError(String(e));
-    }
-  }, []);
-
-  /**
-   * Drop the active extension slot for a browser so `extensionConnected` resets
-   * to false immediately, then let the extension's next heartbeat restore it.
-   * The persisted `extensionInstalled` flag is left unchanged.
-   */
   const refreshBrowserConnection = useCallback(async (browserId: string) => {
-    setError(null);
+    setBrowserError(null);
     try {
       await invoke("refresh_browser_connection", { browserId });
     } catch (e) {
-      setError(String(e));
+      setBrowserError(String(e));
     }
   }, []);
 
-  const sessions = snapshot?.sessions ?? [];
-  const browserAudio: Record<string, AudioSessionInfoDto> =
-    snapshot?.browserAudio ?? {};
+  const error = windowsSessions.error ?? browserError;
 
   return {
     error,
     mainTab,
     setMainTab,
-    pendingKeys,
     alwaysOnTop,
     toggleAlwaysOnTop,
     refresh,
@@ -626,12 +521,13 @@ export function useMediaDashboard() {
     dimmingToWidget,
     fullEnterActive,
     fullEnterVisible,
-    // Browser actions (unified — work on any tab via BrowserTab + browserId)
+    // Browser tab actions
     toggleBrowserTab,
     focusBrowserTab,
     reactivateBrowserTab,
     reloadBrowserTab,
     closeBrowserTab,
+    browserPendingKeys,
     minimizeApp,
     expandWidgetPanel,
     restoreFromWidget,
@@ -643,11 +539,13 @@ export function useMediaDashboard() {
       onPointerUp: onWidgetSurfacePointerUp,
       onPointerCancel: onWidgetSurfacePointerCancel,
     },
-    toggleWinSession,
-    setMixerVolume,
     refreshBrowserConnection,
-    sessions,
     browsers,
-    browserAudio,
+    // Windows media (delegated to useWindowsSessions)
+    sessions: windowsSessions.sessions,
+    winPendingKeys: windowsSessions.pendingKeys,
+    toggleWinSession: windowsSessions.toggleSession,
+    setMixerVolume: windowsSessions.setMixerVolume,
+    browserAudio: windowsSessions.browserAudio,
   };
 }

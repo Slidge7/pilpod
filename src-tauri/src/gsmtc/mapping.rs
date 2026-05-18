@@ -1,51 +1,60 @@
 use windows::{
-    core::HSTRING,
-    Media::Control::{
-        GlobalSystemMediaTransportControlsSession,
-        GlobalSystemMediaTransportControlsSessionPlaybackControls,
-        GlobalSystemMediaTransportControlsSessionPlaybackInfo,
-        GlobalSystemMediaTransportControlsSessionPlaybackStatus,
-        GlobalSystemMediaTransportControlsSessionTimelineProperties,
-        GlobalSystemMediaTransportControlsSessionManager,
-    },
+   core::HSTRING,
+   Media::Control::{
+       GlobalSystemMediaTransportControlsSession,
+       GlobalSystemMediaTransportControlsSessionPlaybackControls,
+       GlobalSystemMediaTransportControlsSessionPlaybackInfo,
+       GlobalSystemMediaTransportControlsSessionPlaybackStatus,
+       GlobalSystemMediaTransportControlsSessionTimelineProperties,
+       GlobalSystemMediaTransportControlsSessionManager,
+   },
 };
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::dto::{
     ControlsDto, GsmtcSnapshot, MediaSessionDto, TimelineDto, SNAPSHOT_VERSION,
 };
 use super::thumbnail::read_thumbnail_b64;
 
-/// GSMTC AUMID substrings for browsers that can run the Chromium companion extension.
-/// When `browser_tabs` is non-empty, these sessions duplicate the extension list.
-const CHROMIUM_FAMILY_AUMID_MARKERS: &[&str] = &[
-    "chrome",
-    "msedge",
-    "microsoftedge",
-    "brave",
-    "opera",
-    "vivaldi",
-    "chromium",
-    "yandexbrowser",
-];
-
-fn aumid_is_chromium_browser_media_source(aumid: &str) -> bool {
-    let a = aumid.to_lowercase();
-    CHROMIUM_FAMILY_AUMID_MARKERS.iter().any(|m| a.contains(m))
+/// Map a browser stable ID (as returned by `browser_name_to_id`) to the
+/// substrings that can appear in its GSMTC AUMID.
+///
+/// Microsoft Edge's process is `msedge.exe`, so its AUMID contains `"msedge"`.
+/// The UWP/Store variant uses `"microsoftedge"` — both are covered.
+fn aumid_markers_for_browser_id(id: &str) -> &'static [&'static str] {
+    match id {
+        "chrome"    => &["chrome"],
+        "msedge"    => &["msedge", "microsoftedge"],
+        "brave"     => &["brave"],
+        "opera"     => &["opera"],
+        "vivaldi"   => &["vivaldi"],
+        "chromium"  => &["chromium"],
+        "firefox"   => &["firefox"],
+        "arc"       => &["arc"],
+        _           => &[],
+    }
 }
 
-/// Drops Chromium-family system sessions from `sessions` when the extension is active,
-/// so the same media is not listed under both Browsers and Windows Media.
+/// Drops GSMTC sessions **only** for the browsers in `active_extension_browsers`,
+/// because those browsers are already represented (with full tab detail) via the
+/// companion extension.  Browsers that are not in the set — e.g. Edge or Brave
+/// when only Chrome has the extension installed — are left in the Windows section.
 pub fn apply_extension_gsmtc_dedup(
     mut snap: GsmtcSnapshot,
-    extension_active: bool,
+    active_extension_browsers: &HashSet<String>,
 ) -> GsmtcSnapshot {
-    if !extension_active {
+    if active_extension_browsers.is_empty() {
         return snap;
     }
-    snap.sessions
-        .retain(|s| !aumid_is_chromium_browser_media_source(&s.source_app_user_model_id));
+    snap.sessions.retain(|s| {
+        let aumid = s.source_app_user_model_id.to_lowercase();
+        !active_extension_browsers.iter().any(|id| {
+            aumid_markers_for_browser_id(id)
+                .iter()
+                .any(|marker| aumid.contains(*marker))
+        })
+    });
     snap
 }
 

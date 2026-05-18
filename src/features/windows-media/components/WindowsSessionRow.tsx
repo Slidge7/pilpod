@@ -1,13 +1,13 @@
 import "./WindowsSessionRow.css";
 import type { MediaSessionDto } from "../../../types/media";
+import { AppVolumeSlider } from "../../../shared/ui/AppVolumeSlider";
+import { IconPause, IconPlay, Spinner } from "../../../shared/ui/icons";
 import { sessionDurationLabel } from "../lib/format";
 import {
   channelSession,
   isSessionPlaying,
   thumbSrc,
 } from "../lib/windowsMedia";
-import { AppVolumeSlider } from "./AppVolumeSlider";
-import { IconPause, IconPlay, Spinner } from "./icons";
 
 type Props = {
   session: MediaSessionDto;

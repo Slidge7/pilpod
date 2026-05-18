@@ -4,7 +4,7 @@
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 use serde::Serialize;
@@ -58,48 +58,9 @@ pub fn enqueue_browser_command(
     }
 }
 
-/// Returns `true` if at least one browser slot sent a POST within the last 3 seconds.
-/// Used by the GSMTC dedup logic to suppress duplicate Chromium system media sessions.
-pub fn has_active_extension(map: &HashMap<String, BrowserSlot>) -> bool {
-    let cutoff = Duration::from_secs(3);
-    let now = Instant::now();
-    map.values()
-        .any(|slot| now.duration_since(slot.last_seen) < cutoff)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn has_active_extension_detects_fresh_slot() {
-        let mut map = HashMap::new();
-        map.insert(
-            "b1".into(),
-            BrowserSlot {
-                last_seen: Instant::now(),
-                browser_id: "b1".into(),
-                browser_name: "Chrome".into(),
-                tabs: vec![],
-            },
-        );
-        assert!(has_active_extension(&map));
-    }
-
-    #[test]
-    fn has_active_extension_returns_false_for_stale_slot() {
-        let mut map = HashMap::new();
-        map.insert(
-            "b1".into(),
-            BrowserSlot {
-                last_seen: Instant::now() - Duration::from_secs(10),
-                browser_id: "b1".into(),
-                browser_name: "Chrome".into(),
-                tabs: vec![],
-            },
-        );
-        assert!(!has_active_extension(&map));
-    }
 
     #[test]
     fn enqueue_orders_per_browser() {

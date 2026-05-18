@@ -7,14 +7,15 @@ import type {
 } from "../../../types/media";
 import type { MediaMainTab } from "../model";
 import { BrowserSessionsPanel } from "./BrowserSessionsPanel";
-import { IconWidgetClose } from "./icons";
-import { WindowsSessionsPanel } from "./WindowsSessionsPanel";
+import { IconWidgetClose } from "../../../shared/ui/icons";
+import { WindowsSessionsPanel } from "../../windows-media";
 
 type Props = {
   mainTab: MediaMainTab;
   onMainTabChange: (t: MediaMainTab) => void;
   error: string | null;
-  pendingKeys: Set<string>;
+  browserPendingKeys: ReadonlySet<string>;
+  winPendingKeys: ReadonlySet<string>;
   browsers: DetectedBrowser[];
   browserAudio: Readonly<Record<string, AudioSessionInfoDto>>;
   sessions: MediaSessionDto[];
@@ -34,7 +35,8 @@ export function WidgetMediaPanel({
   mainTab,
   onMainTabChange,
   error,
-  pendingKeys,
+  browserPendingKeys,
+  winPendingKeys,
   browsers,
   browserAudio,
   sessions,
@@ -105,7 +107,7 @@ export function WidgetMediaPanel({
           {mainTab === "browser" ? (
             <BrowserSessionsPanel
               browsers={browsers}
-              pendingKeys={pendingKeys}
+              pendingKeys={browserPendingKeys}
               browserAudio={browserAudio}
               onPlayPause={onPlayPauseBrowser}
               onFocusTab={onFocusBrowserTab}
@@ -118,7 +120,7 @@ export function WidgetMediaPanel({
           ) : (
             <WindowsSessionsPanel
               sessions={sessions}
-              pendingKeys={pendingKeys}
+              pendingKeys={winPendingKeys}
               onToggleSession={onToggleWinSession}
               onMixerVolume={(id, v) => void onMixerVolume(id, v)}
             />

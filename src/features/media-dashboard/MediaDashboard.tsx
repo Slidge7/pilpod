@@ -5,9 +5,9 @@ import { BrowserSessionsPanel } from "./components/BrowserSessionsPanel";
 import { SourceTabBar } from "./components/SourceTabBar";
 import { WidgetMediaPanel } from "./components/WidgetMediaPanel";
 import { WidgetView } from "./components/WidgetView";
-import { WindowsSessionsPanel } from "./components/WindowsSessionsPanel";
 import { useAppearance } from "./hooks/useAppearance";
 import { useMediaDashboard } from "./hooks/useMediaDashboard";
+import { WindowsSessionsPanel } from "../windows-media";
 
 export function MediaDashboard() {
   const { appearance, toggle } = useAppearance();
@@ -15,7 +15,8 @@ export function MediaDashboard() {
     error,
     mainTab,
     setMainTab,
-    pendingKeys,
+    browserPendingKeys,
+    winPendingKeys,
     alwaysOnTop,
     toggleAlwaysOnTop,
     refresh,
@@ -45,7 +46,6 @@ export function MediaDashboard() {
     browserAudio,
   } = useMediaDashboard();
 
-  // Count running browsers that have tabs reported by the extension.
   const browserTabCount = browsers.reduce(
     (sum, b) => sum + (b.extensionInstalled ? b.tabCount : 0),
     0,
@@ -58,7 +58,8 @@ export function MediaDashboard() {
           mainTab={mainTab}
           onMainTabChange={setMainTab}
           error={error}
-          pendingKeys={pendingKeys}
+          browserPendingKeys={browserPendingKeys}
+          winPendingKeys={winPendingKeys}
           browsers={browsers}
           browserAudio={browserAudio}
           sessions={sessions}
@@ -122,7 +123,7 @@ export function MediaDashboard() {
           {mainTab === "browser" ? (
             <BrowserSessionsPanel
               browsers={browsers}
-              pendingKeys={pendingKeys}
+              pendingKeys={browserPendingKeys}
               browserAudio={browserAudio}
               onPlayPause={toggleBrowserTab}
               onFocusTab={focusBrowserTab}
@@ -135,7 +136,7 @@ export function MediaDashboard() {
           ) : (
             <WindowsSessionsPanel
               sessions={sessions}
-              pendingKeys={pendingKeys}
+              pendingKeys={winPendingKeys}
               onToggleSession={toggleWinSession}
               onMixerVolume={(id, v) => void setMixerVolume(id, v)}
             />
