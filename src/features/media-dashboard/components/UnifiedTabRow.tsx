@@ -6,7 +6,6 @@ import {
   isTabPlaying,
   mediaArtist,
   mediaTimeLabel,
-  tabRowKey,
   tabStateBadge,
   USER_IDLE_WARN_MS,
 } from "../lib/browserMedia";

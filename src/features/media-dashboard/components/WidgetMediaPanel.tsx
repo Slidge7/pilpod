@@ -23,6 +23,7 @@ type Props = {
   onReloadBrowserTab: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onCloseBrowserTab: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onReactivateBrowserTab: (tab: BrowserTab, browserId: string) => void | Promise<void>;
+  onRefreshBrowser: (browserId: string) => void | Promise<void>;
   onToggleWinSession: (s: MediaSessionDto) => void;
   onMixerVolume: (instanceId: string, volume: number) => void;
   onOpenFullWindow: () => void;
@@ -42,6 +43,7 @@ export function WidgetMediaPanel({
   onReloadBrowserTab,
   onCloseBrowserTab,
   onReactivateBrowserTab,
+  onRefreshBrowser,
   onToggleWinSession,
   onMixerVolume,
   onOpenFullWindow,
@@ -110,6 +112,7 @@ export function WidgetMediaPanel({
               onReload={onReloadBrowserTab}
               onClose={onCloseBrowserTab}
               onReactivate={onReactivateBrowserTab}
+              onRefreshBrowser={(id) => void onRefreshBrowser(id)}
               onMixerVolume={(id, v) => void onMixerVolume(id, v)}
             />
           ) : (

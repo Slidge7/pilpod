@@ -67,6 +67,7 @@ export function MediaDashboard() {
           onReloadBrowserTab={reloadBrowserTab}
           onCloseBrowserTab={closeBrowserTab}
           onReactivateBrowserTab={reactivateBrowserTab}
+          onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
           onToggleWinSession={toggleWinSession}
           onMixerVolume={(id, v) => void setMixerVolume(id, v)}
           onOpenFullWindow={() => void restoreFromWidget()}
