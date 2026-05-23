@@ -273,7 +273,11 @@ pub fn merge_detected_and_slots(
         }
     }
 
-    result
+    // Browsers with the companion extension first; uninstalled ones at the bottom.
+    // Partition preserves KNOWN_BROWSERS order within each group.
+    let (with_ext, without_ext): (Vec<_>, Vec<_>) =
+        result.into_iter().partition(|b| b.extension_installed);
+    with_ext.into_iter().chain(without_ext).collect()
 }
 
 /// Returns the set of browser stable IDs (e.g. `"chrome"`, `"brave"`) for every
