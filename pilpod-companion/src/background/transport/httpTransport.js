@@ -4,14 +4,7 @@
 
 "use strict";
 
-import {
-  PUSH_URL,
-  PUSH_INTERVAL_MS,
-  DEBOUNCE_MS,
-  FETCH_TIMEOUT_MS,
-  FAIL_THRESHOLD,
-  SLEEP_INTERVAL_MS,
-} from "../../shared/constants.js";
+import { getBridgeConfig } from "../../shared/bridgeConfig.js";
 
 export class HttpTransport {
   /** @type {ReturnType<typeof setTimeout>|null} */
@@ -58,16 +51,18 @@ export class HttpTransport {
   #onCommands;
 
   schedulePush() {
+    const { debounceMs } = getBridgeConfig();
     if (this.#debounceTimer !== null) return;
     this.#debounceTimer = setTimeout(() => {
       this.#debounceTimer = null;
       void this.#push();
-    }, DEBOUNCE_MS);
+    }, debounceMs);
   }
 
   startHeartbeat() {
+    const { pushIntervalMs } = getBridgeConfig();
     if (this.#heartbeatTimer !== null) return;
-    this.#heartbeatTimer = setInterval(() => void this.#push(), PUSH_INTERVAL_MS);
+    this.#heartbeatTimer = setInterval(() => void this.#push(), pushIntervalMs);
     void this.#push();
   }
 
@@ -85,27 +80,30 @@ export class HttpTransport {
   async #push() {
     if (this.#sleeping) return;
 
+    const cfg = getBridgeConfig();
     const dirty = this.#registry.isDirty();
     /** @type {import("../../shared/protocol.js").BrowserPayload} */
     const payload = dirty
       ? {
-          browserId:   this.#getBrowserId(),
-          browserName: this.#getBrowserName(),
-          tabs:        this.#registry.all(),
+          browserId:       this.#getBrowserId(),
+          browserName:     this.#getBrowserName(),
+          tabs:            this.#registry.all(),
+          protocolVersion: cfg.protocolVersion,
         }
       : {
-          browserId: this.#getBrowserId(),
-          ping:      true,
-          seq:       this.#seq++,
+          browserId:       this.#getBrowserId(),
+          ping:            true,
+          seq:             this.#seq++,
+          protocolVersion: cfg.protocolVersion,
         };
 
     let res;
     try {
-      res = await fetch(PUSH_URL, {
+      res = await fetch(cfg.pushUrl, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify(payload),
-        signal:  AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        signal:  AbortSignal.timeout(cfg.fetchTimeoutMs),
       });
     } catch {
       this.#onFailure();
@@ -143,14 +141,15 @@ export class HttpTransport {
   }
 
   #onFailure() {
+    const { failThreshold, sleepIntervalMs } = getBridgeConfig();
     this.#failCount++;
-    if (this.#failCount >= FAIL_THRESHOLD && !this.#sleeping) {
+    if (this.#failCount >= failThreshold && !this.#sleeping) {
       this.#sleeping = true;
       if (this.#wakeTimer === null) {
         this.#wakeTimer = setTimeout(() => {
           this.#wakeTimer = null;
           void this.#wakeAndRetry();
-        }, SLEEP_INTERVAL_MS);
+        }, sleepIntervalMs);
       }
     }
   }

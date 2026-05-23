@@ -6,8 +6,11 @@ pub mod command;
 pub mod connections;
 mod handler;
 mod http;
+pub mod protocol;
 mod system_events;
 mod ws;
+
+pub use protocol::CONNECTED_WINDOW_SECS;
 
 pub use connections::{new_ws_connection_map, WsConnectionMap};
 pub use handler::BridgeContext;
@@ -43,8 +46,10 @@ pub fn spawn(
         ext_store: std::sync::Arc::clone(&ext_store),
         reconnecting: std::sync::Arc::clone(&reconnecting),
         sync_flag: std::sync::Arc::clone(&sync_flag),
+        ws_connections: std::sync::Arc::clone(&ws_connections),
     });
 
+    let ws_for_bridge = std::sync::Arc::clone(&ws_connections);
     std::thread::Builder::new()
         .name("browser-bridge".into())
         .spawn(move || {
@@ -59,7 +64,7 @@ pub fn spawn(
             rt.block_on(async move {
                 let http_ctx = std::sync::Arc::clone(&ctx);
                 let ws_ctx = ctx;
-                let ws_map = ws_connections;
+                let ws_map = ws_for_bridge;
 
                 tokio::join!(
                     http::run_http_server(http_ctx),
@@ -74,6 +79,7 @@ pub fn spawn(
         reconnecting,
         detected_browsers,
         ext_store,
+        ws_connections,
         app,
     );
 }

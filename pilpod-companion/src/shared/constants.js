@@ -8,6 +8,12 @@
 /** Local Tauri app endpoint for tab state pushes and command polling. */
 export const PUSH_URL = "http://127.0.0.1:17399/browser-tabs";
 
+/** Bridge capabilities endpoint (Rust source of truth for timing). */
+export const CAPABILITIES_URL = "http://127.0.0.1:17399/capabilities";
+
+/** Default protocol major version sent on every POST/WS frame. */
+export const PROTOCOL_VERSION = "1";
+
 /** Primary WebSocket bridge endpoint. */
 export const WS_URL = "ws://127.0.0.1:17400/ws";
 

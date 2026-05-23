@@ -73,7 +73,7 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         std::sync::Arc::clone(&ext_store),
         std::sync::Arc::clone(&reconnecting),
         std::sync::Arc::clone(&sync_flag),
-        ws_connections,
+        std::sync::Arc::clone(&ws_connections),
     );
 
     // ── Spawn OS browser detector ────────────────────────────────────────────
@@ -82,6 +82,7 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         std::sync::Arc::clone(&browser_slots),
         std::sync::Arc::clone(&ext_store),
         std::sync::Arc::clone(&reconnecting),
+        ws_connections,
         handle.clone(),
     );
 

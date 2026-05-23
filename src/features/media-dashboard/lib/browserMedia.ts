@@ -79,7 +79,12 @@ export type SearchTagOption = {
 
 /** Flat list of tabs that match the text query across all browsers. */
 export function collectTextSearchMatches(
-  browsers: ReadonlyArray<{ id: string; displayName: string; tabs: BrowserTab[] }>,
+  browsers: ReadonlyArray<{
+    id: string;
+    displayName: string;
+    profileLabel?: string | null;
+    tabs: BrowserTab[];
+  }>,
   query: string,
 ): SearchTabMatch[] {
   const q = normalizeSearchQuery(query);
@@ -87,11 +92,12 @@ export function collectTextSearchMatches(
 
   const matches: SearchTabMatch[] = [];
   for (const browser of browsers) {
+    const label = browser.profileLabel ?? browser.displayName;
     for (const tab of browser.tabs) {
       if (tabMatchesSearch(tab, q)) {
         matches.push({
           browserId: browser.id,
-          browserDisplayName: browser.displayName,
+          browserDisplayName: label,
           tab,
         });
       }

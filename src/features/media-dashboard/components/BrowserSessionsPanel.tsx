@@ -16,6 +16,10 @@ import { findActiveDownloadForUrl } from "../../downloader/lib/activeDownload";
 import type { DownloadTask } from "../../downloader/types";
 import { UnifiedTabRow } from "./UnifiedTabRow";
 
+function browserDisplayLabel(browser: DetectedBrowser): string {
+  return browser.profileLabel ?? browser.displayName;
+}
+
 /** Format an age in seconds as a compact human-readable string. */
 function formatAge(secs: number): string {
   if (secs < 60) return `${secs}s ago`;
@@ -81,7 +85,7 @@ function BrowserHeader({
   return (
     <header className="pilpod-browser-profile__head">
       <span className="pilpod-browser-profile__label">
-        {browser.displayName}
+        {browserDisplayLabel(browser)}
         {!browser.running ? (
           <span className="pilpod-browser-profile__label-offline">
             {" "}· not running
@@ -119,15 +123,15 @@ function BrowserHeader({
       </span>
       {profileAudio ? (
         <AppVolumeSlider
-          ariaLabel={`Volume for ${browser.displayName}`}
+          ariaLabel={`Volume for ${browserDisplayLabel(browser)}`}
           audio={profileAudio}
           onVolumeChange={onMixerVolume}
         />
       ) : null}
       <button
         className={`pilpod-browser-profile__refresh${refreshing ? " pilpod-browser-profile__refresh--spinning" : ""}`}
-        title={`Refresh connection to ${browser.displayName}`}
-        aria-label={`Refresh ${browser.displayName} connection`}
+        title={`Refresh connection to ${browserDisplayLabel(browser)}`}
+        aria-label={`Refresh ${browserDisplayLabel(browser)} connection`}
         onClick={handleRefresh}
         disabled={refreshing}
       >
@@ -160,7 +164,7 @@ function BrowserBody({
   onDownload: (url: string) => void;
   downloadTasks: Map<string, DownloadTask>;
 }) {
-  const slotBrowserId = browser.tabs[0]?.browserId ?? browser.id;
+  const slotBrowserId = browser.id;
   const isStale = !browser.extensionConnected && browser.tabs.length > 0;
   const displayTabs = isStale
     ? browser.tabs.map((t) => ({ ...t, media: undefined }))
@@ -175,7 +179,7 @@ function BrowserBody({
         key={rk}
         tab={t}
         browserId={slotBrowserId}
-        browserDisplayName={browser.displayName}
+        browserDisplayName={browserDisplayLabel(browser)}
         busy={pendingKeys.has(rk)}
         showMediaControls={showMediaControls}
         onPlayPause={onPlayPause}
@@ -582,11 +586,7 @@ export function BrowserSessionsPanel({
 
       <div className="pilpod-browser-panel__groups">
         {displayBrowsers.map((browser) => {
-          const slotId =
-            browser.tabs.length > 0
-              ? (browser.tabs[0].browserId ?? browser.id)
-              : browser.id;
-          const profileAudio = browserAudio[slotId];
+          const profileAudio = browserAudio[browser.id];
 
           return (
             <div key={browser.id} className="pilpod-browser-profile">

@@ -6,6 +6,7 @@
 
 import { detectBrowserName }          from "./shared/browser.js";
 import { STORAGE_KEY_BROWSER_ID }     from "./shared/constants.js";
+import { loadBridgeConfig }           from "./shared/bridgeConfig.js";
 import { TabRegistry }                from "./background/tabs/registry.js";
 import { HttpTransport }              from "./background/transport/httpTransport.js";
 import { WsTransport }                from "./background/transport/wsTransport.js";
@@ -62,6 +63,7 @@ async function init() {
   await _loadBrowserId();
   await _seedTabs();
   await _seedFocusedWindow();
+  await loadBridgeConfig();
   registry.markDirty();
   transport = await initTransport();
 }

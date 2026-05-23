@@ -17,15 +17,19 @@ pub struct DetectedBrowserInfo {
     pub running: bool,
 }
 
-/// Emitted on `"browsers://update"` — one entry per detected or active browser.
+/// Emitted on `"browsers://update"` — one entry per extension profile or OS browser.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DetectedBrowser {
-    /// Stable id: "chrome", "msedge", "firefox", "brave", etc.
-    /// For browsers seen only via extension (not in the OS scan), this is the
-    /// `browserId` UUID sent by the extension.
+    /// Extension profile UUID (`slot.browser_id`) when a slot exists; otherwise the
+    /// OS browser id (e.g. `"chrome"`) for placeholder rows with no extension yet.
     pub id: String,
+    /// OS-level browser key: `"chrome"`, `"msedge"`, etc. — used for metadata lookup.
+    pub os_browser_id: String,
     pub display_name: String,
+    /// Disambiguates multiple profiles of the same OS browser (e.g. two Chrome profiles).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile_label: Option<String>,
     /// True when the browser process is currently running (from OS scan).
     pub running: bool,
     /// True when the extension has ever successfully connected to PilPod for

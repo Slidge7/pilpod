@@ -1,7 +1,7 @@
 //! WebSocket connection registry — one live connection per extension profile.
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
 };
 
@@ -67,6 +67,14 @@ pub fn push_ws_command(
     })
     .unwrap_or_else(|_| r#"{"commands":[]}"#.to_string());
     push_ws_frame(map, browser_id, &frame)
+}
+
+/// Profile UUIDs with a live WebSocket connection.
+pub fn ws_connected_ids(map: &WsConnectionMap) -> HashSet<String> {
+    map.lock()
+        .ok()
+        .map(|connections| connections.keys().cloned().collect())
+        .unwrap_or_default()
 }
 
 pub fn push_ws_sync_all(map: &WsConnectionMap) {

@@ -14,6 +14,8 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::browser_tabs::{BrowserSlot, BrowserSlotsMap};
+use crate::browser_bridge::connections::{ws_connected_ids, WsConnectionMap};
+use crate::browser_bridge::CONNECTED_WINDOW_SECS;
 use crate::gsmtc::dto::{DetectedBrowser, DetectedBrowserInfo};
 
 /// Event name emitted to the frontend when the browser list changes.
@@ -215,31 +217,88 @@ pub fn build_detected_browsers() -> Vec<DetectedBrowserInfo> {
 
 /// Merge OS-detected browsers with extension slots into the frontend view.
 ///
-/// **Design principles (Phase 2a):**
+/// **Design principles (Phase 2):**
 ///
-/// - `extension_installed` — persisted flag; never flips off on missed heartbeats.
-/// - `extension_connected` — live freshness flag (last POST < 3 s ago).
-/// - **Cached tabs are always shown** for OS-detected browsers that have a slot,
-///   regardless of slot freshness.  Tabs are only replaced when a newer POST arrives.
-/// - `last_sync_secs` — seconds since last POST, so the UI can render
-///   "Offline · cached 2 min ago" without clearing the list.
-/// - For extension-only browsers (not in OS registry), the row is only added while
-///   freshly connected; they do not have a stable OS identity to fall back on.
+/// - One row per extension profile UUID (`BrowserSlot`), not per OS browser executable.
+/// - OS-detected browsers without any slot get a placeholder row keyed by OS id.
+/// - `extension_installed` — persisted flag keyed by OS id; never flips off on missed heartbeats.
+/// - `extension_connected` — WS socket presence when WS is active; heartbeat freshness as fallback.
+/// - Cached tabs are always shown for slots regardless of freshness.
 pub fn merge_detected_and_slots(
     detected: &[DetectedBrowserInfo],
     slots: &HashMap<String, BrowserSlot>,
     ext_store: &ExtensionInstalledStore,
     reconnecting: &HashSet<String>,
+    ws_connected: &HashSet<String>,
 ) -> Vec<DetectedBrowser> {
-    let slot_active_cutoff = Duration::from_secs(3);
+    let slot_active_cutoff = Duration::from_secs(CONNECTED_WINDOW_SECS);
     let now = std::time::Instant::now();
 
-    // Start with one entry per OS-detected browser (always visible).
-    let mut result: Vec<DetectedBrowser> = detected
-        .iter()
-        .map(|d| DetectedBrowser {
+    let detected_by_id: HashMap<&str, &DetectedBrowserInfo> =
+        detected.iter().map(|d| (d.id.as_str(), d)).collect();
+
+    let mut slots_per_os: HashMap<String, usize> = HashMap::new();
+    for slot in slots.values() {
+        let os_id = browser_name_to_id(&slot.browser_name);
+        *slots_per_os.entry(os_id).or_insert(0) += 1;
+    }
+
+    let mut result: Vec<DetectedBrowser> = Vec::new();
+    let mut os_ids_with_slots: HashSet<String> = HashSet::new();
+
+    // Pass B: one row per extension profile slot.
+    for slot in slots.values() {
+        let os_id = browser_name_to_id(&slot.browser_name);
+        os_ids_with_slots.insert(os_id.clone());
+
+        let os_info = detected_by_id.get(os_id.as_str());
+        let running = os_info.map(|d| d.running).unwrap_or(true);
+        let base_display = os_info
+            .map(|d| d.display_name.clone())
+            .unwrap_or_else(|| slot.browser_name.clone());
+
+        let slot_age_secs = now.duration_since(slot.last_seen).as_secs();
+        let is_fresh = now.duration_since(slot.last_seen) < slot_active_cutoff;
+        let ws_up = ws_connected.contains(&slot.browser_id);
+        let extension_connected = ws_up || is_fresh;
+        let extension_reconnecting =
+            reconnecting.contains(&slot.browser_id) && !ws_up;
+
+        let profile_label = if slots_per_os.get(&os_id).copied().unwrap_or(0) > 1 {
+            let prefix = slot
+                .browser_id
+                .get(..8)
+                .unwrap_or(&slot.browser_id);
+            Some(format!("{base_display} · Profile {prefix}"))
+        } else {
+            None
+        };
+
+        result.push(DetectedBrowser {
+            id: slot.browser_id.clone(),
+            os_browser_id: os_id.clone(),
+            display_name: base_display,
+            profile_label,
+            running,
+            extension_installed: ext_store.is_installed(&os_id),
+            extension_connected,
+            tab_count: slot.tabs.len() as u32,
+            tabs: slot.tabs.clone(),
+            last_sync_secs: Some(slot_age_secs),
+            extension_reconnecting,
+        });
+    }
+
+    // Pass A: OS-detected browsers with no extension slot yet.
+    for d in detected {
+        if os_ids_with_slots.contains(&d.id) {
+            continue;
+        }
+        result.push(DetectedBrowser {
             id: d.id.clone(),
+            os_browser_id: d.id.clone(),
             display_name: d.display_name.clone(),
+            profile_label: None,
             running: d.running,
             extension_installed: ext_store.is_installed(&d.id),
             extension_connected: false,
@@ -247,56 +306,9 @@ pub fn merge_detected_and_slots(
             tabs: Vec::new(),
             last_sync_secs: None,
             extension_reconnecting: false,
-        })
-        .collect();
-
-    let mut seen_ids: HashSet<String> =
-        detected.iter().map(|d| d.id.clone()).collect();
-
-    for slot in slots.values() {
-        let is_fresh = now.duration_since(slot.last_seen) < slot_active_cutoff;
-        let slot_id = browser_name_to_id(&slot.browser_name);
-        let slot_age_secs = now.duration_since(slot.last_seen).as_secs();
-        let is_reconnecting = reconnecting.contains(&slot.browser_id);
-
-        if let Some(entry) = result.iter_mut().find(|b| b.id == slot_id) {
-            if is_fresh {
-                entry.extension_connected = true;
-            }
-            if is_reconnecting {
-                entry.extension_reconnecting = true;
-            }
-
-            // Always attach cached tabs, regardless of freshness.  If multiple
-            // slots resolve to the same OS browser (rare), keep the most recent.
-            let is_newer = entry
-                .last_sync_secs
-                .map_or(true, |existing| slot_age_secs < existing);
-
-            if is_newer {
-                entry.tabs = slot.tabs.clone();
-                entry.tab_count = slot.tabs.len() as u32;
-                entry.last_sync_secs = Some(slot_age_secs);
-            }
-        } else if !seen_ids.contains(&slot_id) && is_fresh {
-            // Extension-only browser (not in OS registry scan) — visible while connected.
-            seen_ids.insert(slot_id.clone());
-            result.push(DetectedBrowser {
-                id: slot_id.clone(),
-                display_name: slot.browser_name.clone(),
-                running: true,
-                extension_installed: ext_store.is_installed(&slot_id),
-                extension_connected: true,
-                tab_count: slot.tabs.len() as u32,
-                tabs: slot.tabs.clone(),
-                last_sync_secs: Some(slot_age_secs),
-                extension_reconnecting: is_reconnecting,
-            });
-        }
+        });
     }
 
-    // Browsers with the companion extension first; uninstalled ones at the bottom.
-    // Partition preserves KNOWN_BROWSERS order within each group.
     let (with_ext, without_ext): (Vec<_>, Vec<_>) =
         result.into_iter().partition(|b| b.extension_installed);
     with_ext.into_iter().chain(without_ext).collect()
@@ -311,7 +323,7 @@ pub fn merge_detected_and_slots(
 /// leaving browsers without the extension (e.g. Brave when only Chrome is connected)
 /// visible in the Windows section.
 pub fn active_extension_browser_ids(slots: &HashMap<String, BrowserSlot>) -> HashSet<String> {
-    let cutoff = Duration::from_secs(3);
+    let cutoff = Duration::from_secs(CONNECTED_WINDOW_SECS);
     let now = std::time::Instant::now();
     slots
         .values()
@@ -329,6 +341,7 @@ pub fn emit_browsers_to_ui(
     slots: &BrowserSlotsMap,
     ext_store: &ExtensionInstalledState,
     reconnecting: &ReconnectingBrowsersState,
+    ws_connections: &WsConnectionMap,
 ) {
     let detected_list = detected
         .lock()
@@ -337,12 +350,14 @@ pub fn emit_browsers_to_ui(
     let slots_map = slots.lock().unwrap_or_else(|e| e.into_inner());
     let store = ext_store.lock().unwrap_or_else(|e| e.into_inner());
     let reconnecting_set = reconnecting.lock().unwrap_or_else(|e| e.into_inner());
+    let ws_connected = ws_connected_ids(ws_connections);
 
     let browsers = merge_detected_and_slots(
         &detected_list,
         &*slots_map,
         &*store,
         &*reconnecting_set,
+        &ws_connected,
     );
 
     if let Err(e) = app.emit(BROWSERS_UPDATE_EVENT, &browsers) {
@@ -357,8 +372,9 @@ pub fn emit_on_connection_change(
     slots: &BrowserSlotsMap,
     ext_store: &ExtensionInstalledState,
     reconnecting: &ReconnectingBrowsersState,
+    ws_connections: &WsConnectionMap,
 ) {
-    emit_browsers_to_ui(app, detected, slots, ext_store, reconnecting);
+    emit_browsers_to_ui(app, detected, slots, ext_store, reconnecting, ws_connections);
 }
 
 // ── Background thread ────────────────────────────────────────────────────────
@@ -370,6 +386,7 @@ pub fn spawn_detector(
     slots: BrowserSlotsMap,
     ext_store: ExtensionInstalledState,
     reconnecting: ReconnectingBrowsersState,
+    ws_connections: WsConnectionMap,
     app: AppHandle,
 ) {
     std::thread::Builder::new()
@@ -381,7 +398,14 @@ pub fn spawn_detector(
                 let mut lock = detected.lock().unwrap_or_else(|e| e.into_inner());
                 *lock = initial;
             }
-            emit_browsers_to_ui(&app, &detected, &slots, &ext_store, &reconnecting);
+            emit_browsers_to_ui(
+                &app,
+                &detected,
+                &slots,
+                &ext_store,
+                &reconnecting,
+                &ws_connections,
+            );
 
             loop {
                 std::thread::sleep(Duration::from_secs(2));
@@ -397,7 +421,14 @@ pub fn spawn_detector(
                     }
                 };
                 if changed {
-                    emit_browsers_to_ui(&app, &detected, &slots, &ext_store, &reconnecting);
+                    emit_browsers_to_ui(
+                        &app,
+                        &detected,
+                        &slots,
+                        &ext_store,
+                        &reconnecting,
+                        &ws_connections,
+                    );
                 }
             }
         })

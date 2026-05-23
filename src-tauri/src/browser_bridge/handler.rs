@@ -8,6 +8,7 @@ use std::{
 use serde::Deserialize;
 use tauri::AppHandle;
 
+use crate::browser_bridge::connections::WsConnectionMap;
 use crate::browser_detector::{
     browser_name_to_id, clear_reconnecting, emit_browsers_to_ui, DetectedBrowsersState,
     ExtensionInstalledState, ReconnectingBrowsersState,
@@ -18,6 +19,7 @@ use crate::browser_tabs::{
 use crate::gsmtc::dto::{BrowserTab, TabMedia};
 use crate::gsmtc::state::{emit_fast_to_ui, GsmtcState};
 
+use super::protocol::COMMAND_TTL_SECS;
 use super::SyncRequestedFlag;
 
 #[derive(Debug, Clone)]
@@ -37,6 +39,7 @@ pub struct BridgeContext {
     pub ext_store: ExtensionInstalledState,
     pub reconnecting: ReconnectingBrowsersState,
     pub sync_flag: SyncRequestedFlag,
+    pub ws_connections: WsConnectionMap,
 }
 
 pub struct BridgeResult {
@@ -189,6 +192,7 @@ pub fn apply_ingest(ingest: BridgeIngest, ctx: &BridgeContext) -> BridgeResult {
             &ctx.browser_slots,
             &ctx.ext_store,
             &ctx.reconnecting,
+            &ctx.ws_connections,
         );
     }
 
@@ -208,7 +212,7 @@ pub fn drain_commands(
 ) -> Vec<BrowserMediaCommand> {
     if let Ok(mut q) = command_queue.lock() {
         let now = Instant::now();
-        let cmd_ttl = Duration::from_secs(5);
+        let cmd_ttl = Duration::from_secs(COMMAND_TTL_SECS);
         q.remove(browser_id)
             .unwrap_or_default()
             .into_values()

@@ -56,9 +56,16 @@ export type ControlsDto = {
  * sets `extensionInstalled` and fills `tabs`.
  */
 export type DetectedBrowser = {
-  /** Stable lower-case id: "chrome", "msedge", "firefox", "brave", etc. */
+  /**
+   * Extension profile UUID when a slot exists; otherwise the OS browser id
+   * (e.g. `"chrome"`) for placeholder rows with no extension yet.
+   */
   id: string;
+  /** OS-level browser key: `"chrome"`, `"msedge"`, etc. */
+  osBrowserId: string;
   displayName: string;
+  /** Disambiguates multiple profiles of the same OS browser. */
+  profileLabel?: string | null;
   /** True when the browser process is currently running. */
   running: boolean;
   /**

@@ -1,16 +1,17 @@
 //! WebSocket bridge server — primary transport for the companion extension.
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc, time::{Duration, Instant}};
 
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 use tokio_tungstenite::{accept_async, tungstenite::Message};
 
-use crate::browser_detector::emit_on_connection_change;
+use crate::browser_detector::{clear_reconnecting, emit_on_connection_change};
 
 use super::connections::{register_ws_connection, unregister_ws_connection, WsConnectionMap};
 use super::handler::{apply_ingest, convert_tab, BridgeContext, BridgeIngest, BrowserTabPost};
+use super::protocol::validate_protocol_version;
 use super::{BROWSER_WS_PATH, BROWSER_WS_PORT};
 
 #[derive(Deserialize)]
@@ -26,6 +27,8 @@ struct WsClientMessage {
     tabs: Vec<BrowserTabPost>,
     #[serde(default)]
     seq: u64,
+    #[serde(default)]
+    protocol_version: String,
 }
 
 fn is_loopback(addr: SocketAddr) -> bool {
@@ -68,6 +71,19 @@ async fn handle_connection(
                             continue;
                         }
 
+                        let version = if parsed.protocol_version.is_empty() {
+                            None
+                        } else {
+                            Some(parsed.protocol_version.as_str())
+                        };
+                        if validate_protocol_version(version).is_err() {
+                            eprintln!(
+                                "[browser-bridge-ws] rejected protocolVersion {:?}",
+                                parsed.protocol_version
+                            );
+                            continue;
+                        }
+
                         if registered_id.is_none() {
                             registered_id = Some(parsed.browser_id.clone());
                             register_ws_connection(
@@ -75,12 +91,14 @@ async fn handle_connection(
                                 &parsed.browser_id,
                                 out_tx.clone(),
                             );
+                            clear_reconnecting(&ctx.reconnecting, &parsed.browser_id);
                             emit_on_connection_change(
                                 &ctx.app,
                                 &ctx.detected_browsers,
                                 &ctx.browser_slots,
                                 &ctx.ext_store,
                                 &ctx.reconnecting,
+                                &ws_connections,
                             );
                         }
 
@@ -132,6 +150,14 @@ async fn handle_connection(
     }
 
     if let Some(id) = registered_id {
+        if let Ok(mut set) = ctx.reconnecting.lock() {
+            set.insert(id.clone());
+        }
+        if let Ok(mut map) = ctx.browser_slots.lock() {
+            if let Some(slot) = map.get_mut(&id) {
+                slot.last_seen = Instant::now() - Duration::from_secs(60);
+            }
+        }
         unregister_ws_connection(&ws_connections, &id);
         emit_on_connection_change(
             &ctx.app,
@@ -139,6 +165,7 @@ async fn handle_connection(
             &ctx.browser_slots,
             &ctx.ext_store,
             &ctx.reconnecting,
+            &ws_connections,
         );
     }
 }

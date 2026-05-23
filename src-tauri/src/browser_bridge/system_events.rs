@@ -9,6 +9,7 @@ use crate::browser_detector::{
     emit_browsers_to_ui, DetectedBrowsersState, ExtensionInstalledState,
     ReconnectingBrowsersState,
 };
+use crate::browser_bridge::WsConnectionMap;
 use crate::browser_tabs::BrowserSlotsMap;
 
 use super::handler::invalidate_slots_on_resume;
@@ -18,6 +19,7 @@ struct PowerResumeState {
     reconnecting: ReconnectingBrowsersState,
     detected: DetectedBrowsersState,
     ext_store: ExtensionInstalledState,
+    ws_connections: WsConnectionMap,
     app: AppHandle,
 }
 
@@ -30,6 +32,7 @@ pub fn spawn_power_listener(
     reconnecting: ReconnectingBrowsersState,
     detected_browsers: DetectedBrowsersState,
     ext_store: ExtensionInstalledState,
+    ws_connections: WsConnectionMap,
     app: AppHandle,
 ) {
     std::thread::Builder::new()
@@ -49,6 +52,7 @@ pub fn spawn_power_listener(
                 reconnecting,
                 detected: detected_browsers,
                 ext_store,
+                ws_connections,
                 app,
             });
             POWER_STATE.with(|cell| {
@@ -74,6 +78,7 @@ pub fn spawn_power_listener(
                                     &state.slots,
                                     &state.ext_store,
                                     &state.reconnecting,
+                                    &state.ws_connections,
                                 );
                             }
                         });

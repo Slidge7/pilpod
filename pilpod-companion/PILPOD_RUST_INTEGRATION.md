@@ -1,282 +1,218 @@
-# PilPod Browser Extension — Rust/Tauri Integration Update
+# PilPod Companion — Rust/Tauri Integration
 
-> **For the Cursor AI agent working on the Tauri desktop app.**  
-> This README describes every change made to the browser extension (v1.1.0) and
-> exactly what the Rust side needs to handle.  Read it completely before editing
-> any Rust files.
+> **For agents working on the Tauri desktop app.**  
+> Describes the current wire contract between the MV3 companion extension and the PilPod bridge (v1.3.0).
 
 ---
 
-## What Changed in the Extension
+## Endpoints
 
-### 1. Payload shape (`POST /browser-media`)
+| Transport | URL | Purpose |
+|-----------|-----|---------|
+| Capabilities | `GET http://127.0.0.1:17399/capabilities` | Server-owned timing + protocol metadata |
+| HTTP fallback | `POST http://127.0.0.1:17399/browser-tabs` | Ping/sync + command drain |
+| WebSocket (primary) | `ws://127.0.0.1:17400/ws` | Persistent ping/sync + push commands |
 
-The request body now carries **two tab lists** instead of one.
+All endpoints are loopback-only. CORS allows extension origins on HTTP routes.
+
+---
+
+## Startup flow
+
+1. Extension service worker loads a stable `browserId` from `chrome.storage.local`.
+2. **`GET /capabilities`** — merge server timing into runtime config (`bridgeConfig.js`). On failure, bundled defaults apply.
+3. Connect **WebSocket** first; if connect fails within `wsConnectTimeoutMs`, fall back to HTTP polling.
+4. Every POST/WS frame includes **`protocolVersion`** (currently `"1"`). Rust rejects unknown major versions with HTTP 400.
+
+---
+
+## Capabilities response
 
 ```jsonc
 {
-  "browserId":       "uuid-string",
-  "browserName":     "Chrome",
-  "connectionState": "connected",
-
-  // PRIMARY — tabs that have active media (same as before, with new fields)
-  "tabs": [
-    {
-      "tabId":         123,
-      "browserId":     "uuid-string",
-      "url":           "https://open.spotify.com/...",
-      "title":         "Song Name",
-      "artist":        "Artist Name",
-      "album":         "Album Name",
-      "playbackState": "playing",          // "playing" | "paused" | "none"
-      "artworkUrl":    "https://...",
-      "duration":      210.5,
-      "currentTime":   45.2,
-      // NEW fields on media tabs:
-      "tabState":      "active"            // see Tab States below
-    }
-  ],
-
-  // SECONDARY — all OTHER open tabs (no media detected)
-  "allTabs": [
-    {
-      "tabId":      456,
-      "windowId":   1,
-      "url":        "https://github.com/...",
-      "title":      "GitHub",
-      "favIconUrl": "https://github.com/favicon.ico",
-      "tabState":   "inactive",            // see Tab States below
-      "active":     false,
-      "pinned":     false,
-      "audible":    false,
-      "index":      3
-    }
-  ]
+  "version": "1.2",              // bridge capabilities schema version
+  "protocolVersion": "1",        // wire protocol major version
+  "maxCommandTtlMs": 5000,
+  "connectedWindowMs": 3000,     // HTTP-only extension_connected cutoff
+  "supportsWebSocket": true,
+  "pushIntervalMs": 250,
+  "debounceMs": 60,
+  "fetchTimeoutMs": 800,
+  "failThreshold": 4,
+  "sleepIntervalMs": 5000,
+  "wsConnectTimeoutMs": 2000,
+  "wsReconnectMs": 3000,
+  "httpPath": "/browser-tabs",
+  "wsUrl": "ws://127.0.0.1:17400/ws"
 }
 ```
 
-**Key rule:** A tab appears in either `tabs` OR `allTabs`, never both.
+Rust constants live in `src-tauri/src/browser_bridge/protocol.rs` — this endpoint is the single source of truth the extension reads at runtime.
 
 ---
 
-### 2. Tab States
+## Message types: ping vs sync
 
-Both `TabRow` (media tabs) and `TabMeta` (all-tabs) carry a `tabState` field.
+The extension decouples liveness from state updates:
 
-| Value        | Meaning                                                                 |
-|--------------|-------------------------------------------------------------------------|
-| `"active"`   | Currently focused tab in its window.                                    |
-| `"inactive"` | Loaded and visible but not the focused tab.                             |
-| `"loading"`  | Currently navigating / loading a page.                                  |
-| `"sleeping"` | Browser discarded the renderer to save memory (`tab.discarded = true`). |
-| `"crashed"`  | Renderer process crashed.                                               |
-| `"unknown"`  | State could not be determined.                                          |
+### HTTP ping (no tab changes)
 
-**UI hint:** Show a 💤 badge on `sleeping`, a ⚠️ badge on `crashed`, and a dimmed row for `inactive` tabs. The Rust UI should let users act on these.
-
----
-
-### 3. Content-script signals (inside media tab snapshots)
-
-Each entry in `tabs[]` now also carries activity hints from the page itself.
-These are **informational** — the Rust app can use them for smarter UI but
-they are not required for core functionality.
-
-```jsonc
+```json
 {
-  "pageVisible":   true,       // document.visibilityState === "visible"
-  "userIdleMs":    120000,     // ms since last user interaction (mouse/key/scroll)
-  "documentState": "complete"  // "loading" | "interactive" | "complete"
+  "browserId": "uuid",
+  "ping": true,
+  "seq": 42,
+  "protocolVersion": "1"
 }
 ```
 
-Suggested thresholds for the UI:
-- `userIdleMs > 300_000` (5 min) → show an "inactive" warning on the tile.
-- `pageVisible === false` → tab is in background; dimming is appropriate.
+### HTTP sync (full tab list)
+
+```json
+{
+  "browserId": "uuid",
+  "browserName": "Chrome",
+  "tabs": [ /* TabPost[] */ ],
+  "protocolVersion": "1"
+}
+```
+
+### WebSocket ping
+
+```json
+{
+  "type": "ping",
+  "browserId": "uuid",
+  "seq": 42,
+  "protocolVersion": "1"
+}
+```
+
+### WebSocket sync
+
+```json
+{
+  "type": "sync",
+  "browserId": "uuid",
+  "browserName": "Chrome",
+  "tabs": [ /* TabPost[] */ ],
+  "protocolVersion": "1"
+}
+```
+
+Rust updates `last_seen` on every ping/sync. UI emit and GSMTC refresh happen only when tab content hash changes (or on reconnect lifecycle events).
 
 ---
 
-### 4. New Commands (Rust → Extension)
+## Tab payload (`TabPost`)
 
-The response JSON from `/browser-media` still has the same shape:
+Each entry in `tabs[]` represents one open tab from the extension registry:
 
 ```jsonc
 {
+  "tabId": 123,
+  "windowId": 1,
+  "url": "https://example.com/",
+  "title": "Example",
+  "favIconUrl": "https://example.com/favicon.ico",
+  "tabState": "active",       // active | inactive | loading | sleeping | crashed | unknown
+  "active": true,
+  "windowFocused": true,
+  "audible": false,
+  "muted": false,
+  "pinned": false,
+  "index": 0,
+  "media": {                  // null when no media signal on the page
+    "playbackState": "playing",
+    "title": "Track",
+    "artist": "Artist",
+    "album": "Album",
+    "artworkUrl": "https://...",
+    "duration": 210.5,
+    "currentTime": 45.2,
+    "pageVisible": true,
+    "userIdleMs": 1200,
+    "documentState": "complete"
+  }
+}
+```
+
+There is **no** separate `allTabs` array and **no** `connectionState` field in the payload. Connection state is derived on the Rust side from WS socket presence and heartbeat freshness.
+
+---
+
+## Server response
+
+HTTP POST and WS frames both return:
+
+```json
+{
+  "ok": true,           // HTTP only
   "commands": [
-    { "tabId": 456, "action": "reactivateTab" }
-  ]
+    { "tabId": 123, "action": "playPause" }
+  ],
+  "syncNow": false
 }
 ```
 
-New `action` values to support:
+| Field | Meaning |
+|-------|---------|
+| `commands` | Pending media/tab commands for this `browserId` (TTL 5 s in queue; WS clients receive push immediately on enqueue) |
+| `syncNow` | When `true`, extension sends a full sync on the next tick |
 
-| Action           | Applies to        | What the extension does                                    |
-|------------------|-------------------|------------------------------------------------------------|
-| `focusTab`       | any tab           | Existing — brings window/tab to foreground. *(unchanged)*  |
-| `reactivateTab`  | any tab           | **New** — reloads a sleeping/crashed tab, then focuses it. |
-| `reloadTab`      | any tab           | **New** — hard reloads the tab (clears its media entry).   |
-| `closeTab`       | any tab           | **New** — closes the tab entirely.                         |
-| `playPause`      | media tabs only   | Existing — unchanged.                                      |
-| `next`           | media tabs only   | Existing — unchanged.                                      |
-| `previous`       | media tabs only   | Existing — unchanged.                                      |
-
-> **Important:** `reactivateTab`, `reloadTab`, and `closeTab` can target **any**
-> tabId — it does not have to be a media tab. The extension handles both lists.
+Supported actions: `playPause`, `next`, `previous`, `focusTab`, `reactivateTab`, `reloadTab`, `closeTab`.
 
 ---
 
-## Rust-Side Changes Required
+## Multi-profile identity
 
-### A. Data Structures
-
-Add / update these structs (use `serde` for JSON deserialization):
-
-```rust
-/// Received from the extension — media tab (primary list)
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TabRow {
-    pub tab_id:         i64,
-    pub browser_id:     String,
-    pub url:            String,
-    pub title:          String,
-    pub artist:         String,
-    pub album:          String,
-    pub playback_state: String,   // "playing" | "paused" | "none"
-    pub artwork_url:    String,
-    pub duration:       f64,
-    pub current_time:   f64,
-    // NEW
-    pub tab_state:      String,   // "active" | "inactive" | "loading" | "sleeping" | "crashed" | "unknown"
-    #[serde(default)]
-    pub page_visible:   bool,
-    #[serde(default)]
-    pub user_idle_ms:   u64,
-    #[serde(default)]
-    pub document_state: String,   // "loading" | "interactive" | "complete"
-}
-
-/// NEW — non-media tab (secondary list)
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TabMeta {
-    pub tab_id:       i64,
-    pub window_id:    i64,
-    pub url:          String,
-    pub title:        String,
-    pub fav_icon_url: String,
-    pub tab_state:    String,
-    pub active:       bool,
-    pub pinned:       bool,
-    pub audible:      bool,
-    pub index:        u32,
-}
-
-/// Top-level payload received at POST /browser-media
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BrowserMediaPayload {
-    pub browser_id:       String,
-    pub browser_name:     String,
-    pub connection_state: String,
-    pub tabs:             Vec<TabRow>,   // media tabs (primary)
-    #[serde(default)]
-    pub all_tabs:         Vec<TabMeta>, // all other tabs (secondary)
-}
-```
+- **`browserId`** — stable UUID per browser profile (`chrome.storage.local`).
+- Rust emits **one UI row per `browserId`**, not per OS browser executable.
+- `DetectedBrowser.id` = profile UUID; `osBrowserId` = OS-level browser id (e.g. `chrome`).
 
 ---
 
-### B. HTTP Handler (`/browser-media`)
+## Connection state (Rust → UI)
 
-The handler logic is unchanged except:
+| Field | Source |
+|-------|--------|
+| `extension_connected` | WS socket open **or** `last_seen` within 3 s (HTTP fallback) |
+| `extension_reconnecting` | WS disconnected, in reconnect window (e.g. after sleep/wake) |
+| Cached tabs | Always shown from last sync; media cleared in UI when stale |
 
-1. Deserialize `all_tabs` from the payload (it may be absent in old payloads,
-   `#[serde(default)]` handles that gracefully).
-2. Store `all_tabs` in your browser state alongside `tabs`.
-3. Return commands as before — the new action strings are just new enum variants.
-
-```rust
-// In your command enum / match:
-match action.as_str() {
-    "playPause"      => { /* existing */ }
-    "next"           => { /* existing */ }
-    "previous"       => { /* existing */ }
-    "focusTab"       => { /* existing */ }
-    "reactivateTab"  => { /* NEW — queue command, extension handles the rest */ }
-    "reloadTab"      => { /* NEW */ }
-    "closeTab"       => { /* NEW */ }
-    _                => { /* ignore unknown */ }
-}
-```
+Backoff when desktop unreachable: **`failThreshold = 4`** consecutive failures, then probe every **`sleepIntervalMs = 5000`**. Applies to both HTTP and WS transports.
 
 ---
 
-### C. Frontend (Tauri webview / UI)
+## Protocol versioning
 
-Split the browser tile into two sections:
+- Extension sends `protocolVersion: "1"` on every frame.
+- Missing field treated as v1 (backward compatible).
+- Major version ≠ 1 → HTTP 400; WS frame skipped with log.
 
-#### Primary section — Media Tabs
-Same as before. Additionally:
-- Show `tabState` badge on each tile (💤 sleeping, ⚠️ crashed, ⏳ loading).
-- If `tabState` is `"sleeping"` or `"crashed"`, show a **Reactivate** button
-  that sends `{ tabId, action: "reactivateTab" }`.
-
-#### Secondary section — All Other Tabs
-A collapsible list (default collapsed). Each row shows:
-- `favIconUrl` + `title` + abbreviated `url`
-- `tabState` badge
-- Action buttons:
-  - **Focus**      → `focusTab`
-  - **Reload**     → `reloadTab`
-  - **Close**      → `closeTab`
-  - **Reactivate** → `reactivateTab` (shown only for `sleeping` / `crashed`)
-
-#### Idle detection (optional but recommended)
-On media tab rows, if `userIdleMs > 300_000`:
-- Show a faint "idle" indicator (e.g. grey dot or italic timestamp).
-- This is purely visual; no command is needed.
+When breaking the wire format, bump the major version and reject old clients explicitly.
 
 ---
 
-### D. State Management
+## File map (extension)
 
-Add `all_tabs: Vec<TabMeta>` to whatever per-browser state struct you have.
-Update it on every incoming payload. The field is replaced wholesale (same
-pattern as `tabs`).
-
-On browser disconnect (`connectionState === "disconnected"`):
-- Clear both `tabs` and `all_tabs` for that browser.
-
----
-
-### E. No Breaking Changes
-
-- Old payloads without `allTabs` still parse correctly (`#[serde(default)]`).
-- Old command actions still work — the extension handles them identically.
-- The `/browser-media` endpoint URL and method are unchanged.
+| File | Role |
+|------|------|
+| `src/shared/constants.js` | Fallback defaults |
+| `src/shared/bridgeConfig.js` | Runtime config + `loadBridgeConfig()` |
+| `src/background/transport/wsTransport.js` | Primary transport |
+| `src/background/transport/httpTransport.js` | Fallback transport |
+| `src/background/tabs/registry.js` | Tab + media state, dirty tracking |
+| `src/content.js` | Event-driven media detection |
 
 ---
 
-## File Inventory (extension)
+## File map (Rust)
 
-| File            | Status   | Notes                                          |
-|-----------------|----------|------------------------------------------------|
-| `manifest.json` | Updated  | Version bumped to 1.1.0; added `"windows"` permission |
-| `background.js` | Updated  | `allTabsMeta` map, new lifecycle listeners, new command handlers |
-| `content.js`    | Updated  | Added `pageVisible`, `userIdleMs`, `documentState` to snapshot |
-
----
-
-## Testing Checklist
-
-- [ ] Extension loads without errors in chrome://extensions
-- [ ] `POST /browser-media` body contains both `tabs` and `allTabs`
-- [ ] `tabState` is `"sleeping"` for a tab that has been discarded (open many tabs to trigger, or use chrome://discards)
-- [ ] `tabState` is `"crashed"` for a tab with a crashed renderer (navigate to `chrome://crash`)
-- [ ] Sending `reactivateTab` reloads and focuses a discarded tab
-- [ ] Sending `reloadTab` causes the tab to navigate (media entry is cleared and re-detected)
-- [ ] Sending `closeTab` removes the tab from both lists
-- [ ] Media controls (playPause, next, previous) still work as before
-- [ ] `focusTab` still works as before
-- [ ] Disconnecting the desktop app transitions `connectionState` to `"disconnected"` after 3 failures
+| File | Role |
+|------|------|
+| `browser_bridge/protocol.rs` | Constants, capabilities, version validation |
+| `browser_bridge/http.rs` | POST `/browser-tabs`, GET `/capabilities` |
+| `browser_bridge/ws.rs` | WebSocket server |
+| `browser_bridge/handler.rs` | Shared ingest, hash diff, command drain |
+| `browser_detector.rs` | OS scan + merge with extension slots |

@@ -75,6 +75,7 @@ export const TabState = Object.freeze({
  * @property {TabPost[]} [tabs]
  * @property {boolean} [ping]
  * @property {number} [seq]
+ * @property {string} [protocolVersion]
  */
 
 /**

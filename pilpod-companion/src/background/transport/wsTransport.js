@@ -4,13 +4,7 @@
 
 "use strict";
 
-import {
-  WS_URL,
-  PUSH_INTERVAL_MS,
-  DEBOUNCE_MS,
-  WS_RECONNECT_MS,
-  WS_CONNECT_TIMEOUT_MS,
-} from "../../shared/constants.js";
+import { getBridgeConfig } from "../../shared/bridgeConfig.js";
 
 export class WsTransport {
   /** @type {WebSocket|null} */
@@ -25,8 +19,17 @@ export class WsTransport {
   /** @type {ReturnType<typeof setTimeout>|null} */
   #reconnectTimer = null;
 
+  /** @type {ReturnType<typeof setTimeout>|null} */
+  #wakeTimer = null;
+
   /** @type {number} */
   #seq = 0;
+
+  /** @type {number} */
+  #failCount = 0;
+
+  /** @type {boolean} */
+  #sleeping = false;
 
   /** @type {boolean} */
   #stopped = false;
@@ -34,8 +37,8 @@ export class WsTransport {
   /** @type {(() => void)|null} */
   #readyResolve = null;
 
-  /** @type {Promise<void>} */
-  #readyPromise = Promise.reject(new Error("not connected"));
+  /** Pending until `#openSocket()` runs — must not use `Promise.reject` here (unhandled rejection). */
+  #readyPromise = new Promise(() => {});
 
   /**
    * @param {import("../tabs/registry.js").TabRegistry} registry
@@ -67,26 +70,29 @@ export class WsTransport {
     this.#openSocket();
   }
 
-  waitForReady(timeoutMs = WS_CONNECT_TIMEOUT_MS) {
+  waitForReady(timeoutMs) {
+    const ms = timeoutMs ?? getBridgeConfig().wsConnectTimeoutMs;
     return Promise.race([
       this.#readyPromise,
       new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("ws connect timeout")), timeoutMs);
+        setTimeout(() => reject(new Error("ws connect timeout")), ms);
       }),
     ]);
   }
 
   schedulePush() {
+    const { debounceMs } = getBridgeConfig();
     if (this.#debounceTimer !== null) return;
     this.#debounceTimer = setTimeout(() => {
       this.#debounceTimer = null;
       this.#push();
-    }, DEBOUNCE_MS);
+    }, debounceMs);
   }
 
   startHeartbeat() {
+    const { pushIntervalMs } = getBridgeConfig();
     if (this.#heartbeatTimer !== null) return;
-    this.#heartbeatTimer = setInterval(() => this.#push(), PUSH_INTERVAL_MS);
+    this.#heartbeatTimer = setInterval(() => this.#push(), pushIntervalMs);
     this.#push();
   }
 
@@ -100,6 +106,10 @@ export class WsTransport {
       clearTimeout(this.#reconnectTimer);
       this.#reconnectTimer = null;
     }
+    if (this.#wakeTimer !== null) {
+      clearTimeout(this.#wakeTimer);
+      this.#wakeTimer = null;
+    }
     if (this.#ws) {
       this.#ws.close();
       this.#ws = null;
@@ -107,14 +117,20 @@ export class WsTransport {
   }
 
   #openSocket() {
+    if (this.#sleeping) return;
+
+    const { wsUrl } = getBridgeConfig();
+
     this.#readyPromise = new Promise((resolve) => {
       this.#readyResolve = resolve;
     });
 
-    const ws = new WebSocket(WS_URL);
+    const ws = new WebSocket(wsUrl);
     this.#ws = ws;
 
     ws.onopen = () => {
+      this.#failCount = 0;
+      this.#sleeping = false;
       this.#readyResolve?.();
       this.#readyResolve = null;
       this.startHeartbeat();
@@ -137,7 +153,10 @@ export class WsTransport {
         clearInterval(this.#heartbeatTimer);
         this.#heartbeatTimer = null;
       }
-      this.#scheduleReconnect();
+      this.#onFailure();
+      if (!this.#sleeping) {
+        this.#scheduleReconnect();
+      }
     };
 
     ws.onerror = () => {
@@ -146,28 +165,52 @@ export class WsTransport {
   }
 
   #scheduleReconnect() {
-    if (this.#stopped || this.#reconnectTimer !== null) return;
+    const { wsReconnectMs } = getBridgeConfig();
+    if (this.#stopped || this.#reconnectTimer !== null || this.#sleeping) return;
     this.#reconnectTimer = setTimeout(() => {
       this.#reconnectTimer = null;
       this.#openSocket();
-    }, WS_RECONNECT_MS);
+    }, wsReconnectMs);
+  }
+
+  #onFailure() {
+    const { failThreshold, sleepIntervalMs } = getBridgeConfig();
+    this.#failCount++;
+    if (this.#failCount >= failThreshold && !this.#sleeping) {
+      this.#sleeping = true;
+      if (this.#wakeTimer === null) {
+        this.#wakeTimer = setTimeout(() => {
+          this.#wakeTimer = null;
+          this.#wakeAndRetry();
+        }, sleepIntervalMs);
+      }
+    }
+  }
+
+  #wakeAndRetry() {
+    this.#sleeping = false;
+    this.#openSocket();
   }
 
   #push() {
+    if (this.#sleeping) return;
     if (!this.#ws || this.#ws.readyState !== WebSocket.OPEN) return;
 
+    const cfg = getBridgeConfig();
     const dirty = this.#registry.isDirty();
     const payload = dirty
       ? {
-          type:        "sync",
-          browserId:   this.#getBrowserId(),
-          browserName: this.#getBrowserName(),
-          tabs:        this.#registry.all(),
+          type:            "sync",
+          browserId:       this.#getBrowserId(),
+          browserName:     this.#getBrowserName(),
+          tabs:            this.#registry.all(),
+          protocolVersion: cfg.protocolVersion,
         }
       : {
-          type:      "ping",
-          browserId: this.#getBrowserId(),
-          seq:       this.#seq++,
+          type:            "ping",
+          browserId:       this.#getBrowserId(),
+          seq:             this.#seq++,
+          protocolVersion: cfg.protocolVersion,
         };
 
     this.#ws.send(JSON.stringify(payload));
