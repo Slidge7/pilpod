@@ -1,6 +1,6 @@
 import "./DownloadPanel.css";
-import { useCallback } from "react";
-import { useDownloader } from "./hooks/useDownloader";
+import { useCallback, useEffect } from "react";
+import type { UseDownloaderReturn } from "./hooks/useDownloader";
 import { useDownloadQueue } from "./hooks/useDownloadQueue";
 import { BinaryStatusBanner } from "./components/BinaryStatusBanner";
 import { UrlInput } from "./components/UrlInput";
@@ -9,7 +9,17 @@ import { OutputDirPicker } from "./components/OutputDirPicker";
 import { DownloadQueue } from "./components/DownloadQueue";
 import type { DownloadTask } from "./types";
 
-export function DownloadPanel() {
+type Props = {
+  pendingUrl?: string | null;
+  onPendingUrlConsumed?: () => void;
+  downloader: UseDownloaderReturn;
+};
+
+export function DownloadPanel({
+  pendingUrl = null,
+  onPendingUrlConsumed,
+  downloader,
+}: Props) {
   const {
     tasks,
     binaryStatus,
@@ -26,9 +36,15 @@ export function DownloadPanel() {
     clearDone,
     openOutputDir,
     installYtdlp,
-  } = useDownloader();
+  } = downloader;
 
   const queue = useDownloadQueue(tasks);
+
+  useEffect(() => {
+    if (!pendingUrl) return;
+    void fetchInfo(pendingUrl);
+    onPendingUrlConsumed?.();
+  }, [pendingUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDownload = useCallback(async () => {
     if (!videoInfo || !selectedPreset) return;
@@ -61,7 +77,11 @@ export function DownloadPanel() {
       )}
 
       <div className="pilpod-dl-panel__top">
-        <UrlInput loading={fetchingInfo} onFetch={fetchInfo} />
+        <UrlInput
+          loading={fetchingInfo}
+          onFetch={fetchInfo}
+          prefillUrl={pendingUrl}
+        />
 
         {fetchInfoError && (
           <p className="pilpod-dl-panel__fetch-error">{fetchInfoError}</p>

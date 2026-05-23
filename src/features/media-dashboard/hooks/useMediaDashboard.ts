@@ -21,15 +21,20 @@ import {
 } from "../constants";
 import { tabRowKey } from "../lib/browserMedia";
 import type { MediaMainTab } from "../model";
+import { useDownloader } from "../../downloader/hooks/useDownloader";
 import { useWindowsSessions } from "../../windows-media";
 import { useBrowsers } from "./useBrowsers";
 
 export function useMediaDashboard() {
   const { browsers, refresh: refreshBrowsers } = useBrowsers();
   const windowsSessions = useWindowsSessions();
+  const downloader = useDownloader();
 
   const [browserError, setBrowserError] = useState<string | null>(null);
   const [mainTab, setMainTab] = useState<MediaMainTab>("browser");
+  const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(
+    null,
+  );
   const [browserPendingKeys, setBrowserPendingKeys] = useState<Set<string>>(
     () => new Set(),
   );
@@ -394,6 +399,21 @@ export function useMediaDashboard() {
     }
   }, [alwaysOnTop, isWidget]);
 
+  const clearPendingDownloadUrl = useCallback(() => {
+    setPendingDownloadUrl(null);
+  }, []);
+
+  const downloadFromBrowserTab = useCallback(
+    async (url: string) => {
+      setPendingDownloadUrl(url);
+      setMainTab("download");
+      if (isWidget) {
+        await restoreFromWidget();
+      }
+    },
+    [isWidget, restoreFromWidget],
+  );
+
   const dismissWidgetAndDisable = useCallback(async () => {
     if (windowTransitionLock.current || !isWidget) return;
     windowTransitionLock.current = true;
@@ -511,6 +531,10 @@ export function useMediaDashboard() {
     error,
     mainTab,
     setMainTab,
+    pendingDownloadUrl,
+    clearPendingDownloadUrl,
+    downloadFromBrowserTab,
+    downloader,
     alwaysOnTop,
     toggleAlwaysOnTop,
     refresh,

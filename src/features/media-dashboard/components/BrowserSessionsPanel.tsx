@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
 import "./BrowserSessionsPanel.css";
-import { invoke } from "@tauri-apps/api/core";
 import type { AudioSessionInfoDto, BrowserTab, DetectedBrowser } from "../../../types/media";
 import {
   applySearchTagFilters,
@@ -13,6 +12,8 @@ import {
   type SearchTagOption,
 } from "../lib/browserMedia";
 import { AppVolumeSlider } from "../../../shared/ui/AppVolumeSlider";
+import { findActiveDownloadForUrl } from "../../downloader/lib/activeDownload";
+import type { DownloadTask } from "../../downloader/types";
 import { UnifiedTabRow } from "./UnifiedTabRow";
 
 /** Format an age in seconds as a compact human-readable string. */
@@ -34,6 +35,7 @@ type Props = {
   onMixerVolume: (instanceId: string, volume: number) => void;
   onRefreshBrowser: (browserId: string) => void | Promise<void>;
   onDownloadFromTab?: (url: string) => void;
+  downloadTasks: Map<string, DownloadTask>;
 };
 
 function BrowserHeader({
@@ -131,6 +133,7 @@ function BrowserBody({
   onClose,
   onReactivate,
   onDownload,
+  downloadTasks,
 }: {
   browser: DetectedBrowser;
   pendingKeys: ReadonlySet<string>;
@@ -141,6 +144,7 @@ function BrowserBody({
   onClose: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onReactivate: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onDownload: (url: string) => void;
+  downloadTasks: Map<string, DownloadTask>;
 }) {
   const slotBrowserId = browser.tabs[0]?.browserId ?? browser.id;
   const mediaTabs = browser.tabs.filter(tabHasMedia);
@@ -162,6 +166,11 @@ function BrowserBody({
         onClose={onClose}
         onReactivate={onReactivate}
         onDownload={showMediaControls ? onDownload : undefined}
+        activeDownload={
+          showMediaControls && t.url
+            ? findActiveDownloadForUrl(downloadTasks, t.url)
+            : undefined
+        }
       />
     );
   };
@@ -410,6 +419,7 @@ export function BrowserSessionsPanel({
   onMixerVolume,
   onRefreshBrowser,
   onDownloadFromTab,
+  downloadTasks,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [excludedSites, setExcludedSites] = useState<Set<string>>(() => new Set());
@@ -509,17 +519,7 @@ export function BrowserSessionsPanel({
 
   const handleDownload = useCallback(
     (url: string) => {
-      if (onDownloadFromTab) {
-        onDownloadFromTab(url);
-        return;
-      }
-      // Fallback: fire-and-forget dl_start with best quality preset.
-      void invoke("dl_start", {
-        url,
-        formatId: "bestvideo+bestaudio/best",
-        audioOnly: false,
-        audioFormat: null,
-      });
+      onDownloadFromTab?.(url);
     },
     [onDownloadFromTab],
   );
@@ -590,6 +590,7 @@ export function BrowserSessionsPanel({
                 onClose={onClose}
                 onReactivate={onReactivate}
                 onDownload={handleDownload}
+                downloadTasks={downloadTasks}
               />
             </div>
           );

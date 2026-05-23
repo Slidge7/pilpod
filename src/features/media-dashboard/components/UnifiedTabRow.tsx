@@ -1,5 +1,10 @@
 import "./UnifiedTabRow.css";
 import type { BrowserTab } from "../../../types/media";
+import type { DownloadTask } from "../../downloader/types";
+import {
+  downloadProgressLabel,
+  downloadProgressTitle,
+} from "../../downloader/lib/activeDownload";
 import {
   abbreviatedUrl,
   faviconFromUrl,
@@ -32,6 +37,8 @@ type Props = {
   onReactivate: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   /** Called when the user clicks the download icon on a media tab. */
   onDownload?: (url: string) => void;
+  /** In-progress download for this tab URL, if any. */
+  activeDownload?: DownloadTask;
 };
 
 export function UnifiedTabRow({
@@ -46,6 +53,7 @@ export function UnifiedTabRow({
   onClose,
   onReactivate,
   onDownload,
+  activeDownload,
 }: Props) {
   const ts = (tab.tabState ?? "").toLowerCase();
   const badge = tabStateBadge(tab.tabState);
@@ -207,8 +215,21 @@ export function UnifiedTabRow({
           </>
         ) : null}
 
-        {/* Download button for media tabs */}
-        {showMediaControls && hasMedia && onDownload && tab.url ? (
+        {/* Download button or in-progress feedback for media tabs */}
+        {showMediaControls && hasMedia && activeDownload ? (
+          <span
+            className="pilpod-unified-tab-row__dl-progress"
+            title={downloadProgressTitle(activeDownload)}
+            aria-label={downloadProgressTitle(activeDownload)}
+          >
+            {(activeDownload.status.type === "Queued" ||
+              activeDownload.status.type === "Muxing" ||
+              activeDownload.status.type === "FetchingInfo") && (
+              <Spinner className="pilpod-icon--sm" />
+            )}
+            <span>{downloadProgressLabel(activeDownload)}</span>
+          </span>
+        ) : showMediaControls && hasMedia && onDownload && tab.url ? (
           <button
             type="button"
             title="Download this video"

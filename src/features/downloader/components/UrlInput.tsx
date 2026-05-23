@@ -1,14 +1,19 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Spinner } from "../../../shared/ui/icons";
 
 type Props = {
   loading: boolean;
   onFetch: (url: string) => void;
+  prefillUrl?: string | null;
 };
 
-export function UrlInput({ loading, onFetch }: Props) {
+export function UrlInput({ loading, onFetch, prefillUrl }: Props) {
   const [url, setUrl] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (prefillUrl) setUrl(prefillUrl);
+  }, [prefillUrl]);
 
   const handleSubmit = useCallback(() => {
     const trimmed = url.trim();

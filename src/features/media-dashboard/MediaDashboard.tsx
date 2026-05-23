@@ -16,6 +16,10 @@ export function MediaDashboard() {
     error,
     mainTab,
     setMainTab,
+    pendingDownloadUrl,
+    clearPendingDownloadUrl,
+    downloadFromBrowserTab,
+    downloader,
     browserPendingKeys,
     winPendingKeys,
     alwaysOnTop,
@@ -74,6 +78,8 @@ export function MediaDashboard() {
           onMixerVolume={(id, v) => void setMixerVolume(id, v)}
           onOpenFullWindow={() => void restoreFromWidget()}
           onDismissWidget={() => void dismissWidgetAndDisable()}
+          onDownloadFromTab={(url) => void downloadFromBrowserTab(url)}
+          downloadTasks={downloader.tasks}
         />
       );
     }
@@ -133,6 +139,8 @@ export function MediaDashboard() {
               onReactivate={reactivateBrowserTab}
               onMixerVolume={(id, v) => void setMixerVolume(id, v)}
               onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
+              onDownloadFromTab={(url) => void downloadFromBrowserTab(url)}
+              downloadTasks={downloader.tasks}
             />
           ) : mainTab === "windows" ? (
             <WindowsSessionsPanel
@@ -142,7 +150,11 @@ export function MediaDashboard() {
               onMixerVolume={(id, v) => void setMixerVolume(id, v)}
             />
           ) : (
-            <DownloadPanel />
+            <DownloadPanel
+              pendingUrl={pendingDownloadUrl}
+              onPendingUrlConsumed={clearPendingDownloadUrl}
+              downloader={downloader}
+            />
           )}
         </main>
 

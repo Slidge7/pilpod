@@ -9,6 +9,7 @@ import type { MediaMainTab } from "../model";
 import { BrowserSessionsPanel } from "./BrowserSessionsPanel";
 import { IconWidgetClose } from "../../../shared/ui/icons";
 import { WindowsSessionsPanel } from "../../windows-media";
+import type { DownloadTask } from "../../downloader/types";
 
 type Props = {
   mainTab: MediaMainTab;
@@ -29,6 +30,8 @@ type Props = {
   onMixerVolume: (instanceId: string, volume: number) => void;
   onOpenFullWindow: () => void;
   onDismissWidget: () => void;
+  onDownloadFromTab: (url: string) => void;
+  downloadTasks: Map<string, DownloadTask>;
 };
 
 export function WidgetMediaPanel({
@@ -50,6 +53,8 @@ export function WidgetMediaPanel({
   onMixerVolume,
   onOpenFullWindow,
   onDismissWidget,
+  onDownloadFromTab,
+  downloadTasks,
 }: Props) {
   return (
     <div className="pilpod-widget-panel-root">
@@ -116,6 +121,8 @@ export function WidgetMediaPanel({
               onReactivate={onReactivateBrowserTab}
               onRefreshBrowser={(id) => void onRefreshBrowser(id)}
               onMixerVolume={(id, v) => void onMixerVolume(id, v)}
+              onDownloadFromTab={onDownloadFromTab}
+              downloadTasks={downloadTasks}
             />
           ) : (
             <WindowsSessionsPanel

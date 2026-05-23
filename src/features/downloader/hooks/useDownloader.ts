@@ -21,6 +21,8 @@ export type DownloaderState = {
   outputDir: string;
 };
 
+export type UseDownloaderReturn = DownloaderState & DownloaderActions;
+
 export type DownloaderActions = {
   fetchInfo: (url: string) => Promise<void>;
   clearFetchedInfo: () => void;
@@ -34,7 +36,7 @@ export type DownloaderActions = {
   installYtdlp: () => Promise<void>;
 };
 
-export function useDownloader(): DownloaderState & DownloaderActions {
+export function useDownloader(): UseDownloaderReturn {
   const [tasks, setTasks] = useState<Map<string, DownloadTask>>(() => new Map());
   const [binaryStatus, setBinaryStatus] = useState<BinaryStatus | null>(null);
   const [fetchingInfo, setFetchingInfo] = useState(false);

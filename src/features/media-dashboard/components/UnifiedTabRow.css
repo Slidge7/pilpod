@@ -230,6 +230,23 @@ html.dark .pilpod-unified-tab-row__idle-hint {
   background: color-mix(in srgb, var(--pilpod-accent-danger, #ef4444) 10%, transparent);
 }
 
+.pilpod-unified-tab-row__dl-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  min-width: 2.5rem;
+  justify-content: center;
+  padding: 0.125rem 0.35rem;
+  border-radius: 0.125rem;
+  border: 1px solid var(--pilpod-border-strong);
+  background: var(--pilpod-bg-muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--pilpod-text-muted);
+}
+
 /* Play/pause button */
 .pilpod-unified-tab-row__play {
   display: inline-flex;
