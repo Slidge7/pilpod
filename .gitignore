@@ -1,3 +1,6 @@
+# Bundled binaries — run scripts/fetch-binaries.ps1 to populate
+src-tauri/binaries/
+
 # Logs
 logs
 *.log

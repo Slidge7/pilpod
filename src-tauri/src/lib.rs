@@ -1,6 +1,8 @@
 mod app;
 mod browser_tabs;
 #[cfg(windows)]
+mod downloader;
+#[cfg(windows)]
 mod browser_bridge;
 #[cfg(windows)]
 mod browser_commands;

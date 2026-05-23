@@ -8,6 +8,7 @@ import { WidgetView } from "./components/WidgetView";
 import { useAppearance } from "./hooks/useAppearance";
 import { useMediaDashboard } from "./hooks/useMediaDashboard";
 import { WindowsSessionsPanel } from "../windows-media";
+import { DownloadPanel } from "../downloader";
 
 export function MediaDashboard() {
   const { appearance, toggle } = useAppearance();
@@ -133,13 +134,15 @@ export function MediaDashboard() {
               onMixerVolume={(id, v) => void setMixerVolume(id, v)}
               onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
             />
-          ) : (
+          ) : mainTab === "windows" ? (
             <WindowsSessionsPanel
               sessions={sessions}
               pendingKeys={winPendingKeys}
               onToggleSession={toggleWinSession}
               onMixerVolume={(id, v) => void setMixerVolume(id, v)}
             />
+          ) : (
+            <DownloadPanel />
           )}
         </main>
 

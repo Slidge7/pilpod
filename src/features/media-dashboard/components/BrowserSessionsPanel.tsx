@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import "./BrowserSessionsPanel.css";
+import { invoke } from "@tauri-apps/api/core";
 import type { AudioSessionInfoDto, BrowserTab, DetectedBrowser } from "../../../types/media";
 import { tabRowKey, tabHasMedia } from "../lib/browserMedia";
 import { AppVolumeSlider } from "../../../shared/ui/AppVolumeSlider";
@@ -23,6 +24,7 @@ type Props = {
   onReactivate: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onMixerVolume: (instanceId: string, volume: number) => void;
   onRefreshBrowser: (browserId: string) => void | Promise<void>;
+  onDownloadFromTab?: (url: string) => void;
 };
 
 function BrowserHeader({
@@ -118,6 +120,7 @@ function BrowserBody({
   onReload,
   onClose,
   onReactivate,
+  onDownload,
 }: {
   browser: DetectedBrowser;
   pendingKeys: ReadonlySet<string>;
@@ -126,6 +129,7 @@ function BrowserBody({
   onReload: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onClose: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onReactivate: (tab: BrowserTab, browserId: string) => void | Promise<void>;
+  onDownload: (url: string) => void;
 }) {
   const slotBrowserId = browser.tabs[0]?.browserId ?? browser.id;
   const mediaTabs = browser.tabs.filter(tabHasMedia);
@@ -194,6 +198,7 @@ function BrowserBody({
                 onReload={onReload}
                 onClose={onClose}
                 onReactivate={onReactivate}
+                onDownload={onDownload}
               />
             );
           })}
@@ -245,7 +250,24 @@ export function BrowserSessionsPanel({
   onReactivate,
   onMixerVolume,
   onRefreshBrowser,
+  onDownloadFromTab,
 }: Props) {
+  const handleDownload = useCallback(
+    (url: string) => {
+      if (onDownloadFromTab) {
+        onDownloadFromTab(url);
+        return;
+      }
+      // Fallback: fire-and-forget dl_start with best quality preset.
+      void invoke("dl_start", {
+        url,
+        formatId: "bestvideo+bestaudio/best",
+        audioOnly: false,
+        audioFormat: null,
+      });
+    },
+    [onDownloadFromTab],
+  );
   if (browsers.length === 0) {
     return (
       <section role="tabpanel" id="panel-browser" aria-labelledby="tab-browser">
@@ -283,6 +305,7 @@ export function BrowserSessionsPanel({
                 onReload={onReload}
                 onClose={onClose}
                 onReactivate={onReactivate}
+                onDownload={handleDownload}
               />
             </div>
           );

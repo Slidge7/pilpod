@@ -1,2 +1,2 @@
 /** Primary dashboard source switcher. */
-export type MediaMainTab = "browser" | "windows";
+export type MediaMainTab = "browser" | "windows" | "download";

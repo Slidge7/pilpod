@@ -52,6 +52,10 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         std::sync::Mutex<Option<std::sync::Arc<crate::gsmtc::GsmtcState>>>,
     > = std::sync::Arc::new(std::sync::Mutex::new(None));
 
+    // ── Downloader ────────────────────────────────────────────────────────────
+    let download_state = crate::downloader::init(&handle);
+    let _ = app.manage(std::sync::Arc::clone(&download_state));
+
     // ── Manage state for Tauri commands ──────────────────────────────────────
     let _ = app.manage(std::sync::Arc::clone(&browser_commands));
     let _ = app.manage(std::sync::Arc::clone(&detected_browsers));

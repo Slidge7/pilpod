@@ -51,6 +51,21 @@ export function SourceTabBar({
       >
         Windows ({sessionCount})
       </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mainTab === "download"}
+        id="tab-download"
+        aria-controls="panel-download"
+        onClick={() => onMainTabChange("download")}
+        className={
+          mainTab === "download"
+            ? "pilpod-source-tab-bar__tab pilpod-source-tab-bar__tab--active"
+            : "pilpod-source-tab-bar__tab"
+        }
+      >
+        Download
+      </button>
     </div>
   );
 }

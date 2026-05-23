@@ -16,6 +16,17 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::browser_commands::request_browser_sync,
         // Window / widget commands
         crate::window_widget::toggle_widget_mode,
+        // Downloader commands
+        crate::downloader::commands::dl_fetch_info,
+        crate::downloader::commands::dl_start,
+        crate::downloader::commands::dl_cancel,
+        crate::downloader::commands::dl_get_queue,
+        crate::downloader::commands::dl_clear_done,
+        crate::downloader::commands::dl_get_output_dir,
+        crate::downloader::commands::dl_set_output_dir,
+        crate::downloader::commands::dl_open_output_dir,
+        crate::downloader::commands::dl_check_binaries,
+        crate::downloader::commands::dl_update_ytdlp,
     ])
 }
 
@@ -32,5 +43,16 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::platform::stub_commands::get_browsers,
         crate::platform::stub_commands::refresh_browser_connection,
         crate::platform::stub_commands::request_browser_sync,
+        // Downloader stubs
+        crate::platform::stub_commands::dl_fetch_info,
+        crate::platform::stub_commands::dl_start,
+        crate::platform::stub_commands::dl_cancel,
+        crate::platform::stub_commands::dl_get_queue,
+        crate::platform::stub_commands::dl_clear_done,
+        crate::platform::stub_commands::dl_get_output_dir,
+        crate::platform::stub_commands::dl_set_output_dir,
+        crate::platform::stub_commands::dl_open_output_dir,
+        crate::platform::stub_commands::dl_check_binaries,
+        crate::platform::stub_commands::dl_update_ytdlp,
     ])
 }

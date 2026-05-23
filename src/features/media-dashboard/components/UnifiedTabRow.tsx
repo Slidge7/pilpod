@@ -11,6 +11,7 @@ import {
 } from "../lib/browserMedia";
 import { BrowserMediaThumb } from "./BrowserMediaThumb";
 import {
+  IconDownload,
   IconOpenInTab,
   IconPause,
   IconPlay,
@@ -29,6 +30,8 @@ type Props = {
   onReload: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onClose: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onReactivate: (tab: BrowserTab, browserId: string) => void | Promise<void>;
+  /** Called when the user clicks the download icon on a media tab. */
+  onDownload?: (url: string) => void;
 };
 
 export function UnifiedTabRow({
@@ -42,6 +45,7 @@ export function UnifiedTabRow({
   onReload,
   onClose,
   onReactivate,
+  onDownload,
 }: Props) {
   const ts = (tab.tabState ?? "").toLowerCase();
   const badge = tabStateBadge(tab.tabState);
@@ -201,6 +205,22 @@ export function UnifiedTabRow({
               Close
             </button>
           </>
+        ) : null}
+
+        {/* Download button for media tabs */}
+        {showMediaControls && hasMedia && onDownload && tab.url ? (
+          <button
+            type="button"
+            title="Download this video"
+            aria-label="Download this video"
+            className="pilpod-unified-tab-row__btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDownload(tab.url!);
+            }}
+          >
+            <IconDownload className="pilpod-icon--sm" />
+          </button>
         ) : null}
 
         {/* Play/pause for media tabs */}
