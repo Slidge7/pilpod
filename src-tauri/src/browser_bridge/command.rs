@@ -1,11 +1,13 @@
 use tauri::State;
 
+use crate::browser_bridge::WsConnectionMap;
 use crate::browser_focus_win;
 use crate::browser_tabs::{enqueue_browser_command, BrowserCommandsQueue};
 
 #[tauri::command]
 pub fn browser_media_control(
     queue: State<'_, BrowserCommandsQueue>,
+    ws_connections: State<'_, WsConnectionMap>,
     browser_id: String,
     tab_id: i32,
     action: String,
@@ -26,7 +28,13 @@ pub fn browser_media_control(
         "closetab" | "close_tab" => "closeTab",
         _ => return Err(format!("unknown action: {action}")),
     };
-    enqueue_browser_command(&queue, &browser_id, tab_id, normalized);
+    enqueue_browser_command(
+        &queue,
+        Some(&ws_connections),
+        &browser_id,
+        tab_id,
+        normalized,
+    );
     if normalized == "focusTab" {
         let title = tab_title_for_focus.unwrap_or_default();
         let hint = browser_window_hint.unwrap_or_default();

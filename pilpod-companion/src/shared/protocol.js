@@ -68,10 +68,13 @@ export const TabState = Object.freeze({
  */
 
 /**
+ * Full sync or lightweight ping payload sent to the desktop bridge.
  * @typedef {object} BrowserPayload
  * @property {string} browserId
- * @property {string} browserName
- * @property {TabPost[]} tabs
+ * @property {string} [browserName]
+ * @property {TabPost[]} [tabs]
+ * @property {boolean} [ping]
+ * @property {number} [seq]
  */
 
 /**

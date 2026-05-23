@@ -14,6 +14,21 @@ export class TabRegistry {
   /** @type {number|null} */
   #focusedWindowId = null;
 
+  /** @type {boolean} */
+  #dirty = false;
+
+  markDirty() {
+    this.#dirty = true;
+  }
+
+  isDirty() {
+    return this.#dirty;
+  }
+
+  clearDirty() {
+    this.#dirty = false;
+  }
+
   /** @param {number|null} windowId */
   setFocusedWindow(windowId) {
     this.#focusedWindowId = windowId;
@@ -25,6 +40,7 @@ export class TabRegistry {
         changed = true;
       }
     }
+    if (changed) this.#dirty = true;
     return changed;
   }
 
@@ -53,7 +69,13 @@ export class TabRegistry {
     const existing = this.#tabs.get(tab.id);
     const updated  = buildTabPost(tab, this.#focusedWindowId);
     updated.media  = clearMedia ? null : (existing?.media ?? null);
+
+    const prev = existing ? JSON.stringify(existing) : null;
+    const next = JSON.stringify(updated);
+    if (prev === next) return false;
+
     this.#tabs.set(tab.id, updated);
+    this.#dirty = true;
     return true;
   }
 
@@ -68,6 +90,7 @@ export class TabRegistry {
   evict(tabId) {
     if (!this.#tabs.has(tabId)) return false;
     this.#tabs.delete(tabId);
+    this.#dirty = true;
     return true;
   }
 
@@ -77,6 +100,7 @@ export class TabRegistry {
     if (old) {
       this.#tabs.set(addedTabId, { ...old, tabId: addedTabId });
     }
+    this.#dirty = true;
     return true;
   }
 
@@ -89,6 +113,7 @@ export class TabRegistry {
         changed = true;
       }
     }
+    if (changed) this.#dirty = true;
     return changed;
   }
 
@@ -104,6 +129,7 @@ export class TabRegistry {
     if (p.hasSignal !== true) {
       if (meta.media === null) return false;
       meta.media = null;
+      this.#dirty = true;
       return true;
     }
 
@@ -121,7 +147,10 @@ export class TabRegistry {
     };
 
     const changed = JSON.stringify(meta.media) !== JSON.stringify(next);
-    if (changed) meta.media = next;
+    if (changed) {
+      meta.media = next;
+      this.#dirty = true;
+    }
     return changed;
   }
 
@@ -129,6 +158,7 @@ export class TabRegistry {
     const meta = this.#tabs.get(tabId);
     if (!meta || meta.media === null) return false;
     meta.media = null;
+    this.#dirty = true;
     return true;
   }
 
@@ -145,13 +175,15 @@ export class TabRegistry {
       }
       if (wasActive !== meta.active) changed = true;
     }
+    if (changed) this.#dirty = true;
     return changed;
   }
 
   setTabState(tabId, tabState) {
     const meta = this.#tabs.get(tabId);
-    if (!meta) return false;
+    if (!meta || meta.tabState === tabState) return false;
     meta.tabState = tabState;
+    this.#dirty = true;
     return true;
   }
 }

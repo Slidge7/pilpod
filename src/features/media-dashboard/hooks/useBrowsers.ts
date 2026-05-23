@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { DetectedBrowser } from "../../../types/media";
 import { BROWSERS_UPDATE_EVENT } from "../constants";
+import { browsersEqual } from "../lib/browsersEqual";
 
 /**
  * Subscribes to `"browsers://update"` and returns the current browser list.
@@ -23,10 +24,10 @@ export function useBrowsers() {
   const refresh = useCallback(async () => {
     try {
       const list = await invoke<DetectedBrowser[]>("get_browsers");
-      setBrowsers(list);
+      setBrowsers((prev) => (browsersEqual(prev, list) ? prev : list));
     } catch {
       // Non-Windows dev environment — start with empty list.
-      setBrowsers([]);
+      setBrowsers((prev) => (prev.length === 0 ? prev : []));
     }
   }, []);
 
@@ -37,7 +38,9 @@ export function useBrowsers() {
     let unlisten: UnlistenFn | undefined;
 
     void listen<DetectedBrowser[]>(BROWSERS_UPDATE_EVENT, (ev) => {
-      setBrowsers(ev.payload);
+      setBrowsers((prev) =>
+        browsersEqual(prev, ev.payload) ? prev : ev.payload,
+      );
     }).then((u) => {
       unlisten = u;
     });

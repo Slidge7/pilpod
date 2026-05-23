@@ -81,6 +81,8 @@ export type DetectedBrowser = {
    * Use this to display "Offline · cached 2 min ago" style hints.
    */
   lastSyncSecs: number | null;
+  /** True briefly after system resume until the extension reconnects. */
+  extensionReconnecting?: boolean;
 };
 
 /**

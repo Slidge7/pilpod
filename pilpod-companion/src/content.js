@@ -22,9 +22,10 @@ if (globalThis.__pilpodCompanionContent) {
 
   // ─── Constants ────────────────────────────────────────────────────────────
 
-  const TICK_MS              = 800;
-  const MSG_MEDIA_SNAPSHOT   = "PILPOD_MEDIA_SNAPSHOT";
-  const MSG_MEDIA_CONTROL    = "PILPOD_MEDIA_CONTROL";
+  const SNAPSHOT_DEBOUNCE_MS      = 50;
+  const MEDIASESSION_FALLBACK_MS  = 3000;
+  const MSG_MEDIA_SNAPSHOT        = "PILPOD_MEDIA_SNAPSHOT";
+  const MSG_MEDIA_CONTROL         = "PILPOD_MEDIA_CONTROL";
 
   // ─── Activity tracking ────────────────────────────────────────────────────
 
@@ -62,6 +63,11 @@ if (globalThis.__pilpodCompanionContent) {
     if (ms === "playing") return "playing";
     if (ms === "paused")  return "paused";
     return "none";
+  }
+
+  function hasActiveMedia() {
+    const state = _playbackState();
+    return state === "playing" || state === "paused";
   }
 
   function _artworkUrl() {
@@ -155,21 +161,116 @@ if (globalThis.__pilpodCompanionContent) {
     return true;
   });
 
-  // ─── Snapshot loop ────────────────────────────────────────────────────────
+  // ─── Event-driven snapshot reporting ─────────────────────────────────────
 
   let lastHasSignal = false;
+  let debounceTimer = null;
+  let fallbackInterval = null;
+  let mediaObserver = null;
+  const attachedElements = new WeakSet();
 
-  function _tick() {
+  function _sendSnapshot() {
     const snap = _buildSnapshot();
     if (!snap.hasSignal && !lastHasSignal) return;
     lastHasSignal = snap.hasSignal;
     try {
       chrome.runtime.sendMessage({ type: MSG_MEDIA_SNAPSHOT, payload: snap });
     } catch {
-      clearInterval(_interval);
+      _teardown();
     }
   }
 
-  const _interval = setInterval(_tick, TICK_MS);
-  _tick();
+  function scheduleSnapshot() {
+    if (debounceTimer !== null) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      _sendSnapshot();
+      _syncFallbackPoll();
+    }, SNAPSHOT_DEBOUNCE_MS);
+  }
+
+  function attachMediaElement(el) {
+    if (!(el instanceof HTMLMediaElement) || attachedElements.has(el)) return;
+    attachedElements.add(el);
+    for (const evt of ["play", "pause", "ended", "loadeddata", "loadedmetadata", "volumechange", "timeupdate"]) {
+      el.addEventListener(evt, scheduleSnapshot, { passive: true });
+    }
+  }
+
+  function scanExistingMedia() {
+    for (const el of _allMedia()) attachMediaElement(el);
+  }
+
+  function _needsMediaSessionFallback() {
+    if (_loadedMedia().length > 0) return false;
+    if (document.hidden && !hasActiveMedia()) return false;
+    const ms = navigator.mediaSession;
+    if (!ms) return false;
+    if (ms.playbackState === "playing" || ms.playbackState === "paused") return true;
+    const metaTitle = ms.metadata?.title ?? "";
+    return metaTitle.length > 0;
+  }
+
+  function startFallbackPoll() {
+    if (fallbackInterval !== null) return;
+    fallbackInterval = setInterval(_sendSnapshot, MEDIASESSION_FALLBACK_MS);
+  }
+
+  function stopFallbackPoll() {
+    if (fallbackInterval === null) return;
+    clearInterval(fallbackInterval);
+    fallbackInterval = null;
+  }
+
+  function _syncFallbackPoll() {
+    if (_needsMediaSessionFallback()) startFallbackPoll();
+    else stopFallbackPoll();
+  }
+
+  function _startObserver() {
+    if (mediaObserver !== null) return;
+    mediaObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (node instanceof HTMLMediaElement) {
+            attachMediaElement(node);
+            scheduleSnapshot();
+          } else if (node instanceof Element) {
+            for (const el of node.querySelectorAll("video, audio")) {
+              attachMediaElement(el);
+            }
+          }
+        }
+      }
+    });
+    mediaObserver.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  function _teardown() {
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+    stopFallbackPoll();
+    if (mediaObserver !== null) {
+      mediaObserver.disconnect();
+      mediaObserver = null;
+    }
+  }
+
+  function _syncActivityState() {
+    scanExistingMedia();
+    if (document.hidden && !hasActiveMedia()) {
+      stopFallbackPoll();
+    } else {
+      _syncFallbackPoll();
+    }
+    scheduleSnapshot();
+  }
+
+  document.addEventListener("visibilitychange", _syncActivityState);
+
+  _startObserver();
+  scanExistingMedia();
+  _syncActivityState();
 }

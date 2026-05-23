@@ -7,7 +7,8 @@
 import { detectBrowserName }          from "./shared/browser.js";
 import { STORAGE_KEY_BROWSER_ID }     from "./shared/constants.js";
 import { TabRegistry }                from "./background/tabs/registry.js";
-import { Transport }                  from "./background/transport/transport.js";
+import { HttpTransport }              from "./background/transport/httpTransport.js";
+import { WsTransport }                from "./background/transport/wsTransport.js";
 import { CommandHandler }             from "./background/commands/commandHandler.js";
 import { registerLifecycleListeners } from "./background/tabs/lifecycle.js";
 
@@ -16,28 +17,53 @@ const browserName = detectBrowserName();
 
 const registry = new TabRegistry();
 
-const commandHandler = new CommandHandler(registry, () => transport.schedulePush());
+/** @type {HttpTransport|WsTransport|null} */
+let transport = null;
 
-const transport = new Transport(
-  () => ({ browserId, browserName, tabs: registry.all() }),
-  async (commands) => {
+const commandHandler = new CommandHandler(registry, () => transport?.schedulePush());
+
+async function initTransport() {
+  const onCommands = async (commands) => {
     for (const c of commands) {
       const tabId  = c?.tabId;
       const action = String(c?.action ?? "");
       if (tabId == null || !action) continue;
       await commandHandler.dispatch(tabId, action);
     }
-  },
-);
+  };
 
-// Register listeners before async init so content-script snapshots are not dropped.
-registerLifecycleListeners(registry, () => transport.schedulePush());
+  const ws = new WsTransport(
+    registry,
+    () => browserId,
+    () => browserName,
+    onCommands,
+  );
+
+  ws.connect();
+  try {
+    await ws.waitForReady();
+    return ws;
+  } catch {
+    ws.stop();
+    const http = new HttpTransport(
+      registry,
+      () => browserId,
+      () => browserName,
+      onCommands,
+    );
+    http.startHeartbeat();
+    return http;
+  }
+}
+
+registerLifecycleListeners(registry, () => transport?.schedulePush());
 
 async function init() {
   await _loadBrowserId();
   await _seedTabs();
   await _seedFocusedWindow();
-  transport.startHeartbeat();
+  registry.markDirty();
+  transport = await initTransport();
 }
 
 function _loadBrowserId() {

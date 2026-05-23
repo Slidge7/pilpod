@@ -2,14 +2,18 @@
 //! the localhost HTTP bridge.
 
 use std::{
+    collections::hash_map::DefaultHasher,
     collections::HashMap,
+    hash::{Hash, Hasher},
     sync::{Arc, Mutex},
     time::Instant,
 };
 
+use crate::browser_bridge::connections::push_ws_command;
+use crate::browser_bridge::WsConnectionMap;
 use serde::Serialize;
 
-use crate::gsmtc::dto::BrowserTab;
+use crate::gsmtc::dto::{BrowserTab, TabMedia};
 
 /// Latest tab state pushed by one browser profile (keyed by `browserId` UUID).
 #[derive(Debug, Clone)]
@@ -21,6 +25,8 @@ pub struct BrowserSlot {
     pub browser_name: String,
     /// All open tabs in this browser — each with an optional `media` field.
     pub tabs: Vec<BrowserTab>,
+    /// Hash of tab content for diff-before-emit; excludes `last_seen`.
+    pub content_hash: u64,
 }
 
 /// Key: `browserId` UUID sent by the extension.
@@ -28,7 +34,8 @@ pub type BrowserSlotsMap = Arc<Mutex<HashMap<String, BrowserSlot>>>;
 
 /// Commands the desktop app queues for a browser profile; the companion extension
 /// receives them in the JSON body of its next POST to `/browser-tabs`.
-pub type BrowserCommandsQueue = Arc<Mutex<HashMap<String, Vec<BrowserMediaCommand>>>>;
+/// Outer key: `browserId` UUID. Inner key: `tabId` — latest command per tab wins.
+pub type BrowserCommandsQueue = Arc<Mutex<HashMap<String, HashMap<i32, BrowserMediaCommand>>>>;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -43,35 +50,126 @@ pub struct BrowserMediaCommand {
 
 pub fn enqueue_browser_command(
     queue: &BrowserCommandsQueue,
+    ws_connections: Option<&WsConnectionMap>,
     browser_id: &str,
     tab_id: i32,
     action: &str,
 ) {
+    let cmd = BrowserMediaCommand {
+        tab_id,
+        action: action.to_string(),
+        enqueued_at: Instant::now(),
+    };
+
+    if let Some(ws) = ws_connections {
+        if push_ws_command(ws, browser_id, &cmd) {
+            return;
+        }
+    }
+
     if let Ok(mut q) = queue.lock() {
         q.entry(browser_id.to_string())
             .or_default()
-            .push(BrowserMediaCommand {
-                tab_id,
-                action: action.to_string(),
-                enqueued_at: Instant::now(),
-            });
+            .insert(tab_id, cmd);
     }
+}
+
+fn hash_str(h: &mut DefaultHasher, s: &str) {
+    s.hash(h);
+}
+
+fn hash_media(h: &mut DefaultHasher, media: &TabMedia) {
+    hash_str(h, &media.playback_state);
+    hash_str(h, &media.title);
+    hash_str(h, &media.artist);
+    hash_str(h, &media.album);
+    hash_str(h, &media.artwork_url);
+    media.duration.to_bits().hash(h);
+    media.current_time.to_bits().hash(h);
+    media.page_visible.hash(h);
+    media.user_idle_ms.hash(h);
+    hash_str(h, &media.document_state);
+}
+
+fn hash_tab(h: &mut DefaultHasher, tab: &BrowserTab) {
+    tab.tab_id.hash(h);
+    tab.window_id.hash(h);
+    hash_str(h, &tab.url);
+    hash_str(h, &tab.title);
+    hash_str(h, &tab.favicon_url);
+    hash_str(h, &tab.tab_state);
+    tab.active.hash(h);
+    tab.window_focused.hash(h);
+    tab.audible.hash(h);
+    tab.muted.hash(h);
+    tab.pinned.hash(h);
+    tab.index.hash(h);
+    match &tab.media {
+        None => 0u8.hash(h),
+        Some(m) => {
+            1u8.hash(h);
+            hash_media(h, m);
+        }
+    }
+}
+
+/// Stable hash over tab list content for diff-before-emit.
+pub fn hash_tabs(tabs: &[BrowserTab]) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    tabs.len().hash(&mut hasher);
+    for tab in tabs {
+        hash_tab(&mut hasher, tab);
+    }
+    hasher.finish()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn sample_tab(title: &str) -> BrowserTab {
+        BrowserTab {
+            tab_id: 1,
+            window_id: 2,
+            url: "https://example.com".into(),
+            title: title.into(),
+            favicon_url: String::new(),
+            tab_state: "active".into(),
+            active: true,
+            window_focused: true,
+            audible: false,
+            muted: false,
+            pinned: false,
+            index: 0,
+            media: None,
+            browser_id: "test-browser".into(),
+        }
+    }
+
     #[test]
-    fn enqueue_orders_per_browser() {
+    fn enqueue_dedupes_per_tab() {
         let q: BrowserCommandsQueue = Arc::new(Mutex::new(HashMap::new()));
-        enqueue_browser_command(&q, "b1", 10, "next");
-        enqueue_browser_command(&q, "b1", 11, "previous");
-        enqueue_browser_command(&q, "b2", 20, "playPause");
+        enqueue_browser_command(&q, None, "b1", 10, "next");
+        enqueue_browser_command(&q, None, "b1", 10, "playPause");
+        enqueue_browser_command(&q, None, "b1", 11, "previous");
+        enqueue_browser_command(&q, None, "b2", 20, "playPause");
         let g = q.lock().expect("lock");
         assert_eq!(g["b1"].len(), 2);
-        assert_eq!(g["b1"][0].tab_id, 10);
-        assert_eq!(g["b1"][1].action, "previous");
-        assert_eq!(g["b2"][0].tab_id, 20);
+        assert_eq!(g["b1"][&10].action, "playPause");
+        assert_eq!(g["b1"][&11].action, "previous");
+        assert_eq!(g["b2"][&20].tab_id, 20);
+    }
+
+    #[test]
+    fn hash_tabs_stable_for_same_input() {
+        let tabs = vec![sample_tab("Hello")];
+        assert_eq!(hash_tabs(&tabs), hash_tabs(&tabs));
+    }
+
+    #[test]
+    fn hash_tabs_changes_when_title_changes() {
+        let a = vec![sample_tab("Hello")];
+        let b = vec![sample_tab("World")];
+        assert_ne!(hash_tabs(&a), hash_tabs(&b));
     }
 }

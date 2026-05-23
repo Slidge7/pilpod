@@ -63,8 +63,15 @@ function BrowserHeader({
     }
   }, [onRefresh, refreshing]);
 
+  const showReconnecting =
+    browser.extensionInstalled &&
+    browser.extensionReconnecting === true &&
+    !browser.extensionConnected;
+
   const showOffline =
-    browser.extensionInstalled && !browser.extensionConnected;
+    browser.extensionInstalled &&
+    !browser.extensionConnected &&
+    !showReconnecting;
 
   const cacheHint =
     showOffline && browser.lastSyncSecs != null
@@ -86,6 +93,13 @@ function BrowserHeader({
             title="Companion extension not detected in this browser"
           >
             no ext
+          </span>
+        ) : showReconnecting ? (
+          <span
+            className="pilpod-browser-profile__badge pilpod-browser-profile__badge--reconnecting"
+            title="Reconnecting to PilPod after wake…"
+          >
+            reconnecting…
           </span>
         ) : showOffline ? (
           <span
@@ -147,8 +161,12 @@ function BrowserBody({
   downloadTasks: Map<string, DownloadTask>;
 }) {
   const slotBrowserId = browser.tabs[0]?.browserId ?? browser.id;
-  const mediaTabs = browser.tabs.filter(tabHasMedia);
-  const otherTabs = browser.tabs.filter((t) => !tabHasMedia(t));
+  const isStale = !browser.extensionConnected && browser.tabs.length > 0;
+  const displayTabs = isStale
+    ? browser.tabs.map((t) => ({ ...t, media: undefined }))
+    : browser.tabs;
+  const mediaTabs = displayTabs.filter(tabHasMedia);
+  const otherTabs = displayTabs.filter((t) => !tabHasMedia(t));
 
   const renderTabRow = (t: BrowserTab, showMediaControls: boolean) => {
     const rk = tabRowKey(t);
@@ -178,7 +196,7 @@ function BrowserBody({
   if (searching && browser.tabs.length > 0) {
     return (
       <ul className="pilpod-browser-profile__list">
-        {browser.tabs.map((t) => renderTabRow(t, tabHasMedia(t)))}
+        {displayTabs.map((t) => renderTabRow(t, tabHasMedia(t)))}
       </ul>
     );
   }
@@ -224,8 +242,6 @@ function BrowserBody({
       </p>
     );
   }
-
-  const isStale = !browser.extensionConnected && browser.tabs.length > 0;
 
   return (
     <div className={isStale ? "pilpod-browser-profile__stale" : undefined}>

@@ -23,31 +23,29 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     // ── Shared state ─────────────────────────────────────────────────────────
 
-    // Browser slots: updated by the HTTP bridge on each extension POST.
     let browser_slots: crate::browser_tabs::BrowserSlotsMap =
         std::sync::Arc::new(std::sync::Mutex::new(std::collections::HashMap::new()));
 
-    // Command queue: commands enqueued by Tauri commands, drained by the HTTP bridge.
     let browser_commands: crate::browser_tabs::BrowserCommandsQueue =
         std::sync::Arc::new(std::sync::Mutex::new(std::collections::HashMap::new()));
 
-    // OS-detected browser list: updated by the detector background thread.
     let detected_browsers: crate::browser_detector::DetectedBrowsersState =
         std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
 
-    // Persisted extension-installed flags: survives missed heartbeats + app restarts.
     let ext_store: crate::browser_detector::ExtensionInstalledState =
         std::sync::Arc::new(std::sync::Mutex::new(
             crate::browser_detector::ExtensionInstalledStore::load(&handle),
         ));
 
-    // Sync-requested flag: set by `request_browser_sync` so the bridge includes
-    // `syncNow: true` in the next extension POST response.
+    let reconnecting: crate::browser_detector::ReconnectingBrowsersState =
+        crate::browser_detector::new_reconnecting_state();
+
+    let ws_connections = crate::browser_bridge::new_ws_connection_map();
+
     let sync_flag: crate::browser_bridge::SyncRequestedFlag = std::sync::Arc::new(
         std::sync::atomic::AtomicBool::new(false),
     );
 
-    // GSMTC state slot: filled once the WinRT manager is ready.
     let gsmtc_slot: std::sync::Arc<
         std::sync::Mutex<Option<std::sync::Arc<crate::gsmtc::GsmtcState>>>,
     > = std::sync::Arc::new(std::sync::Mutex::new(None));
@@ -62,8 +60,10 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let _ = app.manage(std::sync::Arc::clone(&browser_slots));
     let _ = app.manage(std::sync::Arc::clone(&ext_store));
     let _ = app.manage(std::sync::Arc::clone(&sync_flag));
+    let _ = app.manage(std::sync::Arc::clone(&reconnecting));
+    let _ = app.manage(std::sync::Arc::clone(&ws_connections));
 
-    // ── Spawn HTTP bridge ────────────────────────────────────────────────────
+    // ── Spawn HTTP + WebSocket bridge + power listener ───────────────────────
     crate::browser_bridge::spawn(
         std::sync::Arc::clone(&browser_slots),
         std::sync::Arc::clone(&browser_commands),
@@ -71,7 +71,9 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         std::sync::Arc::clone(&gsmtc_slot),
         std::sync::Arc::clone(&detected_browsers),
         std::sync::Arc::clone(&ext_store),
+        std::sync::Arc::clone(&reconnecting),
         std::sync::Arc::clone(&sync_flag),
+        ws_connections,
     );
 
     // ── Spawn OS browser detector ────────────────────────────────────────────
@@ -79,6 +81,7 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         std::sync::Arc::clone(&detected_browsers),
         std::sync::Arc::clone(&browser_slots),
         std::sync::Arc::clone(&ext_store),
+        std::sync::Arc::clone(&reconnecting),
         handle.clone(),
     );
 

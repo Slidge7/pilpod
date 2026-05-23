@@ -8,6 +8,15 @@
 /** Local Tauri app endpoint for tab state pushes and command polling. */
 export const PUSH_URL = "http://127.0.0.1:17399/browser-tabs";
 
+/** Primary WebSocket bridge endpoint. */
+export const WS_URL = "ws://127.0.0.1:17400/ws";
+
+/** Max wait for initial WebSocket connect before HTTP fallback. */
+export const WS_CONNECT_TIMEOUT_MS = 2000;
+
+/** Delay before reconnecting a dropped WebSocket. */
+export const WS_RECONNECT_MS = 3000;
+
 /** Periodic heartbeat + command poll interval (ms). */
 export const PUSH_INTERVAL_MS = 250;
 
@@ -17,8 +26,14 @@ export const DEBOUNCE_MS = 60;
 /** Fetch timeout for each push (ms). */
 export const FETCH_TIMEOUT_MS = 800;
 
+/** Consecutive failures before backing off POSTs. */
+export const FAIL_THRESHOLD = 4;
+
+/** Retry interval when desktop is unreachable (ms). */
+export const SLEEP_INTERVAL_MS = 5000;
+
 /** chrome.storage key for the stable browser profile UUID. */
 export const STORAGE_KEY_BROWSER_ID = "pilpodBrowserId";
 
-/** Content script tick rate (ms). */
+/** @deprecated Content script uses event-driven detection; kept for reference only. */
 export const CONTENT_TICK_MS = 800;

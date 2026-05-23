@@ -325,6 +325,17 @@ html.dark .pilpod-browser-profile__other-list > li + li {
   color: var(--pilpod-text-muted, #71717a);
 }
 
+.pilpod-browser-profile__badge--reconnecting {
+  background: color-mix(in srgb, var(--pilpod-emerald, #10b981) 18%, transparent);
+  color: var(--pilpod-emerald, #10b981);
+  animation: pilpod-badge-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pilpod-badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 .pilpod-browser-profile__refresh {
   display: inline-flex;
   align-items: center;

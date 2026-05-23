@@ -43,6 +43,9 @@ pub struct DetectedBrowser {
     /// Used by the UI to display "Offline · cached 2 min ago" hints.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_sync_secs: Option<u64>,
+    /// True briefly after system resume until the extension reconnects.
+    #[serde(default)]
+    pub extension_reconnecting: bool,
 }
 
 /// Unified tab representation — replaces the old `BrowserTabMediaDto` + `TabMeta` split.

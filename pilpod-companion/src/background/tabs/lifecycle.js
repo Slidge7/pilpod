@@ -16,13 +16,23 @@ export function registerLifecycleListeners(registry, schedulePush) {
   });
 
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    const relevant =
+      changeInfo.status === "complete" ||
+      changeInfo.url !== undefined ||
+      changeInfo.pendingUrl !== undefined ||
+      changeInfo.audible !== undefined ||
+      changeInfo.mutedInfo !== undefined;
+
+    if (!relevant) return;
+
     if (tab && tabId != null) {
-      // Only clear media when the tab is actually navigating (URL change),
-      // not on incidental status-only "loading" events from SPAs.
       const navigating =
         changeInfo.status === "loading" &&
         (changeInfo.url != null || changeInfo.pendingUrl != null);
+      registry.markDirty();
       registry.upsert(tab, { clearMedia: navigating });
+    } else {
+      registry.markDirty();
     }
     schedulePush();
   });

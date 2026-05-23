@@ -100,6 +100,21 @@ impl ExtensionInstalledStore {
 /// Shared, thread-safe handle to the persistence store.
 pub type ExtensionInstalledState = Arc<Mutex<ExtensionInstalledStore>>;
 
+/// Shared set of extension `browserId` UUIDs awaiting reconnect after system resume.
+pub type ReconnectingBrowsersState = Arc<Mutex<HashSet<String>>>;
+
+pub fn new_reconnecting_state() -> ReconnectingBrowsersState {
+    Arc::new(Mutex::new(HashSet::new()))
+}
+
+/// Remove a browser from the reconnecting set. Returns true if it was present.
+pub fn clear_reconnecting(state: &ReconnectingBrowsersState, browser_id: &str) -> bool {
+    state
+        .lock()
+        .ok()
+        .map_or(false, |mut set| set.remove(browser_id))
+}
+
 // ── Stable-id helpers ────────────────────────────────────────────────────────
 
 /// Map a browser name reported by the extension to a stable lower-case id.
@@ -214,6 +229,7 @@ pub fn merge_detected_and_slots(
     detected: &[DetectedBrowserInfo],
     slots: &HashMap<String, BrowserSlot>,
     ext_store: &ExtensionInstalledStore,
+    reconnecting: &HashSet<String>,
 ) -> Vec<DetectedBrowser> {
     let slot_active_cutoff = Duration::from_secs(3);
     let now = std::time::Instant::now();
@@ -230,6 +246,7 @@ pub fn merge_detected_and_slots(
             tab_count: 0,
             tabs: Vec::new(),
             last_sync_secs: None,
+            extension_reconnecting: false,
         })
         .collect();
 
@@ -240,10 +257,14 @@ pub fn merge_detected_and_slots(
         let is_fresh = now.duration_since(slot.last_seen) < slot_active_cutoff;
         let slot_id = browser_name_to_id(&slot.browser_name);
         let slot_age_secs = now.duration_since(slot.last_seen).as_secs();
+        let is_reconnecting = reconnecting.contains(&slot.browser_id);
 
         if let Some(entry) = result.iter_mut().find(|b| b.id == slot_id) {
             if is_fresh {
                 entry.extension_connected = true;
+            }
+            if is_reconnecting {
+                entry.extension_reconnecting = true;
             }
 
             // Always attach cached tabs, regardless of freshness.  If multiple
@@ -269,6 +290,7 @@ pub fn merge_detected_and_slots(
                 tab_count: slot.tabs.len() as u32,
                 tabs: slot.tabs.clone(),
                 last_sync_secs: Some(slot_age_secs),
+                extension_reconnecting: is_reconnecting,
             });
         }
     }
@@ -306,6 +328,7 @@ pub fn emit_browsers_to_ui(
     detected: &DetectedBrowsersState,
     slots: &BrowserSlotsMap,
     ext_store: &ExtensionInstalledState,
+    reconnecting: &ReconnectingBrowsersState,
 ) {
     let detected_list = detected
         .lock()
@@ -313,12 +336,29 @@ pub fn emit_browsers_to_ui(
         .clone();
     let slots_map = slots.lock().unwrap_or_else(|e| e.into_inner());
     let store = ext_store.lock().unwrap_or_else(|e| e.into_inner());
+    let reconnecting_set = reconnecting.lock().unwrap_or_else(|e| e.into_inner());
 
-    let browsers = merge_detected_and_slots(&detected_list, &*slots_map, &*store);
+    let browsers = merge_detected_and_slots(
+        &detected_list,
+        &*slots_map,
+        &*store,
+        &*reconnecting_set,
+    );
 
     if let Err(e) = app.emit(BROWSERS_UPDATE_EVENT, &browsers) {
         eprintln!("[browser-detector] emit failed: {e}");
     }
+}
+
+/// Re-emit the browser list after a WS connect/disconnect lifecycle change.
+pub fn emit_on_connection_change(
+    app: &AppHandle,
+    detected: &DetectedBrowsersState,
+    slots: &BrowserSlotsMap,
+    ext_store: &ExtensionInstalledState,
+    reconnecting: &ReconnectingBrowsersState,
+) {
+    emit_browsers_to_ui(app, detected, slots, ext_store, reconnecting);
 }
 
 // ── Background thread ────────────────────────────────────────────────────────
@@ -329,6 +369,7 @@ pub fn spawn_detector(
     detected: DetectedBrowsersState,
     slots: BrowserSlotsMap,
     ext_store: ExtensionInstalledState,
+    reconnecting: ReconnectingBrowsersState,
     app: AppHandle,
 ) {
     std::thread::Builder::new()
@@ -340,7 +381,7 @@ pub fn spawn_detector(
                 let mut lock = detected.lock().unwrap_or_else(|e| e.into_inner());
                 *lock = initial;
             }
-            emit_browsers_to_ui(&app, &detected, &slots, &ext_store);
+            emit_browsers_to_ui(&app, &detected, &slots, &ext_store, &reconnecting);
 
             loop {
                 std::thread::sleep(Duration::from_secs(2));
@@ -356,7 +397,7 @@ pub fn spawn_detector(
                     }
                 };
                 if changed {
-                    emit_browsers_to_ui(&app, &detected, &slots, &ext_store);
+                    emit_browsers_to_ui(&app, &detected, &slots, &ext_store, &reconnecting);
                 }
             }
         })
