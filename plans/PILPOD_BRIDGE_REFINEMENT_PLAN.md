@@ -410,7 +410,21 @@ Additional changes needed:
 
 ---
 
-### P2-3 · Content script: adaptive polling + shared worker
+### P2-3 · Content script: event-driven detection + URL gate
+
+**Files:** `pilpod-companion/src/content.js`, `content/media/mediaDetector.js`  
+**Status:** Implemented (see `docs/MEDIA_DETECTION.md`)
+
+**Problem (original):** 800ms DOM polling in every `http(s)` tab caused false positives and wasted CPU.
+
+**Current architecture:**
+
+- **Event-driven:** `MutationObserver` + media element events with debounced snapshots; MediaSession fallback poll only when needed.
+- **URL gate:** Universal inject with early return — `mediaUrlRules.js` allowlist checked before DOM reads on non-media pages.
+- **Strict signal:** `hasSignal` is true only when a playing element or `navigator.mediaSession.playbackState === "playing"`.
+- **Registry gate:** `mediaGate.js` enforces URL + playing + (active || audible) before attaching `media` to a tab.
+
+The old tick-loop / loose `hasSignal` model below is **superseded** (kept for historical reference).
 
 **File:** `pilpod-companion/src/content.js`  
 **Effort:** 1 day  

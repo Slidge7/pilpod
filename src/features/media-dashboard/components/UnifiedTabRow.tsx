@@ -9,6 +9,7 @@ import {
   abbreviatedUrl,
   faviconFromUrl,
   isTabPlaying,
+  tabHasMedia,
   mediaArtist,
   mediaTimeLabel,
   tabStateBadge,
@@ -59,7 +60,7 @@ export function UnifiedTabRow({
   const badge = tabStateBadge(tab.tabState);
   const showReactivate = ts === "sleeping" || ts === "crashed";
   const playing = isTabPlaying(tab);
-  const hasMedia = tab.media != null;
+  const hasMedia = tabHasMedia(tab);
 
   const fav =
     tab.favIconUrl?.trim() ||

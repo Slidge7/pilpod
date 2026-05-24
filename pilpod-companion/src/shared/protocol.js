@@ -38,7 +38,9 @@ export const TabState = Object.freeze({
 
 /**
  * @typedef {object} MediaSnapshot
- * @property {string}  playbackState
+ * @property {boolean} hasSignal          - True only when a playing element or playing MediaSession detected.
+ * @property {string}  playbackState      - "playing" | "paused" | "none"
+ * @property {string}  [mediaMatchRule]   - Debug: which allowlist rule matched, or undefined.
  * @property {string}  title
  * @property {string}  artist
  * @property {string}  album

@@ -83,7 +83,8 @@ pub struct BrowserTab {
     pub pinned: bool,
     #[serde(default)]
     pub index: u32,
-    /// Present when the content script detected media; absent otherwise.
+    /// Populated only when the tab is actively playing content on an allowlisted URL
+    /// and is the active or audible tab.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub media: Option<TabMedia>,
     /// Filled server-side — identifies which browser this tab belongs to.
@@ -91,8 +92,8 @@ pub struct BrowserTab {
     pub browser_id: String,
 }
 
-/// Media details reported by the content script for a tab that has an active media element
-/// or a MediaSession with metadata.
+/// Media metadata. Only present when the tab is actively playing content
+/// on an allowlisted URL and is the active or audible tab.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TabMedia {

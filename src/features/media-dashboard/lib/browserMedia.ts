@@ -14,18 +14,13 @@ export function tabStateBadge(tabState?: string): string | null {
 
 /** True when the tab has active media that is currently playing. */
 export function isTabPlaying(t: BrowserTab): boolean {
-  return t.media?.playbackState === "playing";
+  return (t.media?.playbackState ?? "").toLowerCase() === "playing";
 }
 
-/** True when the tab has any active media (playing or paused). */
+/** True when the tab is actively playing media (same gate as isTabPlaying). */
 export function tabHasMedia(t: BrowserTab): boolean {
   if (t.media == null) return false;
-  const state = (t.media.playbackState ?? "").toLowerCase();
-  if (state === "playing" || state === "paused") return true;
-  // MediaSession / element detected but playback state not resolved yet.
-  if ((t.media.title?.trim() ?? "").length > 0) return true;
-  if ((t.media.artist?.trim() ?? "").length > 0) return true;
-  return (t.media.duration ?? 0) > 0;
+  return (t.media.playbackState ?? "").toLowerCase() === "playing";
 }
 
 /** Stable pending key for any browser tab row. */

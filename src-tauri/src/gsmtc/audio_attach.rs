@@ -408,6 +408,8 @@ fn chromium_sessions_for_profile<'a>(
 
 /// Match browser profiles to WASAPI sessions using the new unified `BrowserSlot` map.
 /// Groups tabs by `browser_id` (slot key), uses media tab titles as matching hints.
+/// Requires extension media gate: tabs only carry `media` when playing on an allowlisted
+/// URL and active or audible — background-audible music (e.g. Spotify) still matches.
 fn match_browser_profiles_from_slots(
     slots: &HashMap<String, BrowserSlot>,
     mixer: &[MixerSessionRow],

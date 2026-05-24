@@ -6,6 +6,24 @@
 
 import { buildTabPost } from "./tabPost.js";
 import { TabState }     from "../../shared/protocol.js";
+import { shouldReportMedia } from "../../shared/mediaGate.js";
+
+/** @param {object} p */
+function buildTabMedia(p) {
+  return {
+    playbackState: String(p.playbackState ?? "none"),
+    title:         String(p.title         ?? ""),
+    artist:        String(p.artist        ?? ""),
+    album:         String(p.album         ?? ""),
+    artworkUrl:    String(p.artworkUrl    ?? ""),
+    duration:      Number(p.duration      ?? 0),
+    currentTime:   Number(p.currentTime   ?? 0),
+    pageVisible:   Boolean(p.pageVisible),
+    userIdleMs:    Number(p.userIdleMs    ?? 0),
+    documentState: String(p.documentState ?? ""),
+    ...(p.mediaMatchRule ? { mediaMatchRule: String(p.mediaMatchRule) } : {}),
+  };
+}
 
 export class TabRegistry {
   /** @type {Map<number, import("../../shared/protocol.js").TabPost>} */
@@ -126,26 +144,22 @@ export class TabRegistry {
     const meta = this.#tabs.get(tabId);
     if (!meta) return false;
 
-    if (p.hasSignal !== true) {
+    const { pass, reason } = shouldReportMedia({
+      url: meta.url ?? "",
+      tabActive: meta.active ?? false,
+      tabAudible: meta.audible ?? false,
+      snapshot: p,
+    });
+
+    if (!pass) {
       if (meta.media === null) return false;
       meta.media = null;
+      console.debug(`[registry] media cleared for tab ${meta.tabId}: ${reason}`);
       this.#dirty = true;
       return true;
     }
 
-    const next = {
-      playbackState: String(p.playbackState ?? "none"),
-      title:         String(p.title         ?? ""),
-      artist:        String(p.artist        ?? ""),
-      album:         String(p.album         ?? ""),
-      artworkUrl:    String(p.artworkUrl    ?? ""),
-      duration:      Number(p.duration      ?? 0),
-      currentTime:   Number(p.currentTime   ?? 0),
-      pageVisible:   Boolean(p.pageVisible),
-      userIdleMs:    Number(p.userIdleMs    ?? 0),
-      documentState: String(p.documentState ?? ""),
-    };
-
+    const next = buildTabMedia(p);
     const changed = JSON.stringify(meta.media) !== JSON.stringify(next);
     if (changed) {
       meta.media = next;

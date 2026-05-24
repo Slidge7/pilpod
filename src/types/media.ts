@@ -114,16 +114,18 @@ export type BrowserTab = {
   muted?: boolean;
   pinned?: boolean;
   index?: number;
-  /** Present when the content script detected media; absent otherwise. */
+  /** Populated only when tab media is actively playing on an allowlisted URL. */
   media?: TabMedia | null;
   /** Identifies which browser this tab belongs to (filled server-side). */
   browserId?: string;
 };
 
-/** Media details for a tab that has an active media element or MediaSession. */
+/** Media metadata. Populated only when the tab is actively playing on an allowlisted URL. */
 export type TabMedia = {
   /** "playing" | "paused" | "none" */
   playbackState: string;
+  /** Debug: which allowlist rule matched (from content script). */
+  mediaMatchRule?: string;
   title?: string;
   artist?: string;
   album?: string;

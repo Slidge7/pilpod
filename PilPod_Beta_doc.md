@@ -1,5 +1,8 @@
 # React project — structure and file roles
 
+> ⚠️ This document describes the old byTab-only model and old tick loop.
+> It is outdated as of the media detection refactor. See `plans/MEDIA_DETECTION_REFACTOR_WORKPLAN.md` and `docs/MEDIA_DETECTION.md`.
+
 Here is a concise map of the **React (Vite) UI** in this repo. The app is a **Tauri 2** desktop shell: the frontend is **React 19**, **TypeScript**, **Vite 7**, and **plain CSS** (design tokens in `index.css`, component styles in co-located `.css` files).
 
 ---
