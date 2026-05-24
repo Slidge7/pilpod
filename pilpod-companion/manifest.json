@@ -12,8 +12,7 @@
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["src/content.js"],
-      "type": "module",
+      "js": ["dist/content.js"],
       "run_at": "document_idle",
       "all_frames": false
     }

@@ -184,9 +184,9 @@ export function applySearchTagFilters(
 
 /** Group filtered matches back into per-browser buckets for rendering. */
 export function groupSearchMatchesByBrowser(
-  browsers: ReadonlyArray<{ id: string; displayName: string; running: boolean; extensionInstalled: boolean; extensionConnected: boolean; lastSyncSecs: number | null }>,
+  browsers: ReadonlyArray<{ id: string; osBrowserId?: string; displayName: string; running: boolean; extensionInstalled: boolean; extensionConnected: boolean; lastSyncSecs: number | null }>,
   matches: SearchTabMatch[],
-): Array<{ id: string; displayName: string; running: boolean; extensionInstalled: boolean; extensionConnected: boolean; lastSyncSecs: number | null; tabs: BrowserTab[]; tabCount: number }> {
+): Array<{ id: string; osBrowserId: string; displayName: string; running: boolean; extensionInstalled: boolean; extensionConnected: boolean; lastSyncSecs: number | null; tabs: BrowserTab[]; tabCount: number }> {
   const browserById = new Map(browsers.map((b) => [b.id, b]));
   const tabsByBrowser = new Map<string, BrowserTab[]>();
 
@@ -199,6 +199,7 @@ export function groupSearchMatchesByBrowser(
 
   const grouped: Array<{
     id: string;
+    osBrowserId: string;
     displayName: string;
     running: boolean;
     extensionInstalled: boolean;
@@ -213,6 +214,7 @@ export function groupSearchMatchesByBrowser(
     if (!tabs?.length) continue;
     grouped.push({
       id: browser.id,
+      osBrowserId: browser.osBrowserId ?? browser.id,
       displayName: browser.displayName,
       running: browser.running,
       extensionInstalled: browser.extensionInstalled,
