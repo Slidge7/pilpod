@@ -3,7 +3,12 @@
   "name": "PilPod Companion",
   "version": "1.3.0",
   "description": "Bridge between browser media tabs and the PilPod desktop app. Tracks all tabs with media state detection and full tab lifecycle management.",
-  "permissions": ["storage", "tabs", "scripting", "windows"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["storage", "tabs", "windows"],
   "host_permissions": ["http://127.0.0.1:17399/*", "http://127.0.0.1:17400/*"],
   "background": {
     "service_worker": "src/background.js",

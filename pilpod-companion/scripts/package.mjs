@@ -16,6 +16,7 @@ if (!existsSync(join(root, "dist", "content.js"))) {
 
 const items = [
   "manifest.json",
+  "icons",
   "dist",
   "src/background.js",
   "src/background",
