@@ -7,77 +7,27 @@ const NOT_ALLOWLISTED = "https://example.com/";
 describe("shouldReportMedia", () => {
   const cases = [
     {
-      label: "all gates pass (active)",
+      label: "allowlisted URL (active, playing)",
       url: ALLOWLISTED,
-      tabActive: true,
-      tabAudible: false,
-      playbackState: "playing",
       pass: true,
-      reason: "all-gates-passed",
+      reason: "url-allowlisted",
     },
     {
-      label: "audible override",
+      label: "allowlisted URL regardless of tab state",
       url: ALLOWLISTED,
-      tabActive: false,
-      tabAudible: true,
-      playbackState: "playing",
       pass: true,
-      reason: "all-gates-passed",
+      reason: "url-allowlisted",
     },
     {
-      label: "not active or audible",
-      url: ALLOWLISTED,
-      tabActive: false,
-      tabAudible: false,
-      playbackState: "playing",
-      pass: false,
-      reason: "tab-not-active",
-    },
-    {
-      label: "paused",
-      url: ALLOWLISTED,
-      tabActive: true,
-      tabAudible: false,
-      playbackState: "paused",
-      pass: false,
-      reason: "not-playing",
-    },
-    {
-      label: "empty playback state",
-      url: ALLOWLISTED,
-      tabActive: true,
-      tabAudible: false,
-      playbackState: "",
-      pass: false,
-      reason: "not-playing",
-    },
-    {
-      label: "url not allowlisted (playing, active)",
+      label: "url not allowlisted",
       url: NOT_ALLOWLISTED,
-      tabActive: true,
-      tabAudible: false,
-      playbackState: "playing",
-      pass: false,
-      reason: "url-not-allowlisted",
-    },
-    {
-      label: "url not allowlisted (paused, inactive)",
-      url: NOT_ALLOWLISTED,
-      tabActive: false,
-      tabAudible: false,
-      playbackState: "paused",
       pass: false,
       reason: "url-not-allowlisted",
     },
   ];
 
-  it.each(cases)("$label", ({ url, tabActive, tabAudible, playbackState, pass, reason }) => {
-    const result = shouldReportMedia({
-      url,
-      tabActive,
-      tabAudible,
-      snapshot: { playbackState },
-    });
+  it.each(cases)("$label", ({ url, pass, reason }) => {
+    const result = shouldReportMedia({ url });
     expect(result.pass).toBe(pass);
     expect(result.reason).toBe(reason);
   });

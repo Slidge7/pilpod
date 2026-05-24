@@ -83,9 +83,41 @@ describe("TabRegistry dirty tracking", () => {
     registry.applyMediaSnapshot(2, baseSnap());
     registry.clearDirty();
 
+    registry.upsert(mockTab(2, { url: EXAMPLE, active: true }));
     expect(registry.applyMediaSnapshot(2, { hasSignal: false, playbackState: "paused" })).toBe(true);
     expect(registry.isDirty()).toBe(true);
     expect(registry.get(2)?.media).toBeNull();
+  });
+
+  it("allowlisted URL keeps media snapshot when paused", () => {
+    registry.upsert(mockTab(5, { url: YT_WATCH, active: false, audible: false }));
+    registry.applyMediaSnapshot(5, baseSnap());
+    registry.clearDirty();
+
+    expect(registry.applyMediaSnapshot(5, { ...baseSnap(), playbackState: "paused", hasSignal: false })).toBe(true);
+    expect(registry.get(5)?.media?.playbackState).toBe("paused");
+  });
+
+  it("downgrades phantom playing on inactive silent tabs without signal", () => {
+    registry.upsert(mockTab(6, { url: YT_WATCH, active: false, audible: false }));
+    registry.applyMediaSnapshot(6, {
+      ...baseSnap(),
+      playbackState: "playing",
+      hasSignal: false,
+    });
+
+    expect(registry.get(6)?.media?.playbackState).toBe("paused");
+  });
+
+  it("keeps playing on inactive silent tabs when signal is present", () => {
+    registry.upsert(mockTab(7, { url: YT_WATCH, active: false, audible: false }));
+    registry.applyMediaSnapshot(7, {
+      ...baseSnap(),
+      playbackState: "playing",
+      hasSignal: true,
+    });
+
+    expect(registry.get(7)?.media?.playbackState).toBe("playing");
   });
 
   it("upsert marks dirty when tab metadata changes", () => {
@@ -121,10 +153,10 @@ describe("TabRegistry media gate", () => {
       expectMedia: true,
     },
     {
-      label: "watch + active + paused → media cleared",
+      label: "watch + active + paused → media set",
       tab: { url: YT_WATCH, active: true, audible: false },
       snap: { playbackState: "paused", hasSignal: false },
-      expectMedia: false,
+      expectMedia: true,
     },
     {
       label: "home + active + playing → media cleared (URL)",
@@ -133,10 +165,18 @@ describe("TabRegistry media gate", () => {
       expectMedia: false,
     },
     {
-      label: "watch + inactive + playing → media cleared",
+      label: "watch + inactive + playing without signal → stored as paused",
+      tab: { url: YT_WATCH, active: false, audible: false },
+      snap: { playbackState: "playing", hasSignal: false },
+      expectMedia: true,
+      expectPlaybackState: "paused",
+    },
+    {
+      label: "watch + inactive + playing → media set",
       tab: { url: YT_WATCH, active: false, audible: false },
       snap: { playbackState: "playing", hasSignal: true },
-      expectMedia: false,
+      expectMedia: true,
+      expectPlaybackState: "playing",
     },
     {
       label: "watch + inactive + audible + playing → media set",
@@ -152,11 +192,14 @@ describe("TabRegistry media gate", () => {
     },
   ];
 
-  it.each(gateCases)("$label", ({ tab, snap, expectMedia }) => {
+  it.each(gateCases)("$label", ({ tab, snap, expectMedia, expectPlaybackState = null }) => {
     registry.upsert(mockTab(10, tab));
     registry.applyMediaSnapshot(10, { ...baseSnap(), ...snap });
     if (expectMedia) {
       expect(registry.get(10)?.media).not.toBeNull();
+      if (expectPlaybackState) {
+        expect(registry.get(10)?.media?.playbackState).toBe(expectPlaybackState);
+      }
     } else {
       expect(registry.get(10)?.media).toBeNull();
     }

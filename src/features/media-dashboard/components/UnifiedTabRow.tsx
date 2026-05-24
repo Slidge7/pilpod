@@ -9,7 +9,8 @@ import {
   abbreviatedUrl,
   faviconFromUrl,
   isTabPlaying,
-  tabHasMedia,
+  tabHasMediaControls,
+  tabIsLinkIdentifiedMedia,
   mediaArtist,
   mediaTimeLabel,
   tabStateBadge,
@@ -60,7 +61,8 @@ export function UnifiedTabRow({
   const badge = tabStateBadge(tab.tabState);
   const showReactivate = ts === "sleeping" || ts === "crashed";
   const playing = isTabPlaying(tab);
-  const hasMedia = tabHasMedia(tab);
+  const isMediaTab = tabIsLinkIdentifiedMedia(tab);
+  const hasMediaControls = tabHasMediaControls(tab);
 
   const fav =
     tab.favIconUrl?.trim() ||
@@ -68,16 +70,21 @@ export function UnifiedTabRow({
     faviconFromUrl(tab.url ?? "") ||
     null;
 
-  const artist = hasMedia && tab.media ? mediaArtist(tab.media) : null;
-  const timeLabel = hasMedia && tab.media ? mediaTimeLabel(tab.media) : null;
-  const idleWarn = hasMedia && (tab.media?.userIdleMs ?? 0) > USER_IDLE_WARN_MS;
+  const artist = tab.media ? mediaArtist(tab.media) : null;
+  const timeLabel = tab.media ? mediaTimeLabel(tab.media) : null;
+  const idleWarn = (tab.media?.userIdleMs ?? 0) > USER_IDLE_WARN_MS;
+  const playbackState = (tab.media?.playbackState ?? "").toLowerCase();
+  const stateHint =
+    isMediaTab && !artist && !timeLabel && playbackState && playbackState !== "none"
+      ? playbackState.charAt(0).toUpperCase() + playbackState.slice(1)
+      : null;
   const urlShort = abbreviatedUrl(tab.url ?? "");
 
   const rowClass = [
     "pilpod-unified-tab-row",
     playing ? "pilpod-unified-tab-row--playing" : "",
-    ts === "inactive" && !hasMedia ? "pilpod-unified-tab-row--inactive" : "",
-    hasMedia && tab.media?.pageVisible === false
+    ts === "inactive" && !isMediaTab ? "pilpod-unified-tab-row--inactive" : "",
+    isMediaTab && tab.media?.pageVisible === false
       ? "pilpod-unified-tab-row--hidden-page"
       : "",
   ]
@@ -88,7 +95,7 @@ export function UnifiedTabRow({
     <li className={rowClass}>
       {/* Favicon / media thumbnail */}
       <div className="pilpod-unified-tab-row__thumb-wrap">
-        {hasMedia ? (
+        {isMediaTab ? (
           <BrowserMediaThumb tab={tab} />
         ) : (
           <div className="pilpod-unified-tab-row__fav-wrap">
@@ -153,16 +160,17 @@ export function UnifiedTabRow({
         </p>
 
         {/* Media meta row */}
-        {(artist || timeLabel || idleWarn) ? (
+        {(artist || timeLabel || idleWarn || stateHint) ? (
           <p className="pilpod-unified-tab-row__meta">
             {artist}
             {artist && timeLabel ? (
               <span className="pilpod-unified-tab-row__meta-sep" aria-hidden>|</span>
             ) : null}
             {timeLabel ?? ""}
+            {stateHint && !artist && !timeLabel ? stateHint : null}
             {idleWarn ? (
               <>
-                {(artist || timeLabel) ? (
+                {(artist || timeLabel || stateHint) ? (
                   <span className="pilpod-unified-tab-row__meta-sep" aria-hidden>|</span>
                 ) : null}
                 <span className="pilpod-unified-tab-row__idle-hint">
@@ -171,7 +179,7 @@ export function UnifiedTabRow({
               </>
             ) : null}
           </p>
-        ) : !hasMedia ? (
+        ) : !isMediaTab ? (
           /* Show abbreviated URL for non-media tabs */
           <p className="pilpod-unified-tab-row__url" title={tab.url}>
             {urlShort}
@@ -193,7 +201,7 @@ export function UnifiedTabRow({
           </button>
         ) : null}
 
-        {!hasMedia ? (
+        {!isMediaTab ? (
           <>
             <button
               type="button"
@@ -217,7 +225,7 @@ export function UnifiedTabRow({
         ) : null}
 
         {/* Download button or in-progress feedback for media tabs */}
-        {showMediaControls && hasMedia && activeDownload ? (
+        {showMediaControls && isMediaTab && activeDownload ? (
           <span
             className="pilpod-unified-tab-row__dl-progress"
             title={downloadProgressTitle(activeDownload)}
@@ -230,7 +238,7 @@ export function UnifiedTabRow({
             )}
             <span>{downloadProgressLabel(activeDownload)}</span>
           </span>
-        ) : showMediaControls && hasMedia && onDownload && tab.url ? (
+        ) : showMediaControls && isMediaTab && onDownload && tab.url ? (
           <button
             type="button"
             title="Download this video"
@@ -246,7 +254,7 @@ export function UnifiedTabRow({
         ) : null}
 
         {/* Play/pause for media tabs */}
-        {showMediaControls && hasMedia ? (
+        {showMediaControls && hasMediaControls ? (
           <button
             type="button"
             disabled={busy}

@@ -24,24 +24,31 @@ export function activeMediaElement() {
   return all.find((el) => el.paused && el.readyState > 0) ?? null;
 }
 
+function hasPlayingMediaElement() {
+  return allMediaElements().some(
+    (el) => !el.paused && !el.ended && el.readyState > 2,
+  );
+}
+
 export function resolvePlaybackState() {
   const all = mediaElementsWithData();
-  if (all.some((el) => !el.paused && !el.ended && el.readyState > 2)) return "playing";
+  if (hasPlayingMediaElement()) return "playing";
   if (all.some((el) => el.paused && el.readyState > 0)) return "paused";
 
+  // MediaSession alone is unreliable on background tabs (e.g. YouTube /watch opened in a new tab).
   const ms = navigator.mediaSession?.playbackState;
-  if (ms === "playing") return "playing";
-  if (ms === "paused") return "paused";
+  if (ms === "playing" || ms === "paused") {
+    if (document.visibilityState === "visible") return ms;
+    return "none";
+  }
 
   return "none";
 }
 
 function resolveHasSignal() {
-  const hasPlayingElement = allMediaElements().some(
-    (el) => !el.paused && !el.ended && el.readyState > 2,
-  );
-  const hasPlayingSession = navigator.mediaSession?.playbackState === "playing";
-  return hasPlayingElement || hasPlayingSession;
+  if (hasPlayingMediaElement()) return true;
+  if (document.visibilityState !== "visible") return false;
+  return navigator.mediaSession?.playbackState === "playing";
 }
 
 export function pickArtworkUrl() {

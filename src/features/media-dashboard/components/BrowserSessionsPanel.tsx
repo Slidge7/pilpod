@@ -8,7 +8,7 @@ import {
   groupSearchMatchesByBrowser,
   normalizeSearchQuery,
   tabRowKey,
-  tabHasMedia,
+  tabIsLinkIdentifiedMedia,
   type SearchTagOption,
 } from "../lib/browserMedia";
 import { AppVolumeSlider } from "../../../shared/ui/AppVolumeSlider";
@@ -169,8 +169,8 @@ function BrowserBody({
   const displayTabs = isStale
     ? browser.tabs.map((t) => ({ ...t, media: undefined }))
     : browser.tabs;
-  const mediaTabs = displayTabs.filter(tabHasMedia);
-  const otherTabs = displayTabs.filter((t) => !tabHasMedia(t));
+  const mediaTabs = displayTabs.filter(tabIsLinkIdentifiedMedia);
+  const otherTabs = displayTabs.filter((t) => !tabIsLinkIdentifiedMedia(t));
 
   const renderTabRow = (t: BrowserTab, showMediaControls: boolean) => {
     const rk = tabRowKey(t);
@@ -200,7 +200,7 @@ function BrowserBody({
   if (searching && browser.tabs.length > 0) {
     return (
       <ul className="pilpod-browser-profile__list">
-        {displayTabs.map((t) => renderTabRow(t, tabHasMedia(t)))}
+        {displayTabs.map((t) => renderTabRow(t, tabIsLinkIdentifiedMedia(t)))}
       </ul>
     );
   }

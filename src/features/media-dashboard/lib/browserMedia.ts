@@ -1,4 +1,5 @@
 import type { BrowserTab, TabMedia } from "../../../types/media";
+import { isMediaUrl } from "../../../shared/mediaUrlRules";
 
 /** Show idle hint on media tabs when user inactive longer than this. */
 export const USER_IDLE_WARN_MS = 300_000;
@@ -21,6 +22,23 @@ export function isTabPlaying(t: BrowserTab): boolean {
 export function tabHasMedia(t: BrowserTab): boolean {
   if (t.media == null) return false;
   return (t.media.playbackState ?? "").toLowerCase() === "playing";
+}
+
+/**
+ * True when the tab is a known media page (allowlisted URL or prior rule match).
+ * Used to list tabs in the media section regardless of active/playing state.
+ */
+export function tabIsLinkIdentifiedMedia(t: BrowserTab): boolean {
+  if ((t.media?.mediaMatchRule ?? "").trim().length > 0) return true;
+  const url = t.url?.trim();
+  return url ? isMediaUrl(url) : false;
+}
+
+/** True when play/pause controls are meaningful for this tab. */
+export function tabHasMediaControls(t: BrowserTab): boolean {
+  if (!tabIsLinkIdentifiedMedia(t) || t.media == null) return false;
+  const state = (t.media.playbackState ?? "").toLowerCase();
+  return state === "playing" || state === "paused";
 }
 
 /** Stable pending key for any browser tab row. */

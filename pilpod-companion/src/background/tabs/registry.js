@@ -8,6 +8,20 @@ import { buildTabPost } from "./tabPost.js";
 import { TabState }     from "../../shared/protocol.js";
 import { shouldReportMedia } from "../../shared/mediaGate.js";
 
+/**
+ * Drop phantom "playing" when the snapshot has no real signal and the tab is
+ * inactive and silent (typical for YouTube opened in a background tab).
+ * @param {import("../../shared/protocol.js").TabPost} meta
+ * @param {object} p
+ */
+function normalizeSnapshotPlaybackState(meta, p) {
+  const state = String(p.playbackState ?? "none").toLowerCase();
+  if (state !== "playing") return state;
+  if (p.hasSignal === true) return state;
+  if (meta.active === true || meta.audible === true) return state;
+  return "paused";
+}
+
 /** @param {object} p */
 function buildTabMedia(p) {
   return {
@@ -159,7 +173,10 @@ export class TabRegistry {
       return true;
     }
 
-    const next = buildTabMedia(p);
+    const next = buildTabMedia({
+      ...p,
+      playbackState: normalizeSnapshotPlaybackState(meta, p),
+    });
     const changed = JSON.stringify(meta.media) !== JSON.stringify(next);
     if (changed) {
       meta.media = next;
