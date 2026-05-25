@@ -8,7 +8,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import type { BrowserTab } from "../../../types/media";
+import type { BrowserTab, WakeAndSyncBrowserResult } from "../../../types/media";
 import {
   ALWAYS_ON_TOP_STORAGE_KEY,
   WIDGET_CHIP_LOGICAL_PX,
@@ -519,11 +519,27 @@ export function useMediaDashboard() {
   const refreshBrowserConnection = useCallback(async (browserId: string) => {
     setBrowserError(null);
     try {
-      await invoke("refresh_browser_connection", { browserId });
+      const browser = browsers.find((b) => b.id === browserId);
+      const osBrowserId = browser?.osBrowserId ?? browserId;
+
+      const result = await invoke<WakeAndSyncBrowserResult>(
+        "dev_wake_and_sync_browser",
+        { osBrowserId },
+      );
+
+      await refreshBrowsers();
+
+      if (result.error) {
+        setBrowserError(result.error);
+      } else if (result.timedOut) {
+        setBrowserError(
+          `Extension did not connect within ${Math.round(result.waitMs / 1000)}s`,
+        );
+      }
     } catch (e) {
       setBrowserError(String(e));
     }
-  }, []);
+  }, [browsers, refreshBrowsers]);
 
   const error = windowsSessions.error ?? browserError;
 

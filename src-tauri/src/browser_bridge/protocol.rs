@@ -16,7 +16,7 @@ pub const PUSH_INTERVAL_MS: u64 = 250;
 pub const DEBOUNCE_MS: u64 = 60;
 pub const FETCH_TIMEOUT_MS: u64 = 800;
 pub const FAIL_THRESHOLD: u32 = 4;
-pub const SLEEP_INTERVAL_MS: u64 = 5000;
+pub const SLEEP_INTERVAL_MS: u64 = 2000;
 pub const WS_CONNECT_TIMEOUT_MS: u64 = 2000;
 pub const WS_RECONNECT_MS: u64 = 3000;
 

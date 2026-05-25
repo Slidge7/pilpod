@@ -57,7 +57,26 @@ async function initTransport() {
   }
 }
 
+function nudgeTransport() {
+  if (transport && typeof transport.wake === "function") {
+    transport.wake();
+  } else if (transport && typeof transport.schedulePush === "function") {
+    transport.schedulePush();
+  }
+}
+
 registerLifecycleListeners(registry, () => transport?.schedulePush());
+
+chrome.runtime.onStartup.addListener(() => {
+  nudgeTransport();
+});
+
+chrome.alarms.create("pilpod-keepalive", { periodInMinutes: 0.5 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "pilpod-keepalive") {
+    nudgeTransport();
+  }
+});
 
 async function init() {
   await _loadBrowserId();

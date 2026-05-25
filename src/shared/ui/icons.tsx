@@ -243,6 +243,26 @@ export function IconDownload({ className }: { className?: string }) {
   );
 }
 
+export function IconBeaker() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4.5 3h15" />
+      <path d="M6 3v6.5a6 6 0 0 0 3.5 5.4l.5.3V21h5V15.2l.5-.3a6 6 0 0 0 3.5-5.4V3" />
+      <path d="M8.5 14h7" />
+    </svg>
+  );
+}
+
 export function IconFolderOpen({ className }: { className?: string }) {
   return (
     <svg

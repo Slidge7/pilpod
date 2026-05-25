@@ -1,0 +1,121 @@
+.dev-lab-header {
+  display: flex;
+  min-height: 2rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--pilpod-border);
+  background: rgb(255 255 255 / 0.95);
+  padding: 0.25rem 0.25rem 0.25rem 0;
+}
+
+html.dark .dev-lab-header {
+  background: rgb(9 9 11 / 0.95);
+}
+
+.dev-lab-header__left {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+  padding-left: 0.5rem;
+}
+
+.dev-lab-header__logo {
+  pointer-events: none;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 0.375rem;
+  object-fit: cover;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  outline: 1px solid var(--pilpod-ring-icon);
+}
+
+.dev-lab-header__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--pilpod-text-secondary);
+}
+
+html.dark .dev-lab-header__title {
+  color: var(--pilpod-text-muted);
+}
+
+.dev-lab-header__scan-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.25rem;
+}
+
+.dev-lab-header__scan-btn {
+  border: 1px solid var(--pilpod-border);
+  border-radius: 0.375rem;
+  background: var(--pilpod-bg-muted);
+  padding: 0.25rem 0.5rem;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--pilpod-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.dev-lab-header__scan-btn:hover:not(:disabled) {
+  background: var(--pilpod-border-muted);
+  color: var(--pilpod-text);
+}
+
+.dev-lab-header__scan-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+html.dark .dev-lab-header__scan-btn {
+  background: rgb(24 24 27 / 0.8);
+}
+
+.dev-lab-header__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 1px;
+  padding-right: 0.25rem;
+}
+
+.dev-lab-header__btn {
+  display: flex;
+  height: 2rem;
+  min-width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  border: none;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.dev-lab-header__btn:hover {
+  background: var(--pilpod-border-muted);
+  color: var(--pilpod-text);
+}
+
+html.dark .dev-lab-header__btn:hover {
+  background: var(--pilpod-bg-muted);
+  color: var(--pilpod-text-secondary);
+}
+
+.dev-lab-header__btn--close:hover {
+  background: var(--pilpod-red-close-hover-bg);
+  color: var(--pilpod-red-close-hover-text);
+}

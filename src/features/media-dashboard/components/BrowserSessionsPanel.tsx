@@ -1,6 +1,12 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import "./BrowserSessionsPanel.css";
 import type { AudioSessionInfoDto, BrowserTab, DetectedBrowser } from "../../../types/media";
+import {
+  groupTabsByWindow,
+  windowCountForTabs,
+  windowGroupLabel,
+  type TabWindowGroup,
+} from "../../../shared/groupTabsByWindow";
 import {
   applySearchTagFilters,
   collectTextSearchMatches,
@@ -82,6 +88,8 @@ function BrowserHeader({
       ? `cached ${formatAge(browser.lastSyncSecs)}`
       : null;
 
+  const windowCount = windowCountForTabs(browser.tabs);
+
   return (
     <header className="pilpod-browser-profile__head">
       <span className="pilpod-browser-profile__label">
@@ -119,7 +127,12 @@ function BrowserHeader({
         ) : null}
       </span>
       <span className="pilpod-browser-profile__tab-count">
-        {browser.tabCount > 0 ? `${browser.tabCount} tabs` : null}
+        {browser.tabCount > 0 ? (
+          <>
+            {browser.tabCount} tabs
+            {windowCount > 1 ? <> · {windowCount} windows</> : null}
+          </>
+        ) : null}
       </span>
       {profileAudio ? (
         <AppVolumeSlider
@@ -130,14 +143,129 @@ function BrowserHeader({
       ) : null}
       <button
         className={`pilpod-browser-profile__refresh${refreshing ? " pilpod-browser-profile__refresh--spinning" : ""}`}
-        title={`Refresh connection to ${browserDisplayLabel(browser)}`}
-        aria-label={`Refresh ${browserDisplayLabel(browser)} connection`}
+        title={`Wake & sync ${browserDisplayLabel(browser)}`}
+        aria-label={`Wake and sync ${browserDisplayLabel(browser)}`}
         onClick={handleRefresh}
         disabled={refreshing}
       >
         ↺
       </button>
     </header>
+  );
+}
+
+function MediaAndOtherTabLists({
+  tabs,
+  renderTabRow,
+}: {
+  tabs: BrowserTab[];
+  renderTabRow: (t: BrowserTab, showMediaControls: boolean) => ReactNode;
+}) {
+  const mediaTabs = tabs.filter(tabIsLinkIdentifiedMedia);
+  const otherTabs = tabs.filter((t) => !tabIsLinkIdentifiedMedia(t));
+
+  return (
+    <>
+      {mediaTabs.length > 0 ? (
+        <ul className="pilpod-browser-profile__list">
+          {mediaTabs.map((t) => renderTabRow(t, true))}
+        </ul>
+      ) : null}
+
+      {otherTabs.length > 0 ? (
+        <details className="pilpod-browser-profile__other">
+          <summary className="pilpod-browser-profile__other-summary">
+            {mediaTabs.length > 0 ? "Other open tabs" : "Open tabs"}
+            <span className="pilpod-browser-profile__other-count">
+              {otherTabs.length}
+            </span>
+          </summary>
+          <ul className="pilpod-browser-profile__other-list">
+            {otherTabs.map((t) => renderTabRow(t, false))}
+          </ul>
+        </details>
+      ) : null}
+    </>
+  );
+}
+
+function WindowTabGroup({
+  group,
+  index,
+  searching,
+  renderTabRow,
+}: {
+  group: TabWindowGroup;
+  index: number;
+  searching: boolean;
+  renderTabRow: (t: BrowserTab, showMediaControls: boolean) => ReactNode;
+}) {
+  return (
+    <section
+      className={[
+        "pilpod-browser-profile__window",
+        group.focused ? "pilpod-browser-profile__window--focused" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <header className="pilpod-browser-profile__window-head">
+        {windowGroupLabel(group, index)}
+      </header>
+      {searching ? (
+        <ul className="pilpod-browser-profile__list">
+          {group.tabs.map((t) => renderTabRow(t, tabIsLinkIdentifiedMedia(t)))}
+        </ul>
+      ) : (
+        <MediaAndOtherTabLists tabs={group.tabs} renderTabRow={renderTabRow} />
+      )}
+    </section>
+  );
+}
+
+function GroupedTabContent({
+  tabs,
+  searching,
+  renderTabRow,
+  staleClassName,
+}: {
+  tabs: BrowserTab[];
+  searching: boolean;
+  renderTabRow: (t: BrowserTab, showMediaControls: boolean) => ReactNode;
+  staleClassName?: string;
+}) {
+  const windowGroups = groupTabsByWindow(tabs);
+
+  if (windowGroups.length <= 1) {
+    if (searching) {
+      return (
+        <ul className="pilpod-browser-profile__list">
+          {tabs.map((t) => renderTabRow(t, tabIsLinkIdentifiedMedia(t)))}
+        </ul>
+      );
+    }
+
+    return (
+      <div className={staleClassName}>
+        <MediaAndOtherTabLists tabs={tabs} renderTabRow={renderTabRow} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={staleClassName}>
+      <div className="pilpod-browser-profile__windows">
+        {windowGroups.map((group, index) => (
+          <WindowTabGroup
+            key={group.windowId}
+            group={group}
+            index={index}
+            searching={searching}
+            renderTabRow={renderTabRow}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -169,8 +297,6 @@ function BrowserBody({
   const displayTabs = isStale
     ? browser.tabs.map((t) => ({ ...t, media: undefined }))
     : browser.tabs;
-  const mediaTabs = displayTabs.filter(tabIsLinkIdentifiedMedia);
-  const otherTabs = displayTabs.filter((t) => !tabIsLinkIdentifiedMedia(t));
 
   const renderTabRow = (t: BrowserTab, showMediaControls: boolean) => {
     const rk = tabRowKey(t);
@@ -199,9 +325,11 @@ function BrowserBody({
 
   if (searching && browser.tabs.length > 0) {
     return (
-      <ul className="pilpod-browser-profile__list">
-        {displayTabs.map((t) => renderTabRow(t, tabIsLinkIdentifiedMedia(t)))}
-      </ul>
+      <GroupedTabContent
+        tabs={displayTabs}
+        searching
+        renderTabRow={renderTabRow}
+      />
     );
   }
 
@@ -248,27 +376,12 @@ function BrowserBody({
   }
 
   return (
-    <div className={isStale ? "pilpod-browser-profile__stale" : undefined}>
-      {mediaTabs.length > 0 ? (
-        <ul className="pilpod-browser-profile__list">
-          {mediaTabs.map((t) => renderTabRow(t, true))}
-        </ul>
-      ) : null}
-
-      {otherTabs.length > 0 ? (
-        <details className="pilpod-browser-profile__other">
-          <summary className="pilpod-browser-profile__other-summary">
-            {mediaTabs.length > 0 ? "Other open tabs" : "Open tabs"}
-            <span className="pilpod-browser-profile__other-count">
-              {otherTabs.length}
-            </span>
-          </summary>
-          <ul className="pilpod-browser-profile__other-list">
-            {otherTabs.map((t) => renderTabRow(t, false))}
-          </ul>
-        </details>
-      ) : null}
-    </div>
+    <GroupedTabContent
+      tabs={displayTabs}
+      searching={false}
+      renderTabRow={renderTabRow}
+      staleClassName={isStale ? "pilpod-browser-profile__stale" : undefined}
+    />
   );
 }
 

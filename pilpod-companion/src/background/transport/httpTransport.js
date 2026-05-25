@@ -77,6 +77,19 @@ export class HttpTransport {
     }
   }
 
+  /** Force reconnect — used after browser wake or alarm keepalive. */
+  wake() {
+    if (this.#wakeTimer !== null) {
+      clearTimeout(this.#wakeTimer);
+      this.#wakeTimer = null;
+    }
+    if (this.#sleeping) {
+      void this.#wakeAndRetry();
+    } else {
+      void this.#push();
+    }
+  }
+
   async #push() {
     if (this.#sleeping) return;
 
@@ -156,6 +169,7 @@ export class HttpTransport {
 
   async #wakeAndRetry() {
     this.#sleeping = false;
+    this.#failCount = 0;
     await this.#push();
   }
 }

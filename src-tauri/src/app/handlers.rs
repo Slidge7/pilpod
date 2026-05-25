@@ -27,6 +27,10 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::downloader::commands::dl_open_output_dir,
         crate::downloader::commands::dl_check_binaries,
         crate::downloader::commands::dl_update_ytdlp,
+        // Dev lab commands
+        crate::dev_lab::open_dev_lab_window,
+        crate::dev_lab::dev_scan_os_browsers,
+        crate::dev_lab::dev_wake_and_sync_browser,
     ])
 }
 
@@ -54,5 +58,8 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::platform::stub_commands::dl_open_output_dir,
         crate::platform::stub_commands::dl_check_binaries,
         crate::platform::stub_commands::dl_update_ytdlp,
+        crate::platform::stub_commands::open_dev_lab_window,
+        crate::platform::stub_commands::dev_scan_os_browsers,
+        crate::platform::stub_commands::dev_wake_and_sync_browser,
     ])
 }

@@ -36,7 +36,7 @@ export const FETCH_TIMEOUT_MS = 800;
 export const FAIL_THRESHOLD = 4;
 
 /** Retry interval when desktop is unreachable (ms). */
-export const SLEEP_INTERVAL_MS = 5000;
+export const SLEEP_INTERVAL_MS = 2000;
 
 /** chrome.storage key for the stable browser profile UUID. */
 export const STORAGE_KEY_BROWSER_ID = "pilpodBrowserId";

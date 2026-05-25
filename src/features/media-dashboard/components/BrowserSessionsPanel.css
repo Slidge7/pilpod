@@ -378,3 +378,43 @@ html.dark .pilpod-browser-profile__other-list > li + li {
 .pilpod-browser-profile__stale {
   opacity: 0.6;
 }
+
+.pilpod-browser-profile__windows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.35rem;
+}
+
+.pilpod-browser-profile__window {
+  overflow: hidden;
+  border: 1px solid var(--pilpod-border-muted);
+  border-radius: 0.125rem;
+  background: var(--pilpod-bg-elevated);
+}
+
+html.dark .pilpod-browser-profile__window {
+  background: rgb(9 9 11 / 0.45);
+}
+
+.pilpod-browser-profile__window--focused {
+  border-color: var(--pilpod-emerald-border);
+}
+
+.pilpod-browser-profile__window-head {
+  padding: 0.2rem 0.5rem;
+  border-bottom: 1px solid var(--pilpod-border-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-browser-profile__window--focused .pilpod-browser-profile__window-head {
+  color: var(--pilpod-emerald-text, var(--pilpod-emerald, #10b981));
+}
+
+.pilpod-browser-profile__window .pilpod-browser-profile__other {
+  border-top: 1px solid var(--pilpod-border-muted);
+}

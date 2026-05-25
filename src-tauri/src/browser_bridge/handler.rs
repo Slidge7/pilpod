@@ -153,7 +153,19 @@ pub fn apply_ingest(ingest: BridgeIngest, ctx: &BridgeContext) -> BridgeResult {
                 }
                 content_changed
             }
-            None if ingest.is_ping => false,
+            None if ingest.is_ping => {
+                map.insert(
+                    ingest.browser_id.clone(),
+                    BrowserSlot {
+                        last_seen: now,
+                        browser_id: ingest.browser_id.clone(),
+                        browser_name: ingest.browser_name.clone(),
+                        tabs: Vec::new(),
+                        content_hash: incoming_hash,
+                    },
+                );
+                false
+            }
             None => {
                 map.insert(
                     ingest.browser_id.clone(),

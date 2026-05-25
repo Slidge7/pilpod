@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import "./MediaDashboard.css";
 import { DashboardFooter } from "./components/DashboardFooter";
 import { DashboardHeader } from "./components/DashboardHeader";
@@ -164,6 +165,11 @@ export function MediaDashboard() {
           onToggleAppearance={toggle}
           onRefresh={refresh}
           onToggleWidgetEnabled={toggleWidgetEnabled}
+          onOpenDevLab={() => {
+            void invoke("open_dev_lab_window").catch((err: unknown) => {
+              console.error("[dev-lab] open_dev_lab_window failed:", err);
+            });
+          }}
         />
       </div>
     </div>

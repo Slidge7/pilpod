@@ -92,6 +92,24 @@ export type DetectedBrowser = {
   extensionReconnecting?: boolean;
 };
 
+/** Result of `dev_wake_and_sync_browser` — wake OS browser + poll extension + sync tabs. */
+export type WakeAndSyncBrowserResult = {
+  osBrowserId: string;
+  wasRunning: boolean;
+  launched: boolean;
+  connected: boolean;
+  timedOut: boolean;
+  waitMs: number;
+  profiles: Array<{
+    browserId: string;
+    osBrowserId: string;
+    extensionConnected: boolean;
+    tabCount: number;
+    tabs: BrowserTab[];
+  }>;
+  error: string | null;
+};
+
 /**
  * Unified tab representation — replaces the old split of media tabs vs all-tabs.
  * Every open tab is reported; `media` is present only when content is detected.

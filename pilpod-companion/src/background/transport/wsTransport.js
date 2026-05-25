@@ -116,6 +116,22 @@ export class WsTransport {
     }
   }
 
+  /** Force reconnect — used after browser wake or alarm keepalive. */
+  wake() {
+    if (this.#stopped) return;
+    if (this.#wakeTimer !== null) {
+      clearTimeout(this.#wakeTimer);
+      this.#wakeTimer = null;
+    }
+    if (this.#reconnectTimer !== null) {
+      clearTimeout(this.#reconnectTimer);
+      this.#reconnectTimer = null;
+    }
+    if (this.#sleeping || !this.#ws || this.#ws.readyState !== WebSocket.OPEN) {
+      this.#wakeAndRetry();
+    }
+  }
+
   #openSocket() {
     if (this.#sleeping) return;
 
@@ -187,8 +203,9 @@ export class WsTransport {
     }
   }
 
-  #wakeAndRetry() {
+  async #wakeAndRetry() {
     this.#sleeping = false;
+    this.#failCount = 0;
     this.#openSocket();
   }
 

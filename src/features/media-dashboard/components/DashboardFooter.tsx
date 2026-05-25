@@ -1,6 +1,7 @@
 import "./DashboardFooter.css";
 import type { AppearanceMode } from "../../../theme/appearance";
 import {
+  IconBeaker,
   IconMoon,
   IconRefresh,
   IconSun,
@@ -13,6 +14,7 @@ type Props = {
   onToggleAppearance: () => void;
   onRefresh: () => void;
   onToggleWidgetEnabled: () => void;
+  onOpenDevLab?: () => void;
 };
 
 export function DashboardFooter({
@@ -21,6 +23,7 @@ export function DashboardFooter({
   onToggleAppearance,
   onRefresh,
   onToggleWidgetEnabled,
+  onOpenDevLab,
 }: Props) {
   const appearanceTitle =
     appearance === "dark" ? "Use light appearance" : "Use dark appearance";
@@ -67,6 +70,17 @@ export function DashboardFooter({
         >
           <IconWidgetMinimize />
         </button>
+        {import.meta.env.DEV && onOpenDevLab ? (
+          <button
+            type="button"
+            onClick={onOpenDevLab}
+            className="pilpod-dash-footer__btn"
+            title="Open Dev Lab"
+            aria-label="Open Dev Lab"
+          >
+            <IconBeaker />
+          </button>
+        ) : null}
       </div>
     </footer>
   );

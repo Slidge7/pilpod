@@ -52,6 +52,31 @@ pub fn refresh_browser_connection(_browser_id: String) {}
 #[tauri::command]
 pub fn request_browser_sync() {}
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DevOsBrowserRowStub {
+    pub id: String,
+    pub display_name: String,
+    pub running: bool,
+}
+
+#[tauri::command]
+pub fn open_dev_lab_window() -> Result<(), String> {
+    Err("PilPod requires Windows".into())
+}
+
+#[tauri::command]
+pub fn dev_scan_os_browsers() -> Vec<DevOsBrowserRowStub> {
+    Vec::new()
+}
+
+#[tauri::command]
+pub async fn dev_wake_and_sync_browser(os_browser_id: String) -> Result<serde_json::Value, String> {
+    Err(format!(
+        "dev_wake_and_sync_browser is Windows-only (requested: {os_browser_id})"
+    ))
+}
+
 // ─── Downloader stubs (non-Windows) ──────────────────────────────────────────
 
 #[derive(serde::Serialize)]
