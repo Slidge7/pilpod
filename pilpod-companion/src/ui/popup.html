@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PilPod Companion</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="brand">
+      <img src="../../icons/icon48.png" alt="" class="logo" width="24" height="24" />
+      <span class="title">PilPod</span>
+    </div>
+    <div class="connection">
+      <span id="connectionDot" class="dot dot-red" aria-hidden="true"></span>
+      <span id="connectionLabel">Disconnected</span>
+    </div>
+  </header>
+
+  <section id="activeContext" class="section context hidden">
+    <p id="contextText" class="context-text"></p>
+    <div id="discoveryActions" class="actions hidden">
+      <button id="addSiteBtn" type="button" class="btn btn-primary">Add site</button>
+      <button id="dismissSiteBtn" type="button" class="btn btn-secondary">Dismiss</button>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">Custom sites</h2>
+    <ul id="rulesList" class="rules-list"></ul>
+    <div class="manual-add">
+      <input id="manualDomain" type="text" placeholder="example.com" spellcheck="false" />
+      <button id="manualAddBtn" type="button" class="btn btn-secondary">Add</button>
+    </div>
+  </section>
+
+  <p id="errorMsg" class="error hidden" role="alert"></p>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

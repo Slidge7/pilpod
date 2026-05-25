@@ -8,6 +8,7 @@
 
 export const MSG_MEDIA_SNAPSHOT = "PILPOD_MEDIA_SNAPSHOT";
 export const MSG_MEDIA_CONTROL  = "PILPOD_MEDIA_CONTROL";
+export const MSG_POPUP          = "PILPOD_POPUP";
 
 // ─── Commands (Rust → background → tab) ────────────────────────────────────────
 

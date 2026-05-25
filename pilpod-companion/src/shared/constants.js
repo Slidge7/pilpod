@@ -41,5 +41,8 @@ export const SLEEP_INTERVAL_MS = 2000;
 /** chrome.storage key for the stable browser profile UUID. */
 export const STORAGE_KEY_BROWSER_ID = "pilpodBrowserId";
 
+/** chrome.storage key for v2 PilPod configuration. */
+export const STORAGE_KEY_CONFIG = "pilpodConfig";
+
 /** @deprecated Content script uses event-driven detection; kept for reference only. */
 export const CONTENT_TICK_MS = 800;

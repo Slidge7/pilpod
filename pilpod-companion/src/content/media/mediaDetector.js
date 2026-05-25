@@ -4,8 +4,6 @@
 
 "use strict";
 
-import { isMediaUrl, matchMediaUrlRule } from "../../shared/mediaUrlRules.js";
-
 function allMediaElements() {
   return [
     ...document.querySelectorAll("video"),
@@ -69,41 +67,14 @@ export function pickArtworkUrl() {
   return poster ? String(poster) : "";
 }
 
+
 /** @param {{ idleMs: number }} activityTracker */
-function emptySnapshot(url, activityTracker) {
-  return {
-    hasSignal: false,
-    title: "",
-    artist: "",
-    album: "",
-    playbackState: "none",
-    artworkUrl: "",
-    url,
-    duration: 0,
-    currentTime: 0,
-    pageVisible: document.visibilityState === "visible",
-    userIdleMs: activityTracker.idleMs,
-    documentState: document.readyState,
-  };
-}
-
-/**
- * Build a media snapshot for the given page URL.
- * Early-exits without DOM reads when the URL is not on the allowlist.
- * @param {string} url
- * @param {{ idleMs: number }} activityTracker
- */
 export function detectMedia(url, activityTracker) {
-  if (!isMediaUrl(url)) {
-    return emptySnapshot(url, activityTracker);
-  }
-
   const sessionMeta = navigator.mediaSession?.metadata;
   const title       = String(sessionMeta?.title ?? document.title ?? "");
   const artist      = String(sessionMeta?.artist ?? "");
   const album       = String(sessionMeta?.album ?? "");
   const active      = activeMediaElement();
-  const mediaMatchRule = matchMediaUrlRule(url) ?? undefined;
 
   return {
     hasSignal: resolveHasSignal(),
@@ -118,7 +89,6 @@ export function detectMedia(url, activityTracker) {
     pageVisible: document.visibilityState === "visible",
     userIdleMs: activityTracker.idleMs,
     documentState: document.readyState,
-    mediaMatchRule,
   };
 }
 
@@ -128,8 +98,7 @@ export function hasActiveMedia() {
 }
 
 /** @param {string} url */
-export function needsMediaSessionFallback(url) {
-  if (!isMediaUrl(url)) return false;
+export function needsMediaSessionFallback(_url) {
   if (allMediaElements().some((el) => el.readyState >= 1)) return false;
   if (document.hidden && !hasActiveMedia()) return false;
 

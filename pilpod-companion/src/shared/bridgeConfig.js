@@ -33,6 +33,22 @@ const config = {
   wsReconnectMs:      WS_RECONNECT_MS,
 };
 
+/**
+ * @param {string} urlString
+ * @param {{ allowWs?: boolean }} [opts]
+ * @returns {boolean}
+ */
+export function isAllowedLocalhostUrl(urlString, opts = {}) {
+  try {
+    const url = new URL(urlString);
+    if (url.hostname !== "127.0.0.1") return false;
+    if (opts.allowWs) return url.protocol === "ws:" || url.protocol === "http:";
+    return url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 /** @returns {Readonly<import("./bridgeConfig.types.js").BridgeConfig>} */
 export function getBridgeConfig() {
   return config;
@@ -41,6 +57,7 @@ export function getBridgeConfig() {
 /**
  * Fetch server capabilities and merge into runtime config.
  * Keeps defaults when PilPod is offline or the request fails.
+ * WebSocket URL overrides are rejected for CWS security.
  * @returns {Promise<Readonly<import("./bridgeConfig.types.js").BridgeConfig>>}
  */
 export async function loadBridgeConfig() {
@@ -56,11 +73,12 @@ export async function loadBridgeConfig() {
     if (typeof data.protocolVersion === "string" && data.protocolVersion.length > 0) {
       config.protocolVersion = data.protocolVersion;
     }
-    if (typeof data.wsUrl === "string" && data.wsUrl.length > 0) {
-      config.wsUrl = data.wsUrl;
-    }
+
     if (typeof data.httpPath === "string" && data.httpPath.length > 0) {
-      config.pushUrl = `http://127.0.0.1:17399${data.httpPath}`;
+      const candidate = `http://127.0.0.1:17399${data.httpPath}`;
+      if (isAllowedLocalhostUrl(candidate)) {
+        config.pushUrl = candidate;
+      }
     }
 
     const numericFields = [
@@ -84,4 +102,43 @@ export async function loadBridgeConfig() {
   }
 
   return config;
+}
+
+/** @returns {string} */
+export function getValidatedWsUrl() {
+  return isAllowedLocalhostUrl(config.wsUrl, { allowWs: true }) ? config.wsUrl : WS_URL;
+}
+
+/** Resets runtime config to bundled defaults — for tests only. */
+export function resetBridgeConfigForTests() {
+  config.protocolVersion = PROTOCOL_VERSION;
+  config.pushUrl = PUSH_URL;
+  config.wsUrl = WS_URL;
+  config.pushIntervalMs = PUSH_INTERVAL_MS;
+  config.debounceMs = DEBOUNCE_MS;
+  config.fetchTimeoutMs = FETCH_TIMEOUT_MS;
+  config.failThreshold = FAIL_THRESHOLD;
+  config.sleepIntervalMs = SLEEP_INTERVAL_MS;
+  config.wsConnectTimeoutMs = WS_CONNECT_TIMEOUT_MS;
+  config.wsReconnectMs = WS_RECONNECT_MS;
+}
+
+/**
+ * @param {Record<string, unknown>} data
+ */
+export function applyCapabilitiesForTests(data) {
+  if (typeof data.protocolVersion === "string" && data.protocolVersion.length > 0) {
+    config.protocolVersion = data.protocolVersion;
+  }
+  if (typeof data.wsUrl === "string" && data.wsUrl.length > 0) {
+    if (isAllowedLocalhostUrl(data.wsUrl, { allowWs: true })) {
+      config.wsUrl = data.wsUrl;
+    }
+  }
+  if (typeof data.httpPath === "string" && data.httpPath.length > 0) {
+    const candidate = `http://127.0.0.1:17399${data.httpPath}`;
+    if (isAllowedLocalhostUrl(candidate)) {
+      config.pushUrl = candidate;
+    }
+  }
 }

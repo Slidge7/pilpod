@@ -21,6 +21,7 @@ const items = [
   "src/background.js",
   "src/background",
   "src/shared",
+  "src/ui",
 ];
 
 if (existsSync(zipPath)) {

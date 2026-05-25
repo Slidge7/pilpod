@@ -25,6 +25,9 @@ export class HttpTransport {
   /** @type {number} */
   #seq = 0;
 
+  /** @type {boolean} */
+  #connected = false;
+
   /**
    * @param {import("../tabs/registry.js").TabRegistry} registry
    * @param {() => string} getBrowserId
@@ -77,7 +80,6 @@ export class HttpTransport {
     }
   }
 
-  /** Force reconnect — used after browser wake or alarm keepalive. */
   wake() {
     if (this.#wakeTimer !== null) {
       clearTimeout(this.#wakeTimer);
@@ -88,6 +90,10 @@ export class HttpTransport {
     } else {
       void this.#push();
     }
+  }
+
+  getConnectionState() {
+    return this.#connected ? "connected" : "disconnected";
   }
 
   async #push() {
@@ -119,17 +125,20 @@ export class HttpTransport {
         signal:  AbortSignal.timeout(cfg.fetchTimeoutMs),
       });
     } catch {
+      this.#connected = false;
       this.#onFailure();
       return;
     }
 
     if (!res.ok) {
+      this.#connected = false;
       this.#onFailure();
       return;
     }
 
     this.#failCount = 0;
     this.#sleeping = false;
+    this.#connected = true;
 
     if (dirty) this.#registry.clearDirty();
 
@@ -158,6 +167,7 @@ export class HttpTransport {
     this.#failCount++;
     if (this.#failCount >= failThreshold && !this.#sleeping) {
       this.#sleeping = true;
+      this.#connected = false;
       if (this.#wakeTimer === null) {
         this.#wakeTimer = setTimeout(() => {
           this.#wakeTimer = null;

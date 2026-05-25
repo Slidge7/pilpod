@@ -4,7 +4,7 @@
 
 "use strict";
 
-import { getBridgeConfig } from "../../shared/bridgeConfig.js";
+import { getBridgeConfig, getValidatedWsUrl } from "../../shared/bridgeConfig.js";
 
 export class WsTransport {
   /** @type {WebSocket|null} */
@@ -39,6 +39,9 @@ export class WsTransport {
 
   /** Pending until `#openSocket()` runs — must not use `Promise.reject` here (unhandled rejection). */
   #readyPromise = new Promise(() => {});
+
+  /** @type {boolean} */
+  #connected = false;
 
   /**
    * @param {import("../tabs/registry.js").TabRegistry} registry
@@ -116,7 +119,6 @@ export class WsTransport {
     }
   }
 
-  /** Force reconnect — used after browser wake or alarm keepalive. */
   wake() {
     if (this.#stopped) return;
     if (this.#wakeTimer !== null) {
@@ -132,10 +134,17 @@ export class WsTransport {
     }
   }
 
+  getConnectionState() {
+    if (this.#connected && this.#ws?.readyState === WebSocket.OPEN) {
+      return "connected";
+    }
+    return "disconnected";
+  }
+
   #openSocket() {
     if (this.#sleeping) return;
 
-    const { wsUrl } = getBridgeConfig();
+    const wsUrl = getValidatedWsUrl();
 
     this.#readyPromise = new Promise((resolve) => {
       this.#readyResolve = resolve;
@@ -147,6 +156,7 @@ export class WsTransport {
     ws.onopen = () => {
       this.#failCount = 0;
       this.#sleeping = false;
+      this.#connected = true;
       this.#readyResolve?.();
       this.#readyResolve = null;
       this.startHeartbeat();
@@ -164,6 +174,7 @@ export class WsTransport {
     };
 
     ws.onclose = () => {
+      this.#connected = false;
       if (this.#stopped) return;
       if (this.#heartbeatTimer !== null) {
         clearInterval(this.#heartbeatTimer);

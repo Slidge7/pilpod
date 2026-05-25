@@ -1,6 +1,6 @@
 # PilPod Companion — Privacy Policy
 
-**Last updated:** May 24, 2026  
+**Last updated:** May 25, 2026  
 **Extension:** PilPod Companion (Manifest V3)  
 **Publisher:** PilPod
 
@@ -22,8 +22,13 @@ When you play media on supported sites (for example YouTube, Spotify, Netflix), 
 - Current time and duration
 - Whether the page is visible and basic page activity signals
 
+### Custom sites
+Users may manually grant PilPod Companion access to custom domains via the extension popup. This data is stored locally on the user's machine in `chrome.storage.local` and is never transmitted to external cloud services.
+
 ### Stored locally in the extension
 - A random **browser profile ID** (`browserId`) saved in `chrome.storage.local` so PilPod can identify this browser profile across sessions.
+- **Custom site rules** (`pilpodConfig.customRules`) — domains you explicitly approved for content script injection.
+- **Dismissed discovery suggestions** (`pilpodConfig.ignoredDomains`) — domains you chose not to add.
 
 ## What the extension does not collect
 
@@ -49,16 +54,19 @@ Data is used solely to:
 
 ## Data retention
 
-- The extension stores only the local `browserId` in browser storage.
+- The extension stores the local `browserId`, custom site rules, and dismissed domains in browser storage.
 - Tab and media data is held in memory while the extension runs and is sent to the local PilPod app; PilPod desktop retention is governed by the PilPod application, not this extension.
 
 ## Permissions
 
 | Permission | Purpose |
 |------------|---------|
-| `storage` | Persist the local browser profile ID |
-| `tabs` | Read tab metadata and perform tab actions requested by PilPod |
+| `storage` | Persist browser profile ID and custom site configuration |
+| `tabs` | Read tab metadata, audible state, and perform tab actions requested by PilPod |
 | `windows` | Focus browser windows when switching tabs from PilPod |
+| `scripting` | Register content scripts on user-approved custom domains |
+| `activeTab` | Allow adding a custom site from the active tab without blanket host permissions at install |
+| Optional host (`http://*/*`, `https://*/*`) | Runtime permission requests when you explicitly add a custom media site |
 | Host: `127.0.0.1` | Communicate with the local PilPod desktop app only |
 
 ## Children

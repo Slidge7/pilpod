@@ -6,7 +6,6 @@
 
 import { buildTabPost } from "./tabPost.js";
 import { TabState }     from "../../shared/protocol.js";
-import { shouldReportMedia } from "../../shared/mediaGate.js";
 
 /**
  * Drop phantom "playing" when the snapshot has no real signal and the tab is
@@ -35,7 +34,6 @@ function buildTabMedia(p) {
     pageVisible:   Boolean(p.pageVisible),
     userIdleMs:    Number(p.userIdleMs    ?? 0),
     documentState: String(p.documentState ?? ""),
-    ...(p.mediaMatchRule ? { mediaMatchRule: String(p.mediaMatchRule) } : {}),
   };
 }
 
@@ -157,21 +155,6 @@ export class TabRegistry {
   applyMediaSnapshot(tabId, p) {
     const meta = this.#tabs.get(tabId);
     if (!meta) return false;
-
-    const { pass, reason } = shouldReportMedia({
-      url: meta.url ?? "",
-      tabActive: meta.active ?? false,
-      tabAudible: meta.audible ?? false,
-      snapshot: p,
-    });
-
-    if (!pass) {
-      if (meta.media === null) return false;
-      meta.media = null;
-      console.debug(`[registry] media cleared for tab ${meta.tabId}: ${reason}`);
-      this.#dirty = true;
-      return true;
-    }
 
     const next = buildTabMedia({
       ...p,
