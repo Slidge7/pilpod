@@ -13,6 +13,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 
+use crate::browser_catalog::{self, CATALOG};
 use crate::browser_tabs::{BrowserSlot, BrowserSlotsMap};
 use crate::browser_bridge::connections::{ws_connected_ids, WsConnectionMap};
 use crate::browser_bridge::CONNECTED_WINDOW_SECS;
@@ -20,19 +21,6 @@ use crate::gsmtc::dto::{DetectedBrowser, DetectedBrowserInfo};
 
 /// Event name emitted to the frontend when the browser list changes.
 pub const BROWSERS_UPDATE_EVENT: &str = "browsers://update";
-
-/// Well-known browser process names, stable ids, and display names.
-/// Order matters: first match wins for process-name → id lookups.
-const KNOWN_BROWSERS: &[(&str, &str, &str)] = &[
-    ("chrome.exe",   "chrome",   "Google Chrome"),
-    ("msedge.exe",   "msedge",   "Microsoft Edge"),
-    ("firefox.exe",  "firefox",  "Mozilla Firefox"),
-    ("brave.exe",    "brave",    "Brave"),
-    ("opera.exe",    "opera",    "Opera"),
-    ("vivaldi.exe",  "vivaldi",  "Vivaldi"),
-    ("chromium.exe", "chromium", "Chromium"),
-    ("arc.exe",      "arc",      "Arc"),
-];
 
 /// Shared OS-detected browser list (updated by the detector background thread).
 pub type DetectedBrowsersState = Arc<Mutex<Vec<DetectedBrowserInfo>>>;
@@ -119,21 +107,14 @@ pub fn clear_reconnecting(state: &ReconnectingBrowsersState, browser_id: &str) -
 
 // ── Stable-id helpers ────────────────────────────────────────────────────────
 
-/// Map a browser name reported by the extension to a stable lower-case id.
-/// Falls back to the lower-cased name when no known browser matches.
+/// Map a browser name reported by the extension to a stable catalog id.
 pub fn browser_name_to_id(name: &str) -> String {
-    let n = name.trim().to_lowercase();
-    for (_, id, display) in KNOWN_BROWSERS {
-        if n == *id || n == display.to_lowercase() {
-            return id.to_string();
-        }
-    }
-    n
+    browser_catalog::browser_name_to_id(name)
 }
 
 // ── OS scanning ──────────────────────────────────────────────────────────────
 
-/// Enumerate running browser processes via the Windows toolhelp snapshot API.
+/// Enumerate running catalog browsers via toolhelp + full image path for disambiguation.
 fn scan_running_browsers() -> HashSet<String> {
     use windows::Win32::Foundation::CloseHandle;
     use windows::Win32::System::Diagnostics::ToolHelp::{
@@ -157,12 +138,12 @@ fn scan_running_browsers() -> HashSet<String> {
                     .iter()
                     .position(|&c| c == 0)
                     .unwrap_or(entry.szExeFile.len());
-                let name =
-                    String::from_utf16_lossy(&entry.szExeFile[..len]).to_lowercase();
-                for (exe, id, _) in KNOWN_BROWSERS {
-                    if name == *exe {
-                        running.insert(id.to_string());
-                    }
+                let name = String::from_utf16_lossy(&entry.szExeFile[..len]);
+                let full_path = browser_catalog::image_path_for_pid(entry.th32ProcessID);
+                if let Some(id) =
+                    browser_catalog::match_running_process(&name, full_path.as_deref())
+                {
+                    running.insert(id.to_string());
                 }
                 if Process32NextW(snapshot, &mut entry).is_err() {
                     break;
@@ -174,26 +155,25 @@ fn scan_running_browsers() -> HashSet<String> {
     running
 }
 
-/// Read installed browsers from `HKLM\SOFTWARE\Clients\StartMenuInternet`.
-fn scan_installed_browsers() -> HashSet<String> {
+fn scan_installed_from_hive(hive: winreg::HKEY) -> HashSet<String> {
     let mut installed = HashSet::new();
-    let hklm = winreg::RegKey::predef(winreg::enums::HKEY_LOCAL_MACHINE);
-    if let Ok(key) = hklm.open_subkey("SOFTWARE\\Clients\\StartMenuInternet") {
+    let root = winreg::RegKey::predef(hive);
+    if let Ok(key) = root.open_subkey("SOFTWARE\\Clients\\StartMenuInternet") {
         for name_result in key.enum_keys() {
             if let Ok(name) = name_result {
-                let lower = name.to_lowercase();
-                for (exe, id, display) in KNOWN_BROWSERS {
-                    let exe_stem = exe.replace(".exe", "");
-                    if lower.contains(&exe_stem)
-                        || lower.contains(*id)
-                        || lower.contains(&display.to_lowercase())
-                    {
-                        installed.insert(id.to_string());
-                    }
+                if let Some(entry) = browser_catalog::match_registry_key(&name) {
+                    installed.insert(entry.id.to_string());
                 }
             }
         }
     }
+    installed
+}
+
+/// Read installed browsers from HKLM and HKCU `StartMenuInternet` (deduped by catalog id).
+fn scan_installed_browsers() -> HashSet<String> {
+    let mut installed = scan_installed_from_hive(winreg::enums::HKEY_LOCAL_MACHINE);
+    installed.extend(scan_installed_from_hive(winreg::enums::HKEY_CURRENT_USER));
     installed
 }
 
@@ -202,13 +182,13 @@ pub fn build_detected_browsers() -> Vec<DetectedBrowserInfo> {
     let installed = scan_installed_browsers();
     let running = scan_running_browsers();
 
-    KNOWN_BROWSERS
+    CATALOG
         .iter()
-        .filter(|(_, id, _)| installed.contains(*id) || running.contains(*id))
-        .map(|(_, id, name)| DetectedBrowserInfo {
-            id: id.to_string(),
-            display_name: name.to_string(),
-            running: running.contains(*id),
+        .filter(|e| installed.contains(e.id) || running.contains(e.id))
+        .map(|e| DetectedBrowserInfo {
+            id: e.id.to_string(),
+            display_name: e.display_name.to_string(),
+            running: running.contains(e.id),
         })
         .collect()
 }

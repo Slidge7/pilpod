@@ -14,6 +14,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     SetForegroundWindow, ShowWindow, GA_ROOT, GWL_STYLE, GW_OWNER, SW_RESTORE, WS_CHILD,
 };
 
+use crate::browser_catalog;
+
 struct EnumCtx {
     tab_title: String,
     browser_hint: String,
@@ -27,20 +29,22 @@ fn browser_frame_class_ok(class: &str) -> bool {
 
 fn browser_hint_matches_caption(caption: &str, hint: &str) -> bool {
     let h = hint.trim().to_lowercase();
-    match h.as_str() {
-        "" | "unknown" => true,
-        "edge" => caption.contains("Microsoft Edge") || caption.contains(" - Edge"),
-        "chrome" | "chromium" => {
-            caption.contains("Google Chrome") || caption.contains("Chromium")
-        }
-        "brave" => caption.contains("Brave"),
-        "opera" => caption.contains("Opera"),
-        "vivaldi" => caption.contains("Vivaldi"),
-        "arc" => caption.contains("Arc"),
-        "firefox" => caption.contains("Firefox") || caption.contains("Mozilla"),
-        "safari" => caption.contains("Safari"),
-        _ => true,
+    if h.is_empty() || h == "unknown" {
+        return true;
     }
+    if h == "safari" {
+        return caption.contains("Safari");
+    }
+    if let Some(entry) = browser_catalog::focus_entry_for_hint(&h) {
+        return browser_catalog::caption_matches_entry(caption, entry);
+    }
+    if h == "chrome" {
+        return caption.contains("Google Chrome");
+    }
+    if h == "chromium" {
+        return caption.contains("Chromium");
+    }
+    true
 }
 
 fn score_match(caption: &str, tab_title: &str, browser_hint: &str) -> i32 {

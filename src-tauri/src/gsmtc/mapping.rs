@@ -12,28 +12,17 @@ use windows::{
 
 use std::collections::{HashMap, HashSet};
 
+use crate::browser_catalog;
+
 use super::dto::{
     ControlsDto, GsmtcSnapshot, MediaSessionDto, TimelineDto, SNAPSHOT_VERSION,
 };
 use super::thumbnail::read_thumbnail_b64;
 
-/// Map a browser stable ID (as returned by `browser_name_to_id`) to the
-/// substrings that can appear in its GSMTC AUMID.
-///
-/// Microsoft Edge's process is `msedge.exe`, so its AUMID contains `"msedge"`.
-/// The UWP/Store variant uses `"microsoftedge"` — both are covered.
 fn aumid_markers_for_browser_id(id: &str) -> &'static [&'static str] {
-    match id {
-        "chrome"    => &["chrome"],
-        "msedge"    => &["msedge", "microsoftedge"],
-        "brave"     => &["brave"],
-        "opera"     => &["opera"],
-        "vivaldi"   => &["vivaldi"],
-        "chromium"  => &["chromium"],
-        "firefox"   => &["firefox"],
-        "arc"       => &["arc"],
-        _           => &[],
-    }
+    browser_catalog::entry_by_id(id)
+        .map(|e| e.aumid_markers)
+        .unwrap_or(&[])
 }
 
 /// Drops GSMTC sessions **only** for the browsers in `active_extension_browsers`,
