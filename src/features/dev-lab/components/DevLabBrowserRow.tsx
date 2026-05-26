@@ -119,7 +119,20 @@ export function DevLabBrowserRow({
     <li className="dev-lab-browser-row">
       <div className="dev-lab-browser-row__header">
         <div className="dev-lab-browser-row__info">
-          <span className="dev-lab-browser-row__name">{browser.displayName}</span>
+          <div className="dev-lab-browser-row__title">
+            {browser.iconUrl ? (
+              <img
+                src={browser.iconUrl}
+                alt=""
+                className="dev-lab-browser-row__icon"
+                width={20}
+                height={20}
+              />
+            ) : (
+              <span className="dev-lab-browser-row__icon dev-lab-browser-row__icon--fallback" aria-hidden />
+            )}
+            <span className="dev-lab-browser-row__name">{browser.displayName}</span>
+          </div>
           <span className="dev-lab-browser-row__status">
             {browser.running ? "running" : "installed, not running"}
           </span>

@@ -93,38 +93,54 @@ function BrowserHeader({
   return (
     <header className="pilpod-browser-profile__head">
       <span className="pilpod-browser-profile__label">
-        {browserDisplayLabel(browser)}
-        {!browser.running ? (
-          <span className="pilpod-browser-profile__label-offline">
-            {" "}· not running
-          </span>
-        ) : null}
-        {!browser.extensionInstalled ? (
+        {browser.iconUrl ? (
+          <img
+            src={browser.iconUrl}
+            alt=""
+            className="pilpod-browser-profile__icon"
+            width={16}
+            height={16}
+          />
+        ) : (
           <span
-            className="pilpod-browser-profile__badge pilpod-browser-profile__badge--warn"
-            title="Companion extension not detected in this browser"
-          >
-            no ext
-          </span>
-        ) : showReconnecting ? (
-          <span
-            className="pilpod-browser-profile__badge pilpod-browser-profile__badge--reconnecting"
-            title="Reconnecting to PilPod after wake…"
-          >
-            reconnecting…
-          </span>
-        ) : showOffline ? (
-          <span
-            className="pilpod-browser-profile__badge pilpod-browser-profile__badge--offline"
-            title={
-              cacheHint
-                ? `Extension not responding (${cacheHint}) — click Refresh`
-                : "Extension not responding — click Refresh"
-            }
-          >
-            {cacheHint ? `offline · ${cacheHint}` : "offline"}
-          </span>
-        ) : null}
+            className="pilpod-browser-profile__icon pilpod-browser-profile__icon--fallback"
+            aria-hidden
+          />
+        )}
+        <span className="pilpod-browser-profile__label-text">
+          {browserDisplayLabel(browser)}
+          {!browser.running ? (
+            <span className="pilpod-browser-profile__label-offline">
+              {" "}· not running
+            </span>
+          ) : null}
+          {!browser.extensionInstalled ? (
+            <span
+              className="pilpod-browser-profile__badge pilpod-browser-profile__badge--warn"
+              title="Companion extension not detected in this browser"
+            >
+              no ext
+            </span>
+          ) : showReconnecting ? (
+            <span
+              className="pilpod-browser-profile__badge pilpod-browser-profile__badge--reconnecting"
+              title="Reconnecting to PilPod after wake…"
+            >
+              reconnecting…
+            </span>
+          ) : showOffline ? (
+            <span
+              className="pilpod-browser-profile__badge pilpod-browser-profile__badge--offline"
+              title={
+                cacheHint
+                  ? `Extension not responding (${cacheHint}) — click Refresh`
+                  : "Extension not responding — click Refresh"
+              }
+            >
+              {cacheHint ? `offline · ${cacheHint}` : "offline"}
+            </span>
+          ) : null}
+        </span>
       </span>
       <span className="pilpod-browser-profile__tab-count">
         {browser.tabCount > 0 ? (

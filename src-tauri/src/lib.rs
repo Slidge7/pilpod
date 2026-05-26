@@ -11,6 +11,8 @@ mod browser_commands;
 #[cfg(windows)]
 mod browser_catalog;
 #[cfg(windows)]
+mod browser_icon;
+#[cfg(windows)]
 mod browser_detector;
 #[cfg(windows)]
 mod browser_focus_win;

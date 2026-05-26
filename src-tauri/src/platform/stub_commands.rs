@@ -58,6 +58,7 @@ pub struct DevOsBrowserRowStub {
     pub id: String,
     pub display_name: String,
     pub running: bool,
+    pub icon_url: Option<String>,
 }
 
 #[tauri::command]

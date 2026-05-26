@@ -6,6 +6,7 @@ export type DevOsBrowserRow = {
   id: string;
   displayName: string;
   running: boolean;
+  iconUrl: string | null;
 };
 
 export type DevBrowserTabProfile = {

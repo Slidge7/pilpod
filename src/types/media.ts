@@ -90,6 +90,8 @@ export type DetectedBrowser = {
   lastSyncSecs: number | null;
   /** True briefly after system resume until the extension reconnects. */
   extensionReconnecting?: boolean;
+  /** OS-level browser icon as a PNG data URL. */
+  iconUrl?: string | null;
 };
 
 /** Result of `dev_wake_and_sync_browser` — wake OS browser + poll extension + sync tabs. */

@@ -22,7 +22,8 @@
 //! Safari and Samsung Internet (no meaningful Windows client), Internet Explorer (deprecated),
 //! portable-only forks without registry, and niche forks (Zen, Floorp, etc.).
 
-use std::path::Path;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 
 use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
 use winreg::RegKey;
@@ -445,6 +446,156 @@ fn resolve_install_path(entry: &BrowserCatalogEntry) -> Option<String> {
     None
 }
 
+/// MSIX package folder prefix under `%LOCALAPPDATA%\\Packages` (e.g. Arc).
+fn msix_package_prefix(entry: &BrowserCatalogEntry) -> Option<&'static str> {
+    match entry.id {
+        "arc" => Some("TheBrowserCompany.Arc"),
+        _ => None,
+    }
+}
+
+fn is_msix_package_installed(entry: &BrowserCatalogEntry) -> bool {
+    let Some(prefix) = msix_package_prefix(entry) else {
+        return false;
+    };
+    let Some(local) = std::env::var_os("LOCALAPPDATA") else {
+        return false;
+    };
+    let packages = PathBuf::from(local).join("Packages");
+    let Ok(read_dir) = std::fs::read_dir(packages) else {
+        return false;
+    };
+    read_dir.filter_map(Result::ok).any(|entry| {
+        entry
+            .file_name()
+            .to_string_lossy()
+            .starts_with(prefix)
+    })
+}
+
+fn resolve_from_app_paths(entry: &BrowserCatalogEntry) -> Option<String> {
+    let subkey = format!(
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\{}",
+        entry.process_exe
+    );
+    for hive in [HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER] {
+        let root = RegKey::predef(hive);
+        let Ok(key) = root.open_subkey(&subkey) else {
+            continue;
+        };
+        if let Ok(path) = key.get_value::<String, _>("") {
+            if let Some(exe) = normalize_exe_path(&path) {
+                return Some(exe);
+            }
+        }
+    }
+    None
+}
+
+fn parse_exe_path(raw: &str) -> Option<String> {
+    let path = raw.trim().trim_matches('"').split(',').next()?.trim();
+    if path.is_empty() {
+        None
+    } else {
+        Some(path.to_string())
+    }
+}
+
+fn normalize_exe_path(raw: &str) -> Option<String> {
+    let path = parse_exe_path(raw)?;
+    if Path::new(&path).is_file() {
+        Some(path)
+    } else {
+        None
+    }
+}
+
+fn uninstall_key_matches(entry: &BrowserCatalogEntry, key_name: &str) -> bool {
+    let key_lower = key_name.to_lowercase();
+
+    for name in entry.registry_client_names {
+        if key_lower.contains(&name.to_lowercase()) {
+            return true;
+        }
+    }
+    for prefix in entry.registry_key_prefixes {
+        if key_lower.starts_with(prefix) {
+            return true;
+        }
+    }
+    for marker in entry.aumid_markers {
+        if key_lower.contains(marker) {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn resolve_from_uninstall(entry: &BrowserCatalogEntry) -> Option<String> {
+    const UNINSTALL_PATHS: &[&str] = &[
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+    ];
+
+    for hive in [HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER] {
+        let root = RegKey::predef(hive);
+        for path in UNINSTALL_PATHS {
+            let Ok(uninstall) = root.open_subkey(path) else {
+                continue;
+            };
+            for key_name in uninstall.enum_keys().flatten() {
+                if !uninstall_key_matches(entry, &key_name) {
+                    continue;
+                }
+                let Ok(sub) = uninstall.open_subkey(&key_name) else {
+                    continue;
+                };
+
+                if let Ok(icon) = sub.get_value::<String, _>("DisplayIcon") {
+                    if let Some(exe) = normalize_exe_path(&icon) {
+                        return Some(exe);
+                    }
+                }
+
+                if let Ok(loc) = sub.get_value::<String, _>("InstallLocation") {
+                    let exe = Path::new(loc.trim()).join(entry.process_exe);
+                    if exe.is_file() {
+                        return Some(exe.to_string_lossy().into_owned());
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+fn resolve_install_locations(entry: &BrowserCatalogEntry) -> Option<String> {
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+
+    resolve_from_start_menu_internet(&hklm, entry)
+        .or_else(|| resolve_from_start_menu_internet(&hkcu, entry))
+        .or_else(|| resolve_install_path(entry))
+        .or_else(|| resolve_from_app_paths(entry))
+        .or_else(|| resolve_from_uninstall(entry))
+}
+
+/// Browsers missing from `StartMenuInternet` (MSIX, App Paths, uninstall keys).
+pub fn scan_supplemental_installed() -> HashSet<String> {
+    let mut found = HashSet::new();
+    for entry in CATALOG {
+        if is_msix_package_installed(entry)
+            || resolve_from_app_paths(entry).is_some()
+            || resolve_from_uninstall(entry).is_some()
+        {
+            found.insert(entry.id.to_string());
+        }
+    }
+    found
+}
+
 pub unsafe fn image_path_for_pid(pid: u32) -> Option<String> {
     let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
     let mut buf = vec![0u16; 2048];
@@ -511,17 +662,7 @@ fn resolve_from_running_process(entry: &BrowserCatalogEntry) -> Option<String> {
 pub fn resolve_exe_path(os_browser_id: &str) -> Option<String> {
     let entry = entry_by_id(os_browser_id)?;
 
-    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-
-    if let Some(exe) = resolve_from_start_menu_internet(&hklm, entry) {
-        return Some(exe);
-    }
-    if let Some(exe) = resolve_from_start_menu_internet(&hkcu, entry) {
-        return Some(exe);
-    }
-
-    if let Some(exe) = resolve_install_path(entry) {
+    if let Some(exe) = resolve_install_locations(entry) {
         return Some(exe);
     }
 
@@ -622,5 +763,22 @@ mod tests {
         for e in CATALOG {
             assert!(seen.insert(e.id), "duplicate id: {}", e.id);
         }
+    }
+
+    #[test]
+    fn parse_exe_path_strips_icon_index() {
+        assert_eq!(
+            parse_exe_path(r#"C:\Apps\arc.exe,0"#),
+            Some(r"C:\Apps\arc.exe".to_string())
+        );
+    }
+
+    #[test]
+    fn uninstall_key_matches_arc_msix_key() {
+        let arc = entry_by_id("arc").unwrap();
+        assert!(uninstall_key_matches(
+            arc,
+            "TheBrowserCompany.Arc_ttt1ap7aakyb4"
+        ));
     }
 }

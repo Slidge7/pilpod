@@ -28,6 +28,7 @@ pub struct DevOsBrowserRow {
     pub id: String,
     pub display_name: String,
     pub running: bool,
+    pub icon_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -118,10 +119,14 @@ pub fn dev_scan_os_browsers(
 
     fresh
         .into_iter()
-        .map(|b| DevOsBrowserRow {
-            id: b.id,
-            display_name: b.display_name,
-            running: b.running,
+        .map(|b| {
+            let icon_url = crate::browser_icon::data_url_for_browser(&b.id);
+            DevOsBrowserRow {
+                id: b.id,
+                display_name: b.display_name,
+                running: b.running,
+                icon_url,
+            }
         })
         .collect()
 }

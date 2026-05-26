@@ -200,15 +200,35 @@ html.dark .pilpod-browser-profile__head {
 }
 
 .pilpod-browser-profile__label {
+  display: flex;
   min-width: 0;
+  align-items: center;
+  gap: 0.35rem;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--pilpod-text-muted);
+}
+
+.pilpod-browser-profile__icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 0.15rem;
+}
+
+.pilpod-browser-profile__icon--fallback {
+  display: inline-block;
+  background: var(--pilpod-border-muted);
+}
+
+.pilpod-browser-profile__label-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 html.dark .pilpod-browser-profile__label {

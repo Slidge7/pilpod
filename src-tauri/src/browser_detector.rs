@@ -170,10 +170,11 @@ fn scan_installed_from_hive(hive: winreg::HKEY) -> HashSet<String> {
     installed
 }
 
-/// Read installed browsers from HKLM and HKCU `StartMenuInternet` (deduped by catalog id).
+/// Read installed browsers from HKLM and HKCU `StartMenuInternet`, plus MSIX/App Paths fallbacks.
 fn scan_installed_browsers() -> HashSet<String> {
     let mut installed = scan_installed_from_hive(winreg::enums::HKEY_LOCAL_MACHINE);
     installed.extend(scan_installed_from_hive(winreg::enums::HKEY_CURRENT_USER));
+    installed.extend(browser_catalog::scan_supplemental_installed());
     installed
 }
 
@@ -266,6 +267,7 @@ pub fn merge_detected_and_slots(
             tabs: slot.tabs.clone(),
             last_sync_secs: Some(slot_age_secs),
             extension_reconnecting,
+            icon_url: crate::browser_icon::data_url_for_browser(&os_id),
         });
     }
 
@@ -286,6 +288,7 @@ pub fn merge_detected_and_slots(
             tabs: Vec::new(),
             last_sync_secs: None,
             extension_reconnecting: false,
+            icon_url: crate::browser_icon::data_url_for_browser(&d.id),
         });
     }
 

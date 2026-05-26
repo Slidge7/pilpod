@@ -50,6 +50,9 @@ pub struct DetectedBrowser {
     /// True briefly after system resume until the extension reconnects.
     #[serde(default)]
     pub extension_reconnecting: bool,
+    /// OS-level browser icon as a PNG data URL (`data:image/png;base64,...`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_url: Option<String>,
 }
 
 /// Unified tab representation — replaces the old `BrowserTabMediaDto` + `TabMeta` split.

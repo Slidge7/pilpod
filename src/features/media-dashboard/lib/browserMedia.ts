@@ -202,9 +202,33 @@ export function applySearchTagFilters(
 
 /** Group filtered matches back into per-browser buckets for rendering. */
 export function groupSearchMatchesByBrowser(
-  browsers: ReadonlyArray<{ id: string; osBrowserId?: string; displayName: string; running: boolean; extensionInstalled: boolean; extensionConnected: boolean; lastSyncSecs: number | null }>,
+  browsers: ReadonlyArray<{
+    id: string;
+    osBrowserId?: string;
+    displayName: string;
+    profileLabel?: string | null;
+    running: boolean;
+    extensionInstalled: boolean;
+    extensionConnected: boolean;
+    lastSyncSecs: number | null;
+    extensionReconnecting?: boolean;
+    iconUrl?: string | null;
+  }>,
   matches: SearchTabMatch[],
-): Array<{ id: string; osBrowserId: string; displayName: string; running: boolean; extensionInstalled: boolean; extensionConnected: boolean; lastSyncSecs: number | null; tabs: BrowserTab[]; tabCount: number }> {
+): Array<{
+  id: string;
+  osBrowserId: string;
+  displayName: string;
+  profileLabel?: string | null;
+  running: boolean;
+  extensionInstalled: boolean;
+  extensionConnected: boolean;
+  lastSyncSecs: number | null;
+  extensionReconnecting?: boolean;
+  iconUrl?: string | null;
+  tabs: BrowserTab[];
+  tabCount: number;
+}> {
   const browserById = new Map(browsers.map((b) => [b.id, b]));
   const tabsByBrowser = new Map<string, BrowserTab[]>();
 
@@ -219,10 +243,13 @@ export function groupSearchMatchesByBrowser(
     id: string;
     osBrowserId: string;
     displayName: string;
+    profileLabel?: string | null;
     running: boolean;
     extensionInstalled: boolean;
     extensionConnected: boolean;
     lastSyncSecs: number | null;
+    extensionReconnecting?: boolean;
+    iconUrl?: string | null;
     tabs: BrowserTab[];
     tabCount: number;
   }> = [];
@@ -234,10 +261,13 @@ export function groupSearchMatchesByBrowser(
       id: browser.id,
       osBrowserId: browser.osBrowserId ?? browser.id,
       displayName: browser.displayName,
+      profileLabel: browser.profileLabel,
       running: browser.running,
       extensionInstalled: browser.extensionInstalled,
       extensionConnected: browser.extensionConnected,
       lastSyncSecs: browser.lastSyncSecs,
+      extensionReconnecting: browser.extensionReconnecting,
+      iconUrl: browser.iconUrl,
       tabs,
       tabCount: tabs.length,
     });
