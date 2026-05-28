@@ -22,14 +22,7 @@ const POLL_INTERVAL_MS: u64 = 500;
 const POLL_TIMEOUT_MS: u64 = 12_000;
 const POST_CONNECT_WAIT_MS: u64 = 1_500;
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DevOsBrowserRow {
-    pub id: String,
-    pub display_name: String,
-    pub running: bool,
-    pub icon_url: Option<String>,
-}
+pub use crate::browser_os_scan::DevOsBrowserScanRow as DevOsBrowserRow;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -102,10 +95,13 @@ pub fn dev_scan_os_browsers(
     reconnecting: State<'_, ReconnectingBrowsersState>,
     ws_connections: State<'_, WsConnectionMap>,
 ) -> Vec<DevOsBrowserRow> {
+    let rows = crate::browser_os_scan::build_dev_os_browser_rows();
+
+    // Keep the shared detector cache in sync for wake/sync and dashboard merge.
     let fresh = build_detected_browsers();
     {
         let mut lock = detected.lock().unwrap_or_else(|e| e.into_inner());
-        *lock = fresh.clone();
+        *lock = fresh;
     }
 
     emit_browsers_to_ui(
@@ -117,18 +113,7 @@ pub fn dev_scan_os_browsers(
         &ws_connections,
     );
 
-    fresh
-        .into_iter()
-        .map(|b| {
-            let icon_url = crate::browser_icon::data_url_for_browser(&b.id);
-            DevOsBrowserRow {
-                id: b.id,
-                display_name: b.display_name,
-                running: b.running,
-                icon_url,
-            }
-        })
-        .collect()
+    rows
 }
 
 #[tauri::command]

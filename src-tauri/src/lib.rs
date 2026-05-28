@@ -15,6 +15,8 @@ mod browser_icon;
 #[cfg(windows)]
 mod browser_detector;
 #[cfg(windows)]
+mod browser_os_scan;
+#[cfg(windows)]
 mod browser_focus_win;
 #[cfg(windows)]
 mod audio_mixer;

@@ -2,10 +2,23 @@ import { useCallback, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { BrowserTab, DetectedBrowser, GsmtcSnapshot } from "../../../types/media";
 
+export type DevBrowserProcessState =
+  | "notInstalled"
+  | "notRunning"
+  | "portable"
+  | "active"
+  | "inactive"
+  | "notResponding"
+  | "running";
+
 export type DevOsBrowserRow = {
   id: string;
   displayName: string;
+  installed: boolean;
   running: boolean;
+  processState: DevBrowserProcessState;
+  processCount: number;
+  extensionInstalledOs: boolean;
   iconUrl: string | null;
 };
 

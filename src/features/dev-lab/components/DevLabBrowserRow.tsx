@@ -7,6 +7,7 @@ import {
   type TabWindowGroup,
 } from "../../../shared/groupTabsByWindow";
 import type {
+  DevBrowserProcessState,
   DevBrowserTabScan,
   DevOsBrowserRow,
   DevWakeAndSyncResult,
@@ -21,6 +22,27 @@ type Props = {
   onScanTabs: () => void;
   onWakeAndSync: () => void;
 };
+
+function processStateLabel(state: DevBrowserProcessState): string {
+  switch (state) {
+    case "notInstalled":
+      return "not installed";
+    case "notRunning":
+      return "installed · not running";
+    case "portable":
+      return "running (portable)";
+    case "active":
+      return "active";
+    case "inactive":
+      return "inactive";
+    case "notResponding":
+      return "not responding";
+    case "running":
+      return "running";
+    default:
+      return state;
+  }
+}
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString(undefined, {
@@ -115,8 +137,12 @@ export function DevLabBrowserRow({
   onScanTabs,
   onWakeAndSync,
 }: Props) {
+  const osActionsEnabled = browser.installed || browser.running;
+
   return (
-    <li className="dev-lab-browser-row">
+    <li
+      className={`dev-lab-browser-row${browser.installed ? "" : " dev-lab-browser-row--absent"}`}
+    >
       <div className="dev-lab-browser-row__header">
         <div className="dev-lab-browser-row__info">
           <div className="dev-lab-browser-row__title">
@@ -134,7 +160,14 @@ export function DevLabBrowserRow({
             <span className="dev-lab-browser-row__name">{browser.displayName}</span>
           </div>
           <span className="dev-lab-browser-row__status">
-            {browser.running ? "running" : "installed, not running"}
+            {processStateLabel(browser.processState)}
+            {browser.processCount > 0
+              ? ` · ${browser.processCount} window${browser.processCount !== 1 ? "s" : ""}`
+              : ""}
+            {" · "}
+            {browser.extensionInstalledOs
+              ? "PilPod extension on disk"
+              : "no PilPod extension on disk"}
           </span>
         </div>
         <div className="dev-lab-browser-row__actions">
@@ -142,7 +175,12 @@ export function DevLabBrowserRow({
             type="button"
             className="dev-lab-browser-row__wake-btn"
             onClick={() => void onWakeAndSync()}
-            disabled={waking || scanning}
+            disabled={!osActionsEnabled || waking || scanning}
+            title={
+              osActionsEnabled
+                ? undefined
+                : "Install or launch this browser first"
+            }
           >
             {waking ? "Waking…" : "Wake & Sync"}
           </button>
@@ -150,7 +188,12 @@ export function DevLabBrowserRow({
             type="button"
             className="dev-lab-browser-row__scan-btn"
             onClick={() => void onScanTabs()}
-            disabled={scanning || waking}
+            disabled={!osActionsEnabled || scanning || waking}
+            title={
+              osActionsEnabled
+                ? undefined
+                : "Install or launch this browser first"
+            }
           >
             {scanning ? "Scanning…" : "Scan tabs"}
           </button>

@@ -485,7 +485,9 @@ fn resolve_from_app_paths(entry: &BrowserCatalogEntry) -> Option<String> {
         };
         if let Ok(path) = key.get_value::<String, _>("") {
             if let Some(exe) = normalize_exe_path(&path) {
-                return Some(exe);
+                if install_exe_matches_entry(&exe, entry) {
+                    return Some(exe);
+                }
             }
         }
     }
@@ -510,11 +512,18 @@ fn normalize_exe_path(raw: &str) -> Option<String> {
     }
 }
 
+/// True when an install/uninstall/App Paths exe path belongs to this catalog entry.
+/// Disambiguates shared executables (`opera.exe`, `firefox.exe`, `browser.exe`).
+pub fn install_exe_matches_entry(exe_path: &str, entry: &BrowserCatalogEntry) -> bool {
+    path_matches_entry(exe_path, entry)
+}
+
 fn uninstall_key_matches(entry: &BrowserCatalogEntry, key_name: &str) -> bool {
     let key_lower = key_name.to_lowercase();
 
     for name in entry.registry_client_names {
-        if key_lower.contains(&name.to_lowercase()) {
+        let n = name.to_lowercase();
+        if key_lower == n {
             return true;
         }
     }
@@ -525,6 +534,12 @@ fn uninstall_key_matches(entry: &BrowserCatalogEntry, key_name: &str) -> bool {
     }
     for marker in entry.aumid_markers {
         if key_lower.contains(marker) {
+            if entry.id == "opera" && (key_lower.contains("opera gx") || key_lower.contains("operagx")) {
+                continue;
+            }
+            if entry.id == "firefox" && key_lower.contains("tor") {
+                continue;
+            }
             return true;
         }
     }
@@ -554,14 +569,19 @@ fn resolve_from_uninstall(entry: &BrowserCatalogEntry) -> Option<String> {
 
                 if let Ok(icon) = sub.get_value::<String, _>("DisplayIcon") {
                     if let Some(exe) = normalize_exe_path(&icon) {
-                        return Some(exe);
+                        if install_exe_matches_entry(&exe, entry) {
+                            return Some(exe);
+                        }
                     }
                 }
 
                 if let Ok(loc) = sub.get_value::<String, _>("InstallLocation") {
                     let exe = Path::new(loc.trim()).join(entry.process_exe);
                     if exe.is_file() {
-                        return Some(exe.to_string_lossy().into_owned());
+                        let exe_str = exe.to_string_lossy().into_owned();
+                        if install_exe_matches_entry(&exe_str, entry) {
+                            return Some(exe_str);
+                        }
                     }
                 }
             }
@@ -586,10 +606,17 @@ fn resolve_install_locations(entry: &BrowserCatalogEntry) -> Option<String> {
 pub fn scan_supplemental_installed() -> HashSet<String> {
     let mut found = HashSet::new();
     for entry in CATALOG {
-        if is_msix_package_installed(entry)
-            || resolve_from_app_paths(entry).is_some()
-            || resolve_from_uninstall(entry).is_some()
-        {
+        if is_msix_package_installed(entry) {
+            found.insert(entry.id.to_string());
+            continue;
+        }
+        if let Some(exe) = resolve_from_app_paths(entry) {
+            if install_exe_matches_entry(&exe, entry) {
+                found.insert(entry.id.to_string());
+            }
+            continue;
+        }
+        if resolve_from_uninstall(entry).is_some() {
             found.insert(entry.id.to_string());
         }
     }
@@ -780,5 +807,36 @@ mod tests {
             arc,
             "TheBrowserCompany.Arc_ttt1ap7aakyb4"
         ));
+    }
+
+    #[test]
+    fn install_exe_disambiguates_opera_gx_vs_opera() {
+        let opera = entry_by_id("opera").unwrap();
+        let operagx = entry_by_id("operagx").unwrap();
+        let opera_path = r"C:\Users\me\AppData\Local\Programs\Opera\opera.exe";
+        let gx_path = r"C:\Users\me\AppData\Local\Programs\Opera GX\opera.exe";
+        assert!(install_exe_matches_entry(opera_path, opera));
+        assert!(!install_exe_matches_entry(opera_path, operagx));
+        assert!(install_exe_matches_entry(gx_path, operagx));
+        assert!(!install_exe_matches_entry(gx_path, opera));
+    }
+
+    #[test]
+    fn install_exe_disambiguates_firefox_vs_tor() {
+        let firefox = entry_by_id("firefox").unwrap();
+        let tor = entry_by_id("tor").unwrap();
+        let ff_path = r"C:\Program Files\Mozilla Firefox\firefox.exe";
+        let tor_path = r"C:\Users\me\Desktop\Tor Browser\Browser\firefox.exe";
+        assert!(install_exe_matches_entry(ff_path, firefox));
+        assert!(!install_exe_matches_entry(ff_path, tor));
+        assert!(install_exe_matches_entry(tor_path, tor));
+        assert!(!install_exe_matches_entry(tor_path, firefox));
+    }
+
+    #[test]
+    fn uninstall_firefox_key_does_not_match_tor() {
+        let tor = entry_by_id("tor").unwrap();
+        assert!(!uninstall_key_matches(tor, "Mozilla Firefox 128.0.1"));
+        assert!(!uninstall_key_matches(tor, "Firefox-308046B0AF4A39CB"));
     }
 }

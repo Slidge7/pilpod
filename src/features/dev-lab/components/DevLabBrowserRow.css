@@ -13,6 +13,14 @@ html.dark .dev-lab-browser-row {
   margin-top: 0.375rem;
 }
 
+.dev-lab-browser-row--absent {
+  opacity: 0.55;
+}
+
+.dev-lab-browser-row--absent .dev-lab-browser-row__name {
+  color: var(--pilpod-text-muted);
+}
+
 .dev-lab-browser-row__header {
   display: flex;
   align-items: center;

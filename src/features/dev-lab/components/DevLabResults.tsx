@@ -89,22 +89,26 @@ export function DevLabResults({
         </h2>
         {browsersScannedAt === null ? (
           <p className="dev-lab-results__empty">No scan yet.</p>
-        ) : browsers.length === 0 ? (
-          <p className="dev-lab-results__empty">No browsers detected on this PC.</p>
         ) : (
           <ul className="dev-lab-results__list">
-            {browsers.map((browser) => (
-              <DevLabBrowserRow
-                key={browser.id}
-                browser={browser}
-                tabScan={browserTabScans[browser.id]}
-                wakeResult={wakeResults[browser.id]}
-                scanning={tabScanLoadingId === browser.id}
-                waking={wakingBrowsers.has(browser.id)}
-                onScanTabs={() => onScanTabsForBrowser(browser.id)}
-                onWakeAndSync={() => onWakeAndSyncBrowser(browser.id)}
-              />
-            ))}
+            {[...browsers]
+              .sort((a, b) => {
+                if (a.installed !== b.installed) return a.installed ? -1 : 1;
+                if (a.running !== b.running) return a.running ? -1 : 1;
+                return a.displayName.localeCompare(b.displayName);
+              })
+              .map((browser) => (
+                <DevLabBrowserRow
+                  key={browser.id}
+                  browser={browser}
+                  tabScan={browserTabScans[browser.id]}
+                  wakeResult={wakeResults[browser.id]}
+                  scanning={tabScanLoadingId === browser.id}
+                  waking={wakingBrowsers.has(browser.id)}
+                  onScanTabs={() => onScanTabsForBrowser(browser.id)}
+                  onWakeAndSync={() => onWakeAndSyncBrowser(browser.id)}
+                />
+              ))}
           </ul>
         )}
       </section>

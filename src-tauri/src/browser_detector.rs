@@ -115,7 +115,7 @@ pub fn browser_name_to_id(name: &str) -> String {
 // ── OS scanning ──────────────────────────────────────────────────────────────
 
 /// Enumerate running catalog browsers via toolhelp + full image path for disambiguation.
-fn scan_running_browsers() -> HashSet<String> {
+pub(crate) fn scan_running_browsers() -> HashSet<String> {
     use windows::Win32::Foundation::CloseHandle;
     use windows::Win32::System::Diagnostics::ToolHelp::{
         CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
@@ -171,7 +171,7 @@ fn scan_installed_from_hive(hive: winreg::HKEY) -> HashSet<String> {
 }
 
 /// Read installed browsers from HKLM and HKCU `StartMenuInternet`, plus MSIX/App Paths fallbacks.
-fn scan_installed_browsers() -> HashSet<String> {
+pub(crate) fn scan_installed_browsers() -> HashSet<String> {
     let mut installed = scan_installed_from_hive(winreg::enums::HKEY_LOCAL_MACHINE);
     installed.extend(scan_installed_from_hive(winreg::enums::HKEY_CURRENT_USER));
     installed.extend(browser_catalog::scan_supplemental_installed());

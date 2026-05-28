@@ -57,7 +57,11 @@ pub fn request_browser_sync() {}
 pub struct DevOsBrowserRowStub {
     pub id: String,
     pub display_name: String,
+    pub installed: bool,
     pub running: bool,
+    pub process_state: String,
+    pub process_count: u32,
+    pub extension_installed_os: bool,
     pub icon_url: Option<String>,
 }
 
