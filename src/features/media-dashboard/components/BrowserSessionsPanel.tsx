@@ -20,6 +20,7 @@ import {
 import { findActiveDownloadForUrl } from "../../downloader/lib/activeDownload";
 import type { DownloadTask } from "../../downloader/types";
 import { UnifiedTabRow } from "./UnifiedTabRow";
+import { MediaItemCard } from "./MediaItemCard";
 
 function browserDisplayLabel(browser: DetectedBrowser): string {
   return browser.profileLabel ?? browser.displayName;
@@ -308,6 +309,30 @@ function BrowserBody({
 
   const renderTabRow = (t: BrowserTab, showMediaControls: boolean) => {
     const rk = tabRowKey(t);
+    const isMediaTab = tabIsLinkIdentifiedMedia(t);
+
+    if (isMediaTab && showMediaControls) {
+      return (
+        <MediaItemCard
+          key={rk}
+          tab={t}
+          browserId={slotBrowserId}
+          browserDisplayName={browserDisplayLabel(browser)}
+          busy={pendingKeys.has(rk)}
+          profileAudio={profileAudio}
+          onMixerVolume={onMixerVolume}
+          onPlayPause={onPlayPause}
+          onFocus={onFocusTab}
+          onReload={onReload}
+          onClose={onClose}
+          onDownload={onDownload}
+          activeDownload={
+            t.url ? findActiveDownloadForUrl(downloadTasks, t.url) : undefined
+          }
+        />
+      );
+    }
+
     return (
       <UnifiedTabRow
         key={rk}

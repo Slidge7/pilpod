@@ -1,0 +1,389 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --glass-border:rgba(255,255,255,0.18);
+  --glass-shine:rgba(255,255,255,0.22);
+  --accent:#a78bfa;
+  --text-main:rgba(255,255,255,0.92);
+  --text-muted:rgba(255,255,255,0.50);
+  --text-dim:rgba(255,255,255,0.28);
+  --thumb-w:96px;
+}
+.scene{
+  font-family:'Inter',sans-serif;
+  background:linear-gradient(135deg,#0f0c29 0%,#302b63 50%,#24243e 100%);
+  min-height:440px;
+  display:flex;align-items:center;justify-content:center;
+  padding:32px 16px;
+}
+.list-shell{width:360px;display:flex;flex-direction:column;gap:10px;}
+.list-label{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:2px;padding:0 4px;}
+
+.media-item{
+  position:relative;width:360px;height:72px;border-radius:14px;
+  background:linear-gradient(135deg,rgba(255,255,255,.10),rgba(255,255,255,.04));
+  border:1px solid var(--glass-border);
+  box-shadow:0 2px 0 0 var(--glass-shine) inset,0 -1px 0 0 rgba(0,0,0,.3) inset,0 8px 32px rgba(0,0,0,.45);
+  display:flex;align-items:center;overflow:hidden;
+  transition:transform .2s,box-shadow .2s;
+  cursor:default;user-select:none;
+}
+.media-item::before{content:'';position:absolute;inset:0;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 60%);pointer-events:none;}
+.media-item:hover{transform:translateY(-1px);box-shadow:0 2px 0 0 var(--glass-shine) inset,0 -1px 0 0 rgba(0,0,0,.3) inset,0 14px 44px rgba(0,0,0,.55),0 4px 12px rgba(167,139,250,.15);}
+
+/* ── THUMBNAIL ───────────────────────────────────────────── */
+.thumb-wrap{
+  position:relative;width:var(--thumb-w);height:72px;flex-shrink:0;
+  border-radius:13px 0 0 13px;overflow:hidden;z-index:2;
+}
+.thumb-img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(.82);transition:filter .22s;}
+.thumb-wrap:hover .thumb-img{filter:brightness(.42);}
+.thumb-overlay{position:absolute;inset:0;display:flex;align-items:stretch;opacity:0;transition:opacity .2s;pointer-events:none;}
+.thumb-wrap:hover .thumb-overlay{opacity:1;pointer-events:all;}
+.goto-area{flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.thumb-goto{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;color:white;font-size:14px;transition:background .15s,transform .15s;}
+.goto-area:hover .thumb-goto{background:rgba(255,255,255,.3);transform:scale(1.1);}
+
+/* expand strip on thumbnail right edge */
+.expand-strip{
+  width:22px;height:100%;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;
+  background:rgba(0,0,0,.18);
+  border-left:1px solid rgba(255,255,255,.08);
+  transition:background .15s;
+}
+.expand-strip:hover{background:rgba(167,139,250,.22);}
+.expand-strip i{font-size:12px;color:rgba(255,255,255,.7);transition:transform .2s;}
+.expand-strip:hover i{color:#a78bfa;}
+.expand-strip.active{background:rgba(167,139,250,.28);}
+.expand-strip.active i{transform:scaleX(-1);color:#a78bfa;}
+
+.thumb-duration{position:absolute;bottom:5px;right:6px;background:rgba(0,0,0,.72);color:rgba(255,255,255,.9);font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;pointer-events:none;z-index:1;}
+
+/* ── BODY ZONE (title + volume) ─────────────────────────── */
+.item-body{
+  flex:1;min-width:0;height:72px;
+  position:relative;
+  overflow:hidden;
+  z-index:1;
+}
+
+/* normal content */
+.item-content{
+  position:absolute;inset:0;
+  padding:10px 10px 10px 12px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  transition:opacity .2s ease,transform .2s ease;
+}
+
+/* ── SLIDE MENU — covers the body zone only ─────────────── */
+.body-menu{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  background:linear-gradient(135deg,rgba(18,10,48,.95),rgba(10,6,30,.97));
+  border-left:1px solid rgba(167,139,250,.18);
+  transform:translateX(100%);
+  opacity:0;
+  transition:transform .26s cubic-bezier(.34,1.2,.64,1),opacity .2s ease;
+  pointer-events:none;
+  z-index:3;
+}
+.body-menu.open{
+  transform:translateX(0);
+  opacity:1;
+  pointer-events:all;
+}
+/* push content away when menu opens */
+.item-body.menu-open .item-content{
+  opacity:0;
+  transform:translateX(-12px);
+  pointer-events:none;
+}
+
+.menu-act{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:15px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.07);
+  color:rgba(255,255,255,.75);
+  transition:background .14s,border-color .14s,transform .14s,box-shadow .14s,color .14s;
+  flex-shrink:0;
+}
+.menu-act:active{transform:scale(.9);}
+.menu-act.dl:hover{background:rgba(96,165,250,.25);border-color:rgba(96,165,250,.6);color:#60a5fa;box-shadow:0 0 10px rgba(96,165,250,.3);}
+.menu-act.rl:hover{background:rgba(52,211,153,.2);border-color:rgba(52,211,153,.55);color:#34d399;box-shadow:0 0 10px rgba(52,211,153,.25);}
+.menu-act.cl:hover{background:rgba(248,113,113,.2);border-color:rgba(248,113,113,.5);color:#f87171;box-shadow:0 0 10px rgba(248,113,113,.25);}
+.menu-act.cl.confirm{
+  background:rgba(248,113,113,.42) !important;
+  border-color:#f87171 !important;color:#fca5a5 !important;
+  box-shadow:0 0 16px rgba(248,113,113,.55) !important;
+  animation:closebounce .34s cubic-bezier(.36,.07,.19,.97);
+}
+@keyframes closebounce{0%{transform:scale(1);}30%{transform:scale(1.35);}55%{transform:scale(.85);}75%{transform:scale(1.15);}100%{transform:scale(1);}}
+
+/* ── BODY CONTENT ───────────────────────────────────────── */
+.title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;}
+.item-meta{min-width:0;flex:1;}
+.item-title{font-size:12.5px;font-weight:500;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;max-width:155px;}
+.item-channel{font-size:10.5px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:155px;}
+.state-badge{display:flex;align-items:center;gap:3px;padding:2px 6px;border-radius:6px;font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border:1px solid;cursor:pointer;transition:all .15s;flex-shrink:0;}
+.state-badge.active  {background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.35);color:#34d399;}
+.state-badge.inactive{background:rgba(251,191,36,.10);border-color:rgba(251,191,36,.3);color:#fbbf24;}
+.state-badge.sleep   {background:rgba(167,139,250,.10);border-color:rgba(167,139,250,.3);color:#a78bfa;}
+.state-badge.ext     {background:rgba(248,113,113,.10);border-color:rgba(248,113,113,.3);color:#f87171;}
+.state-dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+.state-badge.active .state-dot{box-shadow:0 0 4px #34d399;}
+
+.vol-row{display:flex;align-items:center;gap:5px;}
+.vol-icon{color:var(--text-muted);font-size:13px;flex-shrink:0;cursor:pointer;transition:color .15s;}
+.vol-icon:hover{color:var(--accent);}
+.vol-track{position:relative;flex:1;height:18px;display:flex;align-items:center;cursor:pointer;}
+.vol-rail{position:relative;width:100%;height:3px;background:rgba(255,255,255,.12);border-radius:3px;}
+.vol-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#a78bfa,#60a5fa);transition:width .05s;}
+.vol-fill::after{content:'';position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:white;box-shadow:0 0 6px rgba(167,139,250,.8);opacity:0;transition:opacity .15s;}
+.vol-track:hover .vol-fill::after{opacity:1;}
+.vol-input{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer;height:18px;}
+.vol-pct{font-size:9.5px;font-weight:600;color:var(--accent);min-width:28px;text-align:right;flex-shrink:0;}
+
+.play-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(167,139,250,.25),rgba(96,165,250,.2));
+  border:1px solid rgba(167,139,250,.45);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:white;font-size:14px;flex-shrink:0;z-index:2;
+  transition:all .18s;
+  box-shadow:0 1px 0 rgba(255,255,255,.15) inset,0 4px 12px rgba(167,139,250,.25);
+  margin-right:10px;
+}
+.play-btn:hover{background:linear-gradient(135deg,rgba(167,139,250,.42),rgba(96,165,250,.36));border-color:rgba(167,139,250,.7);transform:scale(1.08);box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 6px 18px rgba(167,139,250,.4);}
+.play-btn:active{transform:scale(.95);}
+
+.progress-bar{position:absolute;bottom:0;left:13px;right:13px;height:2px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,#a78bfa,#60a5fa);border-radius:2px;}
+
+.demo-controls{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;}
+.demo-pill{font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:var(--text-muted);cursor:pointer;transition:all .15s;}
+.demo-pill:hover{background:rgba(167,139,250,.18);border-color:rgba(167,139,250,.4);color:var(--accent);}
+</style>
+
+<div class="scene">
+  <div class="list-shell">
+    <div class="list-label">Now playing · 2 tabs</div>
+
+    <!-- ITEM 1 -->
+    <div class="media-item" id="item1">
+      <div class="thumb-wrap" id="tw1">
+        <svg class="thumb-img" viewBox="0 0 96 72" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="tg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1a1040"/><stop offset="100%" stop-color="#3b2075"/></linearGradient></defs>
+          <rect width="96" height="72" fill="url(#tg1)"/>
+          <circle cx="48" cy="36" r="22" fill="rgba(167,139,250,.15)" stroke="rgba(167,139,250,.3)" stroke-width="1"/>
+          <polygon points="44,28 44,44 58,36" fill="rgba(255,255,255,.7)"/>
+        </svg>
+        <div class="thumb-overlay">
+          <div class="goto-area" onclick="gotoTab(1)">
+            <div class="thumb-goto"><i class="ti ti-external-link" aria-hidden="true"></i></div>
+          </div>
+          <div class="expand-strip" id="es1" onclick="toggleMenu(1,event)">
+            <i class="ti ti-chevrons-right" aria-hidden="true"></i>
+          </div>
+        </div>
+        <div class="thumb-duration">12:47</div>
+      </div>
+
+      <div class="item-body" id="ib1">
+        <div class="item-content">
+          <div class="title-row">
+            <div class="item-meta">
+              <div class="item-title">Advanced CSS Grid Mastery</div>
+              <div class="item-channel">Fireship · 2.1M views</div>
+            </div>
+            <div class="state-badge active" id="badge1" onclick="cycleState('badge1',event)">
+              <div class="state-dot"></div><span id="badge1-text">active</span>
+            </div>
+          </div>
+          <div class="vol-row">
+            <i class="ti ti-volume vol-icon" aria-hidden="true" onclick="toggleMute(1)"></i>
+            <div class="vol-track">
+              <div class="vol-rail"><div class="vol-fill" id="vf1" style="width:80%"></div></div>
+              <input type="range" class="vol-input" min="0" max="600" value="80" step="5" oninput="updateVol(1,this.value)">
+            </div>
+            <span class="vol-pct" id="vp1">80%</span>
+          </div>
+        </div>
+        <div class="body-menu" id="bm1">
+          <div class="menu-act dl" onclick="doAct('dl',1)" aria-label="Download"><i class="ti ti-download" aria-hidden="true"></i></div>
+          <div class="menu-act rl" onclick="doAct('rl',1)" aria-label="Reload"><i class="ti ti-refresh" aria-hidden="true"></i></div>
+          <div class="menu-act cl" id="cl1" onclick="closeConfirm(1)" aria-label="Close tab"><i class="ti ti-x" aria-hidden="true"></i></div>
+        </div>
+      </div>
+
+      <div class="play-btn" onclick="togglePlay(1)" aria-label="Play/Pause">
+        <i class="ti ti-player-play" id="pi1" aria-hidden="true"></i>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:42%"></div></div>
+    </div>
+
+    <!-- ITEM 2 -->
+    <div class="media-item" id="item2" style="background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.03));">
+      <div class="thumb-wrap" id="tw2">
+        <svg class="thumb-img" viewBox="0 0 96 72" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="tg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0c2340"/><stop offset="100%" stop-color="#0f4c81"/></linearGradient></defs>
+          <rect width="96" height="72" fill="url(#tg2)"/>
+          <rect x="12" y="16" width="72" height="8" rx="2" fill="rgba(96,165,250,.2)"/>
+          <rect x="12" y="28" width="52" height="5" rx="2" fill="rgba(96,165,250,.15)"/>
+          <rect x="12" y="37" width="62" height="5" rx="2" fill="rgba(96,165,250,.12)"/>
+        </svg>
+        <div class="thumb-overlay">
+          <div class="goto-area" onclick="gotoTab(2)">
+            <div class="thumb-goto"><i class="ti ti-external-link" aria-hidden="true"></i></div>
+          </div>
+          <div class="expand-strip" id="es2" onclick="toggleMenu(2,event)">
+            <i class="ti ti-chevrons-right" aria-hidden="true"></i>
+          </div>
+        </div>
+        <div class="thumb-duration">38:02</div>
+      </div>
+
+      <div class="item-body" id="ib2">
+        <div class="item-content">
+          <div class="title-row">
+            <div class="item-meta">
+              <div class="item-title">TypeScript for React Devs</div>
+              <div class="item-channel">Matt Pocock · 890K views</div>
+            </div>
+            <div class="state-badge sleep" id="badge2" onclick="cycleState('badge2',event)">
+              <div class="state-dot"></div><span id="badge2-text">sleep</span>
+            </div>
+          </div>
+          <div class="vol-row">
+            <i class="ti ti-volume vol-icon" aria-hidden="true" onclick="toggleMute(2)"></i>
+            <div class="vol-track">
+              <div class="vol-rail"><div class="vol-fill" id="vf2" style="width:25%;background:linear-gradient(90deg,#fbbf24,#f87171)"></div></div>
+              <input type="range" class="vol-input" min="0" max="600" value="150" step="5" oninput="updateVol(2,this.value)">
+            </div>
+            <span class="vol-pct" id="vp2" style="color:#fbbf24">150%</span>
+          </div>
+        </div>
+        <div class="body-menu" id="bm2">
+          <div class="menu-act dl" onclick="doAct('dl',2)" aria-label="Download"><i class="ti ti-download" aria-hidden="true"></i></div>
+          <div class="menu-act rl" onclick="doAct('rl',2)" aria-label="Reload"><i class="ti ti-refresh" aria-hidden="true"></i></div>
+          <div class="menu-act cl" id="cl2" onclick="closeConfirm(2)" aria-label="Close tab"><i class="ti ti-x" aria-hidden="true"></i></div>
+        </div>
+      </div>
+
+      <div class="play-btn" onclick="togglePlay(2)" style="background:linear-gradient(135deg,rgba(96,165,250,.2),rgba(52,211,153,.15));border-color:rgba(96,165,250,.4);" aria-label="Play/Pause">
+        <i class="ti ti-player-pause" id="pi2" aria-hidden="true"></i>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:67%;background:linear-gradient(90deg,#60a5fa,#34d399)"></div></div>
+    </div>
+
+    <div class="demo-controls">
+      <div class="demo-pill" onclick="sendPrompt('Export this as a full React JSX + TypeScript component')">Export React JSX ↗</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const states=['active','inactive','sleep','ext'];
+const playing={1:false,2:true};
+const muted={1:false,2:false};
+const prevVol={1:80,2:150};
+const confirmState={1:false,2:false};
+const menuOpen={1:false,2:false};
+
+function toggleMenu(n,e){
+  e.stopPropagation();
+  menuOpen[n]=!menuOpen[n];
+  const bm=document.getElementById('bm'+n);
+  const ib=document.getElementById('ib'+n);
+  const es=document.getElementById('es'+n);
+  if(menuOpen[n]){
+    bm.classList.add('open');
+    ib.classList.add('menu-open');
+    es.classList.add('active');
+  } else {
+    bm.classList.remove('open');
+    ib.classList.remove('menu-open');
+    es.classList.remove('active');
+    resetConfirm(n);
+  }
+}
+
+document.addEventListener('click',()=>{
+  [1,2].forEach(n=>{
+    if(menuOpen[n]){
+      menuOpen[n]=false;
+      document.getElementById('bm'+n).classList.remove('open');
+      document.getElementById('ib'+n).classList.remove('menu-open');
+      document.getElementById('es'+n).classList.remove('active');
+      resetConfirm(n);
+    }
+  });
+});
+
+function cycleState(id,e){
+  e.stopPropagation();
+  const el=document.getElementById(id);
+  const txt=document.getElementById(id+'-text');
+  const cur=el.className.replace('state-badge ','');
+  const next=states[(states.indexOf(cur)+1)%states.length];
+  el.className='state-badge '+next;
+  txt.textContent=next;
+}
+function togglePlay(n){
+  playing[n]=!playing[n];
+  document.getElementById('pi'+n).className=playing[n]?'ti ti-player-pause':'ti ti-player-play';
+}
+function updateVol(n,v){
+  v=parseInt(v);
+  const fw=Math.min(100,(v/600)*100);
+  const f=document.getElementById('vf'+n);
+  const p=document.getElementById('vp'+n);
+  f.style.width=fw+'%';p.textContent=v+'%';
+  if(v===0){f.style.background='rgba(255,255,255,.15)';p.style.color='rgba(255,255,255,.3)';}
+  else if(v<=100){f.style.background='linear-gradient(90deg,#a78bfa,#60a5fa)';p.style.color='#a78bfa';}
+  else if(v<=200){f.style.background='linear-gradient(90deg,#60a5fa,#fbbf24)';p.style.color='#fbbf24';}
+  else{f.style.background='linear-gradient(90deg,#fbbf24,#f87171)';p.style.color='#f87171';}
+}
+function toggleMute(n){
+  const input=document.getElementById('item'+n).querySelector('.vol-input');
+  if(!muted[n]){prevVol[n]=parseInt(input.value);input.value=0;muted[n]=true;}
+  else{input.value=prevVol[n];muted[n]=false;}
+  updateVol(n,input.value);
+}
+function doAct(type,n){
+  if(type==='rl'){
+    const i=document.getElementById('bm'+n).querySelector('.menu-act.rl i');
+    i.style.transition='transform .5s';i.style.transform='rotate(360deg)';
+    setTimeout(()=>{i.style.transform='';i.style.transition='';},520);
+  }
+  if(type==='dl'){
+    const i=document.getElementById('bm'+n).querySelector('.menu-act.dl i');
+    i.style.transition='transform .28s';i.style.transform='translateY(3px)';
+    setTimeout(()=>{i.style.transform='';},300);
+  }
+}
+function resetConfirm(n){
+  confirmState[n]=false;
+  const cl=document.getElementById('cl'+n);
+  if(cl)cl.classList.remove('confirm');
+}
+function closeConfirm(n){
+  if(!confirmState[n]){
+    confirmState[n]=true;
+    document.getElementById('cl'+n).classList.add('confirm');
+    setTimeout(()=>{if(confirmState[n])resetConfirm(n);},2800);
+  } else {
+    const item=document.getElementById('item'+n);
+    item.style.transition='opacity .28s,transform .28s,max-height .32s,margin .32s';
+    item.style.opacity='0';item.style.transform='translateX(18px) scale(.97)';
+    item.style.maxHeight='0';item.style.overflow='hidden';item.style.marginBottom='0';
+    setTimeout(()=>item.remove(),340);
+  }
+}
+function gotoTab(n){}
+updateVol(1,80);updateVol(2,150);
+</script>

@@ -317,3 +317,8 @@ export function mediaTimeLabel(m: TabMedia): string | null {
   const pos = m.currentTime != null && m.currentTime >= 0 ? m.currentTime : 0;
   return `${formatMediaSeconds(pos)} / ${formatMediaSeconds(dur)}`;
 }
+
+/** Format seconds as a compact duration label (same as formatMediaSeconds). */
+export function formatDuration(secs: number): string {
+  return formatMediaSeconds(secs);
+}

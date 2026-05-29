@@ -67,6 +67,108 @@
 
   --pilpod-card-radius: 12px;
   --pilpod-card-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
+
+  /* Glass media item — light mode */
+  --pilpod-glass-surface: rgba(255, 255, 255, 0.62);
+  --pilpod-glass-border: rgba(15, 23, 42, 0.1);
+  --pilpod-glass-shine: rgba(255, 255, 255, 0.9);
+  --pilpod-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 60%);
+  --pilpod-glass-accent: #7c3aed;
+  --pilpod-glass-text: #18181b;
+  --pilpod-glass-text-muted: #71717a;
+  --pilpod-glass-text-dim: #a1a1aa;
+  --pilpod-glass-hover-shadow:
+    0 2px 0 0 var(--pilpod-glass-shine) inset,
+    0 -1px 0 0 rgba(15, 23, 42, 0.06) inset,
+    -1px 5px 4px 0 rgb(15 23 42 / 8%),
+    0 4px 12px rgba(124, 58, 237, 0.12);
+  --pilpod-glass-playing-border: rgba(124, 58, 237, 0.45);
+  --pilpod-glass-playing-shadow:
+    0 2px 0 0 var(--pilpod-glass-shine) inset,
+    0 -1px 0 0 rgba(15, 23, 42, 0.06) inset,
+    -1px 5px 4px 0 rgb(15 23 42 / 10%),
+    0 4px 14px rgba(124, 58, 237, 0.2);
+  --pilpod-glass-menu-bg: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.97),
+    rgba(244, 245, 248, 0.98)
+  );
+  --pilpod-glass-menu-border: rgba(124, 58, 237, 0.2);
+  --pilpod-glass-menu-act-bg: rgba(15, 23, 42, 0.04);
+  --pilpod-glass-menu-act-border: rgba(15, 23, 42, 0.12);
+  --pilpod-glass-menu-act-color: #52525b;
+  --pilpod-glass-expand-bg: rgba(15, 23, 42, 0.06);
+  --pilpod-glass-expand-border: rgba(15, 23, 42, 0.08);
+  --pilpod-glass-expand-hover: rgba(124, 58, 237, 0.14);
+  --pilpod-glass-expand-active: rgba(124, 58, 237, 0.22);
+  --pilpod-glass-expand-icon: #71717a;
+  --pilpod-glass-thumb-goto-bg: rgba(255, 255, 255, 0.88);
+  --pilpod-glass-thumb-goto-border: rgba(15, 23, 42, 0.2);
+  --pilpod-glass-thumb-goto-color: #3f3f46;
+  --pilpod-glass-thumb-goto-hover: rgba(255, 255, 255, 1);
+  --pilpod-glass-thumb-letter-bg: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  --pilpod-glass-thumb-letter-color: #5b21b6;
+  --pilpod-glass-thumb-fav-bg: linear-gradient(135deg, #ede9fe, #e0e7ff);
+  --pilpod-glass-duration-bg: rgba(15, 23, 42, 0.78);
+  --pilpod-glass-duration-text: rgba(255, 255, 255, 0.95);
+  --pilpod-glass-vol-rail: rgba(15, 23, 42, 0.12);
+  --pilpod-glass-vol-icon: #71717a;
+  --pilpod-glass-vol-thumb: #ffffff;
+  --pilpod-glass-vol-thumb-shadow: 0 0 6px rgba(124, 58, 237, 0.45);
+  --pilpod-glass-vol-pct-muted: #a1a1aa;
+  --pilpod-glass-progress-track: rgba(15, 23, 42, 0.08);
+  --pilpod-glass-progress-fill: linear-gradient(90deg, #8b5cf6, #3b82f6);
+  --pilpod-glass-progress-fill-playing: linear-gradient(90deg, #3b82f6, #10b981);
+  --pilpod-glass-play-bg: linear-gradient(135deg, rgba(139, 92, 246, 0.18), rgba(59, 130, 246, 0.14));
+  --pilpod-glass-play-border: rgba(124, 58, 237, 0.4);
+  --pilpod-glass-play-color: #5b21b6;
+  --pilpod-glass-play-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 4px 12px rgba(124, 58, 237, 0.18);
+  --pilpod-glass-play-hover-bg: linear-gradient(135deg, rgba(139, 92, 246, 0.32), rgba(59, 130, 246, 0.26));
+  --pilpod-glass-play-hover-border: rgba(124, 58, 237, 0.55);
+  --pilpod-glass-play-hover-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 6px 18px rgba(124, 58, 237, 0.28);
+  --pilpod-glass-play-playing-bg: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(16, 185, 129, 0.16));
+  --pilpod-glass-play-playing-border: rgba(37, 99, 235, 0.45);
+  --pilpod-glass-play-playing-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 4px 12px rgba(37, 99, 235, 0.22);
+  --pilpod-glass-play-playing-hover-bg: linear-gradient(135deg, rgba(59, 130, 246, 0.34), rgba(16, 185, 129, 0.28));
+  --pilpod-glass-play-playing-hover-border: rgba(37, 99, 235, 0.58);
+  --pilpod-glass-play-playing-hover-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 6px 18px rgba(37, 99, 235, 0.32);
+  --pilpod-glass-close-confirm-bg: rgba(239, 68, 68, 0.18);
+  --pilpod-glass-close-confirm-border: #ef4444;
+  --pilpod-glass-close-confirm-text: #b91c1c;
+  --pilpod-glass-close-confirm-shadow: 0 0 16px rgba(239, 68, 68, 0.35);
+
+  /* Volume color stops (shared; readable on both themes) */
+  --pilpod-vol-normal: linear-gradient(90deg, #8b5cf6, #3b82f6);
+  --pilpod-vol-boost: linear-gradient(90deg, #3b82f6, #f59e0b);
+  --pilpod-vol-high: linear-gradient(90deg, #f59e0b, #ef4444);
+  --pilpod-vol-muted: rgba(15, 23, 42, 0.12);
+  --pilpod-vol-pct-boost: #d97706;
+  --pilpod-vol-pct-high: #dc2626;
+
+  /* State badge colors */
+  --pilpod-badge-active-bg: rgba(52,211,153,0.12);
+  --pilpod-badge-active-border: rgba(52,211,153,0.35);
+  --pilpod-badge-active-text: #34d399;
+  --pilpod-badge-inactive-bg: rgba(251,191,36,0.10);
+  --pilpod-badge-inactive-border: rgba(251,191,36,0.3);
+  --pilpod-badge-inactive-text: #fbbf24;
+  --pilpod-badge-sleep-bg: rgba(167,139,250,0.10);
+  --pilpod-badge-sleep-border: rgba(167,139,250,0.3);
+  --pilpod-badge-sleep-text: #a78bfa;
+  --pilpod-badge-ext-bg: rgba(248,113,113,0.10);
+  --pilpod-badge-ext-border: rgba(248,113,113,0.3);
+  --pilpod-badge-ext-text: #f87171;
+
+  /* Menu action button colors */
+  --pilpod-act-dl-bg: rgba(96,165,250,0.25);
+  --pilpod-act-dl-border: rgba(96,165,250,0.6);
+  --pilpod-act-dl-text: #60a5fa;
+  --pilpod-act-rl-bg: rgba(52,211,153,0.2);
+  --pilpod-act-rl-border: rgba(52,211,153,0.55);
+  --pilpod-act-rl-text: #34d399;
+  --pilpod-act-cl-bg: rgba(248,113,113,0.2);
+  --pilpod-act-cl-border: rgba(248,113,113,0.5);
+  --pilpod-act-cl-text: #f87171;
 }
 
 html.dark {
@@ -132,6 +234,78 @@ html.dark {
   --pilpod-slider-fill: var(--pilpod-accent-blue);
 
   --pilpod-card-shadow: 0 4px 24px rgb(0 0 0 / 0.35);
+
+  /* Glass media item — dark mode */
+  --pilpod-glass-surface: transparent;
+  --pilpod-glass-border: rgba(255, 255, 255, 0.18);
+  --pilpod-glass-shine: rgba(255, 255, 255, 0.22);
+  --pilpod-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 60%);
+  --pilpod-glass-accent: #a78bfa;
+  --pilpod-glass-text: rgba(255, 255, 255, 0.92);
+  --pilpod-glass-text-muted: rgba(255, 255, 255, 0.5);
+  --pilpod-glass-text-dim: rgba(255, 255, 255, 0.28);
+  --pilpod-glass-hover-shadow:
+    0 2px 0 0 var(--pilpod-glass-shine) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.3) inset,
+    -1px 5px 4px 0 rgb(0 0 0 / 31%),
+    0 4px 12px rgba(167, 139, 250, 0.15);
+  --pilpod-glass-playing-border: rgba(167, 139, 250, 0.45);
+  --pilpod-glass-playing-shadow:
+    0 2px 0 0 var(--pilpod-glass-shine) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.3) inset,
+    -1px 5px 4px 0 rgb(0 0 0 / 31%),
+    0 4px 12px rgba(167, 139, 250, 0.25);
+  --pilpod-glass-menu-bg: linear-gradient(135deg, rgba(18, 10, 48, 0.95), rgba(10, 6, 30, 0.97));
+  --pilpod-glass-menu-border: rgba(167, 139, 250, 0.18);
+  --pilpod-glass-menu-act-bg: rgba(255, 255, 255, 0.07);
+  --pilpod-glass-menu-act-border: rgba(255, 255, 255, 0.16);
+  --pilpod-glass-menu-act-color: rgba(255, 255, 255, 0.75);
+  --pilpod-glass-expand-bg: rgba(0, 0, 0, 0.18);
+  --pilpod-glass-expand-border: rgba(255, 255, 255, 0.08);
+  --pilpod-glass-expand-hover: rgba(167, 139, 250, 0.22);
+  --pilpod-glass-expand-active: rgba(167, 139, 250, 0.28);
+  --pilpod-glass-expand-icon: rgba(255, 255, 255, 0.7);
+  --pilpod-glass-thumb-goto-bg: rgba(255, 255, 255, 0.15);
+  --pilpod-glass-thumb-goto-border: rgba(255, 255, 255, 0.6);
+  --pilpod-glass-thumb-goto-color: #ffffff;
+  --pilpod-glass-thumb-goto-hover: rgba(255, 255, 255, 0.3);
+  --pilpod-glass-thumb-letter-bg: linear-gradient(135deg, #1a1040, #3b2075);
+  --pilpod-glass-thumb-letter-color: rgba(255, 255, 255, 0.7);
+  --pilpod-glass-thumb-fav-bg: linear-gradient(135deg, #1a1040, #3b2075);
+  --pilpod-glass-duration-bg: rgba(0, 0, 0, 0.72);
+  --pilpod-glass-duration-text: rgba(255, 255, 255, 0.9);
+  --pilpod-glass-vol-rail: rgba(255, 255, 255, 0.12);
+  --pilpod-glass-vol-icon: rgba(255, 255, 255, 0.5);
+  --pilpod-glass-vol-thumb: #ffffff;
+  --pilpod-glass-vol-thumb-shadow: 0 0 6px rgba(167, 139, 250, 0.9);
+  --pilpod-glass-vol-pct-muted: rgba(255, 255, 255, 0.3);
+  --pilpod-glass-progress-track: rgba(255, 255, 255, 0.06);
+  --pilpod-glass-progress-fill: linear-gradient(90deg, #a78bfa, #60a5fa);
+  --pilpod-glass-progress-fill-playing: linear-gradient(90deg, #60a5fa, #34d399);
+  --pilpod-glass-play-bg: linear-gradient(135deg, rgba(167, 139, 250, 0.25), rgba(96, 165, 250, 0.2));
+  --pilpod-glass-play-border: rgba(167, 139, 250, 0.45);
+  --pilpod-glass-play-color: #ffffff;
+  --pilpod-glass-play-shadow: 0 1px 0 rgba(255, 255, 255, 0.15) inset, 0 4px 12px rgba(167, 139, 250, 0.25);
+  --pilpod-glass-play-hover-bg: linear-gradient(135deg, rgba(167, 139, 250, 0.42), rgba(96, 165, 250, 0.36));
+  --pilpod-glass-play-hover-border: rgba(167, 139, 250, 0.7);
+  --pilpod-glass-play-hover-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 6px 18px rgba(167, 139, 250, 0.4);
+  --pilpod-glass-play-playing-bg: linear-gradient(135deg, rgba(96, 165, 250, 0.2), rgba(52, 211, 153, 0.15));
+  --pilpod-glass-play-playing-border: rgba(96, 165, 250, 0.4);
+  --pilpod-glass-play-playing-shadow: 0 1px 0 rgba(255, 255, 255, 0.15) inset, 0 4px 12px rgba(96, 165, 250, 0.3);
+  --pilpod-glass-play-playing-hover-bg: linear-gradient(135deg, rgba(96, 165, 250, 0.35), rgba(52, 211, 153, 0.28));
+  --pilpod-glass-play-playing-hover-border: rgba(96, 165, 250, 0.55);
+  --pilpod-glass-play-playing-hover-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 6px 18px rgba(96, 165, 250, 0.45);
+  --pilpod-glass-close-confirm-bg: rgba(248, 113, 113, 0.42);
+  --pilpod-glass-close-confirm-border: #f87171;
+  --pilpod-glass-close-confirm-text: #fca5a5;
+  --pilpod-glass-close-confirm-shadow: 0 0 16px rgba(248, 113, 113, 0.55);
+
+  --pilpod-vol-normal: linear-gradient(90deg, #a78bfa, #60a5fa);
+  --pilpod-vol-boost: linear-gradient(90deg, #60a5fa, #fbbf24);
+  --pilpod-vol-high: linear-gradient(90deg, #fbbf24, #f87171);
+  --pilpod-vol-muted: rgba(255, 255, 255, 0.15);
+  --pilpod-vol-pct-boost: #fbbf24;
+  --pilpod-vol-pct-high: #f87171;
 }
 
 @keyframes pilpod-spin {

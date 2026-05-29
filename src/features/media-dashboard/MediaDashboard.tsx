@@ -125,7 +125,19 @@ export function MediaDashboard() {
 
   return (
     <div className={shellClass}>
-      <div className="pilpod-dashboard-shell__inner">
+      <div
+        className={[
+          "pilpod-dashboard-shell__inner",
+          hasWallpaper ? "pilpod-dashboard-shell__inner--wallpaper" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        style={
+          wallpaper
+            ? { backgroundImage: `url("${wallpaper}")` }
+            : undefined
+        }
+      >
         <DashboardHeader
           menuOpen={menuOpen}
           widgetEnabled={widgetEnabled}
@@ -159,19 +171,7 @@ export function MediaDashboard() {
           sessionCount={sessions.length}
         />
 
-        <main
-          className={[
-            "pilpod-dashboard-shell__main",
-            hasWallpaper ? "pilpod-dashboard-shell__main--wallpaper" : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          style={
-            wallpaper
-              ? { backgroundImage: `url("${wallpaper}")` }
-              : undefined
-          }
-        >
+        <main className="pilpod-dashboard-shell__main">
           {error ? (
             <div className="pilpod-alert-error">{error}</div>
           ) : null}

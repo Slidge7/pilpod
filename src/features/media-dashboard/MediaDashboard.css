@@ -3,8 +3,8 @@
   height: 100vh;
   min-height: 0;
   flex-direction: column;
-  padding: 3px;
-  background: var(--pilpod-bg-frame);
+  padding: 0px 3px;
+  background: transparent;
   color: var(--pilpod-text);
 }
 
@@ -29,20 +29,30 @@
   padding: 0.75rem;
 }
 
-/* User-selected wallpaper fills the main body. The wallpaper is set via an
-   inline `background-image` style; these rules control how it is painted. */
-.pilpod-dashboard-shell__main--wallpaper {
+/* User-selected wallpaper covers the entire inner shell (header + body).
+   background-attachment: fixed keeps it pinned to the viewport — it never
+   scrolls as the content list scrolls. */
+.pilpod-dashboard-shell__inner--wallpaper {
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  background-attachment: local;
+  background-attachment: fixed;
 }
 
-/* With a wallpaper active, the section "containers" become transparent so the
-   image shows through, while media items and buttons keep their own surfaces. */
-.pilpod-dashboard-shell__main--wallpaper .pilpod-browser-profile,
-.pilpod-dashboard-shell__main--wallpaper .pilpod-browser-profile__head,
-.pilpod-dashboard-shell__main--wallpaper .pilpod-browser-profile__window {
+/* Header and scrollable body become transparent so the wallpaper shows through. */
+.pilpod-dashboard-shell__inner--wallpaper .pilpod-dash-header {
+  background: transparent;
+  border-bottom-color: transparent;
+}
+
+.pilpod-dashboard-shell__inner--wallpaper .pilpod-dashboard-shell__main {
+  background: transparent;
+}
+
+/* Section containers also become transparent so the wallpaper shows through. */
+.pilpod-dashboard-shell__inner--wallpaper .pilpod-browser-profile,
+.pilpod-dashboard-shell__inner--wallpaper .pilpod-browser-profile__head,
+.pilpod-dashboard-shell__inner--wallpaper .pilpod-browser-profile__window {
   background: transparent;
 }
 

@@ -1,0 +1,485 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --glass-border:rgba(255,255,255,0.18);
+  --glass-shine:rgba(255,255,255,0.22);
+  --accent:#a78bfa;
+  --text-main:rgba(255,255,255,0.92);
+  --text-muted:rgba(255,255,255,0.50);
+  --text-dim:rgba(255,255,255,0.28);
+  --thumb-w:96px;
+
+  /* ── BACKGROUND IMAGE: replace url(...) with your image path ── */
+  /* Recommended image size: 360 × 500 px  (portrait, same as list width) */
+  /* Or use a wider image like 800×500 and it will cover+center */
+  --bg-image: url('https://cdn.pixabay.com/photo/2018/01/14/23/12/nature-3082832_1280.jpg');
+}
+
+/* SVG icons inline ─────────────────────────────────────── */
+.icon-external  { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E"); }
+.icon-chevrons  { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.7)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='13 17 18 12 13 7'/%3E%3Cpolyline points='6 17 11 12 6 7'/%3E%3C/svg%3E"); }
+.icon-chevrons-flip { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='11 17 6 12 11 7'/%3E%3Cpolyline points='18 17 13 12 18 7'/%3E%3C/svg%3E"); }
+.icon-download  { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' y1='15' x2='12' y2='3'/%3E%3C/svg%3E"); }
+.icon-reload    { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'/%3E%3Cpath d='M20.49 15a9 9 0 1 1-2.12-9.36L23 10'/%3E%3C/svg%3E"); }
+.icon-close     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E"); }
+.icon-play      { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpolygon points='5 3 19 12 5 21 5 3'/%3E%3C/svg%3E"); }
+.icon-pause     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Crect x='6' y='4' width='4' height='16'/%3E%3Crect x='14' y='4' width='4' height='16'/%3E%3C/svg%3E"); }
+.icon-vol       { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='11 5 6 9 2 9 2 15 6 15 11 19 11 5'/%3E%3Cpath d='M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07'/%3E%3C/svg%3E"); }
+.icon-vol-mute  { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='11 5 6 9 2 9 2 15 6 15 11 19 11 5'/%3E%3Cline x1='23' y1='9' x2='17' y2='15'/%3E%3Cline x1='17' y1='9' x2='23' y2='15'/%3E%3C/svg%3E"); }
+
+.svg-icon { display:inline-block; background-size:contain; background-repeat:no-repeat; background-position:center; }
+
+.scene{
+  font-family:'Inter',sans-serif;
+  background: var(--bg-image) center center / cover no-repeat,
+              linear-gradient(135deg,#0f0c29 0%,#302b63 50%,#24243e 100%);
+  min-height:500px;
+  display:flex;align-items:center;justify-content:center;
+  padding:32px 16px;
+}
+.list-shell{width:360px;display:flex;flex-direction:column;gap:10px;}
+.list-label{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:2px;padding:0 4px;}
+
+.media-item{
+  position:relative;width:360px;height:72px;border-radius:14px;
+  border:1px solid var(--glass-border);
+  display:flex;align-items:center;overflow:hidden;
+  transition:transform .2s,box-shadow .2s;
+  cursor:default;user-select:none;
+      backdrop-filter: blur(2px);
+}
+.media-item::before{content:'';position:absolute;inset:0;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 60%);pointer-events:none;}
+.media-item:hover{box-shadow: 0 2px 0 0 var(--glass-shine) inset, 0 -1px 0 0 rgba(0, 0, 0, .3) inset, -1px 5px 4px 0px rgb(0 0 0 / 31%), 0 4px 12px rgba(167, 139, 250, .15);}
+
+/* ── THUMBNAIL ───────────────────────────────────────────── */
+.thumb-wrap{position:relative;width:var(--thumb-w);height:72px;flex-shrink:0;border-radius:13px 0 0 13px;overflow:hidden;z-index:2;}
+.thumb-img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(.82);transition:filter .22s;}
+.thumb-wrap:hover .thumb-img{filter:brightness(.42);}
+.thumb-overlay{position:absolute;inset:0;display:flex;align-items:stretch;opacity:0;transition:opacity .2s;pointer-events:none;}
+.thumb-wrap:hover .thumb-overlay{opacity:1;pointer-events:all;}
+.goto-area{flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.thumb-goto{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;transition:background .15s,transform .15s;}
+.goto-area:hover .thumb-goto{background:rgba(255,255,255,.3);transform:scale(1.1);}
+.thumb-goto .svg-icon{width:15px;height:15px;}
+
+.expand-strip{width:22px;height:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background:rgba(0,0,0,.18);border-left:1px solid rgba(255,255,255,.08);transition:background .15s;}
+.expand-strip:hover{background:rgba(167,139,250,.22);}
+.expand-strip.active{background:rgba(167,139,250,.28);}
+.expand-strip .svg-icon{width:14px;height:14px;}
+
+.thumb-duration{position:absolute;bottom:5px;right:6px;background:rgba(0,0,0,.72);color:rgba(255,255,255,.9);font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;pointer-events:none;z-index:1;}
+
+/* ── BODY ZONE ───────────────────────────────────────────── */
+.item-body{flex:1;min-width:0;height:72px;position:relative;overflow:hidden;z-index:1;}
+.item-content{position:absolute;inset:0;padding:10px 10px 10px 12px;display:flex;flex-direction:column;justify-content:space-between;transition:opacity .2s ease,transform .2s ease;}
+
+/* ── SLIDE MENU inside body ──────────────────────────────── */
+.body-menu{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  background:linear-gradient(135deg,rgba(18,10,48,.95),rgba(10,6,30,.97));
+  border-left:1px solid rgba(167,139,250,.18);
+  transform:translateX(100%);opacity:0;
+  transition:transform .26s cubic-bezier(.34,1.2,.64,1),opacity .2s ease;
+  pointer-events:none;z-index:3;
+}
+.body-menu.open{transform:translateX(0);opacity:1;pointer-events:all;}
+.item-body.menu-open .item-content{opacity:0;transform:translateX(-12px);pointer-events:none;}
+
+.menu-act{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.07);
+  transition:background .14s,border-color .14s,transform .14s,box-shadow .14s;
+  flex-shrink:0;
+}
+.menu-act .svg-icon{width:16px;height:16px;}
+.menu-act:active{transform:scale(.9);}
+.menu-act.dl:hover{background:rgba(96,165,250,.25);border-color:rgba(96,165,250,.6);box-shadow:0 0 10px rgba(96,165,250,.3);}
+.menu-act.dl:hover .svg-icon{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2360a5fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' y1='15' x2='12' y2='3'/%3E%3C/svg%3E");}
+.menu-act.rl:hover{background:rgba(52,211,153,.2);border-color:rgba(52,211,153,.55);box-shadow:0 0 10px rgba(52,211,153,.25);}
+.menu-act.rl:hover .svg-icon{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2334d399' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'/%3E%3Cpath d='M20.49 15a9 9 0 1 1-2.12-9.36L23 10'/%3E%3C/svg%3E");}
+.menu-act.cl:hover{background:rgba(248,113,113,.2);border-color:rgba(248,113,113,.5);box-shadow:0 0 10px rgba(248,113,113,.25);}
+.menu-act.cl:hover .svg-icon{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f87171' stroke-width='2.5' stroke-linecap='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E");}
+.menu-act.cl.confirm{
+  background:rgba(248,113,113,.42) !important;border-color:#f87171 !important;
+  box-shadow:0 0 16px rgba(248,113,113,.55) !important;
+  animation:closebounce .34s cubic-bezier(.36,.07,.19,.97);
+}
+.menu-act.cl.confirm .svg-icon{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fca5a5' stroke-width='2.5' stroke-linecap='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E") !important;}
+@keyframes closebounce{0%{transform:scale(1);}30%{transform:scale(1.35);}55%{transform:scale(.85);}75%{transform:scale(1.15);}100%{transform:scale(1);}}
+
+/* ── TITLE ROW ───────────────────────────────────────────── */
+.title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;}
+.item-meta{min-width:0;flex:1;}
+.item-title{font-size:12.5px;font-weight:500;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;max-width:155px;}
+.item-channel{font-size:10.5px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:155px;}
+.state-badge{display:flex;align-items:center;gap:3px;padding:2px 6px;border-radius:6px;font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border:1px solid;cursor:pointer;transition:all .15s;flex-shrink:0;}
+.state-badge.active  {background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.35);color:#34d399;}
+.state-badge.inactive{background:rgba(251,191,36,.10);border-color:rgba(251,191,36,.3);color:#fbbf24;}
+.state-badge.sleep   {background:rgba(167,139,250,.10);border-color:rgba(167,139,250,.3);color:#a78bfa;}
+.state-badge.ext     {background:rgba(248,113,113,.10);border-color:rgba(248,113,113,.3);color:#f87171;}
+.state-dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+.state-badge.active .state-dot{box-shadow:0 0 4px #34d399;}
+
+/* ── VOLUME SLIDER ───────────────────────────────────────── */
+.vol-row{display:flex;align-items:center;gap:6px;}
+.vol-icon-btn{width:18px;height:18px;flex-shrink:0;cursor:pointer;background-size:contain;background-repeat:no-repeat;background-position:center;opacity:.7;transition:opacity .15s;}
+.vol-icon-btn:hover{opacity:1;}
+
+.vol-track{
+  position:relative;flex:1;height:18px;
+  display:flex;align-items:center;
+  cursor:pointer;
+}
+.vol-rail{
+  position:absolute;left:0;right:0;
+  height:3px;
+  background:rgba(255,255,255,.12);
+  border-radius:3px;
+  pointer-events:none;
+}
+.vol-fill{
+  position:absolute;left:0;
+  height:3px;
+  border-radius:3px;
+  background:linear-gradient(90deg,#a78bfa,#60a5fa);
+  pointer-events:none;
+  transition:width .04s;
+}
+.vol-thumb{
+  position:absolute;
+  width:10px;height:10px;border-radius:50%;
+  background:white;
+  box-shadow:0 0 6px rgba(167,139,250,.9);
+  pointer-events:none;
+  transform:translate(-50%,-50%);
+  top:50%;
+  opacity:0;
+  transition:opacity .15s;
+}
+.vol-track:hover .vol-thumb{opacity:1;}
+.vol-input{
+  position:absolute;inset:0;width:100%;height:100%;
+  opacity:0;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  margin:0;padding:0;
+}
+.vol-pct{font-size:9.5px;font-weight:600;color:var(--accent);min-width:30px;text-align:right;flex-shrink:0;}
+
+/* ── PLAY BUTTON ─────────────────────────────────────────── */
+.play-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(167,139,250,.25),rgba(96,165,250,.2));
+  border:1px solid rgba(167,139,250,.45);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;z-index:2;
+  transition:all .18s;
+  box-shadow:0 1px 0 rgba(255,255,255,.15) inset,0 4px 12px rgba(167,139,250,.25);
+  margin-right:10px;
+}
+.play-btn .svg-icon{width:14px;height:14px;}
+.play-btn:hover{background:linear-gradient(135deg,rgba(167,139,250,.42),rgba(96,165,250,.36));border-color:rgba(167,139,250,.7);transform:scale(1.08);box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 6px 18px rgba(167,139,250,.4);}
+.play-btn:active{transform:scale(.95);}
+
+.progress-bar{position:absolute;bottom:0;left:13px;right:13px;height:2px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,#a78bfa,#60a5fa);border-radius:2px;}
+
+/* ── DEMO PILLS ──────────────────────────────────────────── */
+.demo-controls{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;}
+.demo-pill{font-size:10px;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:var(--text-muted);cursor:pointer;transition:all .15s;}
+.demo-pill:hover{background:rgba(167,139,250,.18);border-color:rgba(167,139,250,.4);color:var(--accent);}
+
+/* bg note */
+.bg-note{font-size:10px;color:rgba(255,255,255,.3);text-align:center;margin-top:8px;line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="scene" id="scene">
+  <div class="list-shell">
+    <div class="list-label">Now playing · 2 tabs</div>
+
+    <!-- ITEM 1 -->
+    <div class="media-item" id="item1">
+      <div class="thumb-wrap">
+        <svg class="thumb-img" viewBox="0 0 96 72" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="tg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1a1040"/><stop offset="100%" stop-color="#3b2075"/></linearGradient></defs>
+          <rect width="96" height="72" fill="url(#tg1)"/>
+          <circle cx="48" cy="36" r="22" fill="rgba(167,139,250,.15)" stroke="rgba(167,139,250,.3)" stroke-width="1"/>
+          <polygon points="44,28 44,44 58,36" fill="rgba(255,255,255,.7)"/>
+        </svg>
+        <div class="thumb-overlay">
+          <div class="goto-area" onclick="gotoTab(1)">
+            <div class="thumb-goto"><span class="svg-icon icon-external"></span></div>
+          </div>
+          <div class="expand-strip" id="es1" onclick="toggleMenu(1,event)">
+            <span class="svg-icon icon-chevrons" id="eico1"></span>
+          </div>
+        </div>
+        <div class="thumb-duration">12:47</div>
+      </div>
+
+      <div class="item-body" id="ib1">
+        <div class="item-content">
+          <div class="title-row">
+            <div class="item-meta">
+              <div class="item-title">Advanced CSS Grid Mastery</div>
+              <div class="item-channel">Fireship · 2.1M views</div>
+            </div>
+            <div class="state-badge active" id="badge1" onclick="cycleState('badge1',event)">
+              <div class="state-dot"></div><span id="badge1-text">active</span>
+            </div>
+          </div>
+          <div class="vol-row">
+            <span class="svg-icon vol-icon-btn icon-vol" id="vi1" onclick="toggleMute(1)"></span>
+            <div class="vol-track" id="vt1">
+              <div class="vol-rail"></div>
+              <div class="vol-fill" id="vf1"></div>
+              <div class="vol-thumb" id="vth1"></div>
+              <input type="range" class="vol-input" id="vr1" min="0" max="600" value="80" step="5">
+            </div>
+            <span class="vol-pct" id="vp1">80%</span>
+          </div>
+        </div>
+        <div class="body-menu" id="bm1" onmouseenter="cancelClose(1)" onmouseleave="scheduleClose(1)">
+          <div class="menu-act dl" onclick="doAct('dl',1)"><span class="svg-icon icon-download"></span></div>
+          <div class="menu-act rl" id="rl1" onclick="doAct('rl',1)"><span class="svg-icon icon-reload"></span></div>
+          <div class="menu-act cl" id="cl1" onclick="closeConfirm(1)"><span class="svg-icon icon-close" id="clico1"></span></div>
+        </div>
+      </div>
+
+      <div class="play-btn" id="pb1" onclick="togglePlay(1)">
+        <span class="svg-icon icon-play" id="pi1"></span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:42%"></div></div>
+    </div>
+
+    <!-- ITEM 2 -->
+    <div class="media-item" id="item2">
+      <div class="thumb-wrap">
+        <svg class="thumb-img" viewBox="0 0 96 72" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="tg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0c2340"/><stop offset="100%" stop-color="#0f4c81"/></linearGradient></defs>
+          <rect width="96" height="72" fill="url(#tg2)"/>
+          <rect x="12" y="16" width="72" height="8" rx="2" fill="rgba(96,165,250,.2)"/>
+          <rect x="12" y="28" width="52" height="5" rx="2" fill="rgba(96,165,250,.15)"/>
+          <rect x="12" y="37" width="62" height="5" rx="2" fill="rgba(96,165,250,.12)"/>
+        </svg>
+        <div class="thumb-overlay">
+          <div class="goto-area" onclick="gotoTab(2)">
+            <div class="thumb-goto"><span class="svg-icon icon-external"></span></div>
+          </div>
+          <div class="expand-strip" id="es2" onclick="toggleMenu(2,event)">
+            <span class="svg-icon icon-chevrons" id="eico2"></span>
+          </div>
+        </div>
+        <div class="thumb-duration">38:02</div>
+      </div>
+
+      <div class="item-body" id="ib2">
+        <div class="item-content">
+          <div class="title-row">
+            <div class="item-meta">
+              <div class="item-title">TypeScript for React Devs</div>
+              <div class="item-channel">Matt Pocock · 890K views</div>
+            </div>
+            <div class="state-badge sleep" id="badge2" onclick="cycleState('badge2',event)">
+              <div class="state-dot"></div><span id="badge2-text">sleep</span>
+            </div>
+          </div>
+          <div class="vol-row">
+            <span class="svg-icon vol-icon-btn icon-vol" id="vi2" onclick="toggleMute(2)"></span>
+            <div class="vol-track" id="vt2">
+              <div class="vol-rail"></div>
+              <div class="vol-fill" id="vf2"></div>
+              <div class="vol-thumb" id="vth2"></div>
+              <input type="range" class="vol-input" id="vr2" min="0" max="600" value="150" step="5">
+            </div>
+            <span class="vol-pct" id="vp2">150%</span>
+          </div>
+        </div>
+        <div class="body-menu" id="bm2" onmouseenter="cancelClose(2)" onmouseleave="scheduleClose(2)">
+          <div class="menu-act dl" onclick="doAct('dl',2)"><span class="svg-icon icon-download"></span></div>
+          <div class="menu-act rl" id="rl2" onclick="doAct('rl',2)"><span class="svg-icon icon-reload"></span></div>
+          <div class="menu-act cl" id="cl2" onclick="closeConfirm(2)"><span class="svg-icon icon-close" id="clico2"></span></div>
+        </div>
+      </div>
+
+      <div class="play-btn" id="pb2" onclick="togglePlay(2)" style="background:linear-gradient(135deg,rgba(96,165,250,.2),rgba(52,211,153,.15));border-color:rgba(96,165,250,.4);">
+        <span class="svg-icon icon-pause" id="pi2"></span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:67%;background:linear-gradient(90deg,#60a5fa,#34d399)"></div></div>
+    </div>
+
+    <div class="demo-controls">
+      <div class="demo-pill" onclick="sendPrompt('Export this as a full React JSX + TypeScript component')">Export React JSX ↗</div>
+    </div>
+
+    <div class="bg-note">
+      Background image: <strong style="color:rgba(255,255,255,.5)">800 × 500 px</strong> recommended<br>
+      Set via <code style="color:#a78bfa">--bg-image: url('your-image.jpg')</code> in :root
+    </div>
+  </div>
+</div>
+
+<script>
+const states=['active','inactive','sleep','ext'];
+const playing={1:false,2:true};
+const muted={1:false,2:false};
+const prevVol={1:80,2:150};
+const confirmState={1:false,2:false};
+const menuOpen={1:false,2:false};
+const closeTimers={1:null,2:null};
+const confirmTimers={1:null,2:null};
+
+/* ── VOLUME: render thumb & fill from value ─────────────── */
+function renderVol(n,v){
+  v=parseInt(v);
+  const pct=v/600;
+  const track=document.getElementById('vt'+n);
+  const fill=document.getElementById('vf'+n);
+  const thumb=document.getElementById('vth'+n);
+  const label=document.getElementById('vp'+n);
+  const w=track.offsetWidth;
+  const px=pct*w;
+
+  fill.style.width=px+'px';
+  thumb.style.left=px+'px';
+  label.textContent=v+'%';
+
+  if(v===0){fill.style.background='rgba(255,255,255,.15)';label.style.color='rgba(255,255,255,.3)';}
+  else if(v<=100){fill.style.background='linear-gradient(90deg,#a78bfa,#60a5fa)';label.style.color='#a78bfa';}
+  else if(v<=200){fill.style.background='linear-gradient(90deg,#60a5fa,#fbbf24)';label.style.color='#fbbf24';}
+  else{fill.style.background='linear-gradient(90deg,#fbbf24,#f87171)';label.style.color='#f87171';}
+}
+
+function initVol(n){
+  const input=document.getElementById('vr'+n);
+  input.addEventListener('input',()=>renderVol(n,input.value));
+  // re-render after layout is stable
+  requestAnimationFrame(()=>renderVol(n,input.value));
+}
+window.addEventListener('resize',()=>{renderVol(1,document.getElementById('vr1').value);renderVol(2,document.getElementById('vr2').value);});
+
+function toggleMute(n){
+  const input=document.getElementById('vr'+n);
+  const icon=document.getElementById('vi'+n);
+  if(!muted[n]){
+    prevVol[n]=parseInt(input.value);
+    input.value=0;muted[n]=true;
+    icon.className='svg-icon vol-icon-btn icon-vol-mute';
+  } else {
+    input.value=prevVol[n];muted[n]=false;
+    icon.className='svg-icon vol-icon-btn icon-vol';
+  }
+  renderVol(n,input.value);
+}
+
+/* ── MENU ────────────────────────────────────────────────── */
+function openMenu(n){
+  menuOpen[n]=true;
+  document.getElementById('bm'+n).classList.add('open');
+  document.getElementById('ib'+n).classList.add('menu-open');
+  document.getElementById('es'+n).classList.add('active');
+  document.getElementById('eico'+n).className='svg-icon icon-chevrons-flip';
+}
+function closeMenu(n){
+  menuOpen[n]=false;
+  document.getElementById('bm'+n).classList.remove('open');
+  document.getElementById('ib'+n).classList.remove('menu-open');
+  document.getElementById('es'+n).classList.remove('active');
+  document.getElementById('eico'+n).className='svg-icon icon-chevrons';
+  resetConfirm(n);
+}
+function toggleMenu(n,e){
+  e.stopPropagation();
+  cancelClose(n);
+  menuOpen[n]?closeMenu(n):openMenu(n);
+}
+function scheduleClose(n){
+  cancelClose(n);
+  closeTimers[n]=setTimeout(()=>closeMenu(n),1500);
+}
+function cancelClose(n){
+  if(closeTimers[n]){clearTimeout(closeTimers[n]);closeTimers[n]=null;}
+}
+
+/* also schedule close when expand strip loses hover (menu not open = nothing to do) */
+document.getElementById('es1').addEventListener('mouseleave',()=>{if(menuOpen[1])scheduleClose(1);});
+document.getElementById('es2').addEventListener('mouseleave',()=>{if(menuOpen[2])scheduleClose(2);});
+
+/* click outside closes immediately */
+document.addEventListener('click',(e)=>{
+  [1,2].forEach(n=>{
+    if(menuOpen[n]&&!e.target.closest('#bm'+n)&&!e.target.closest('#es'+n)){
+      cancelClose(n);closeMenu(n);
+    }
+  });
+});
+
+/* ── ACTIONS ─────────────────────────────────────────────── */
+function doAct(type,n){
+  if(type==='rl'){
+    const ico=document.getElementById('rl'+n).querySelector('.svg-icon');
+    ico.style.transition='transform .5s';ico.style.transform='rotate(360deg)';
+    setTimeout(()=>{ico.style.transform='';ico.style.transition='';},520);
+  }
+  if(type==='dl'){
+    const ico=document.getElementById('bm'+n).querySelector('.menu-act.dl .svg-icon');
+    ico.style.transition='transform .28s';ico.style.transform='translateY(3px)';
+    setTimeout(()=>{ico.style.transform='';},300);
+  }
+}
+
+function resetConfirm(n){
+  if(confirmTimers[n]){clearTimeout(confirmTimers[n]);confirmTimers[n]=null;}
+  confirmState[n]=false;
+  const cl=document.getElementById('cl'+n);
+  if(cl){cl.classList.remove('confirm');}
+}
+function closeConfirm(n){
+  cancelClose(n); // don't auto-close while user is confirming
+  if(!confirmState[n]){
+    confirmState[n]=true;
+    document.getElementById('cl'+n).classList.add('confirm');
+    confirmTimers[n]=setTimeout(()=>resetConfirm(n),2800);
+  } else {
+    const item=document.getElementById('item'+n);
+    item.style.transition='opacity .28s,transform .28s,max-height .32s,margin .32s';
+    item.style.opacity='0';item.style.transform='translateX(18px) scale(.97)';
+    item.style.maxHeight='0';item.style.overflow='hidden';item.style.marginBottom='0';
+    setTimeout(()=>item.remove(),340);
+  }
+}
+
+/* ── PLAY ────────────────────────────────────────────────── */
+function togglePlay(n){
+  playing[n]=!playing[n];
+  const ic=document.getElementById('pi'+n);
+  ic.className=playing[n]?'svg-icon icon-pause':'svg-icon icon-play';
+}
+
+/* ── STATE BADGE ─────────────────────────────────────────── */
+function cycleState(id,e){
+  e.stopPropagation();
+  const el=document.getElementById(id);
+  const txt=document.getElementById(id+'-text');
+  const cur=el.className.replace('state-badge ','');
+  const next=states[(states.indexOf(cur)+1)%states.length];
+  el.className='state-badge '+next;
+  txt.textContent=next;
+}
+
+function gotoTab(n){}
+
+/* init */
+initVol(1);initVol(2);
+</script>
+</body>
+</html>
