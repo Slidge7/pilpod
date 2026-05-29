@@ -23,6 +23,7 @@ export function AppVolumeSlider({
   }, [audio.volume]);
 
   const pct = Math.round(localVolume * 100);
+  const volPctStyle = { "--vol-pct": `${pct}%` } as React.CSSProperties;
 
   return (
     <div
@@ -44,6 +45,7 @@ export function AppVolumeSlider({
         value={localVolume}
         disabled={disabled}
         className="pilpod-volume__range"
+        style={volPctStyle}
         aria-label={ariaLabel}
         aria-valuemin={0}
         aria-valuemax={100}

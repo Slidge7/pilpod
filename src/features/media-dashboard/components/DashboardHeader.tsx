@@ -30,7 +30,8 @@ export function DashboardHeader({
 
   const pinClass = [
     "pilpod-dash-header__btn",
-    alwaysOnTop ? "pilpod-dash-header__btn--amber" : "",
+    "pilpod-dash-header__btn--pin",
+    alwaysOnTop ? "pilpod-dash-header__btn--pin-active" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -41,25 +42,29 @@ export function DashboardHeader({
         <img
           src="/pilpod-icon.png"
           alt=""
-          width={22}
-          height={22}
+          width={24}
+          height={24}
           className="pilpod-dash-header__logo"
           aria-hidden
         />
-        <span className="pilpod-dash-header__title">PilPod</span>
-        <span className="pilpod-dash-header__stats">
-          {browserTabCount} br · {sessionCount} win
-        </span>
+        <div className="pilpod-dash-header__brand">
+          <span className="pilpod-dash-header__title">PilPod</span>
+          <span className="pilpod-dash-header__stats">
+            {browserTabCount} browser · {sessionCount} Windows
+          </span>
+        </div>
       </div>
       <div className="pilpod-dash-header__actions">
         <button
           type="button"
           onClick={onToggleAlwaysOnTop}
           className={pinClass}
-          title={alwaysOnTop ? "Disable always on top" : "Keep window on top"}
+          title={alwaysOnTop ? "Unpin window" : "Pin window (always on top)"}
+          aria-label={alwaysOnTop ? "Unpin window" : "Pin window"}
           aria-pressed={alwaysOnTop}
         >
           <IconStayOnTop />
+          <span className="pilpod-dash-header__pin-label">Pin</span>
         </button>
         <button
           type="button"
@@ -75,6 +80,7 @@ export function DashboardHeader({
           onClick={onClose}
           className="pilpod-dash-header__btn pilpod-dash-header__btn--close"
           title="Close"
+          aria-label="Close"
         >
           <IconClose />
         </button>

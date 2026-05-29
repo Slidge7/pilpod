@@ -1,4 +1,4 @@
-/* PilPod design tokens — plain CSS (no Tailwind). Dark mode: html.dark */
+/* PilPod design tokens — plain CSS (no Tailwind). Dark HUD: html.dark */
 
 :root {
   color-scheme: light;
@@ -9,11 +9,13 @@
   --pilpod-text-subtle: #a1a1aa;
 
   --pilpod-bg-transparent: transparent;
-  --pilpod-bg-shell: #f4f4f5;
+  --pilpod-bg-shell: #eceef2;
+  --pilpod-bg-frame: #dfe3ea;
   --pilpod-bg-elevated: #ffffff;
-  --pilpod-bg-muted: #fafafa;
-  --pilpod-bg-tab-track: #fafafa;
+  --pilpod-bg-muted: #f4f5f8;
+  --pilpod-bg-tab-track: #e8ebf0;
   --pilpod-bg-tab-active: #ffffff;
+  --pilpod-bg-card: #ffffff;
   --pilpod-bg-row-hover: rgb(244 244 245 / 0.9);
   --pilpod-bg-thumb: #f4f4f5;
   --pilpod-bg-thumb-letter: #e4e4e7;
@@ -24,15 +26,25 @@
   --pilpod-border-muted: #e4e4e7;
   --pilpod-ring-icon: rgb(228 228 231 / 0.7);
 
-  --pilpod-amber-active-bg: #fffbeb;
-  --pilpod-amber-active-text: #b45309;
-  --pilpod-amber-active-ring: #fcd34d;
+  --pilpod-accent-blue: #2563eb;
+  --pilpod-accent-blue-hover: #1d4ed8;
+  --pilpod-accent-blue-muted: rgb(37 99 235 / 0.12);
+  --pilpod-accent-blue-ring: rgb(37 99 235 / 0.45);
 
-  --pilpod-emerald-row: rgb(236 253 245 / 0.85);
-  --pilpod-emerald-border: #059669;
-  --pilpod-emerald-bg: #059669;
-  --pilpod-emerald-bg-hover: #047857;
-  --pilpod-emerald-focus-ring: #059669;
+  --pilpod-playback-red: #ef4444;
+  --pilpod-playback-red-glow: rgb(239 68 68 / 0.35);
+  --pilpod-playback-row: rgb(254 242 242 / 0.95);
+  --pilpod-playback-border: rgb(239 68 68 / 0.55);
+
+  --pilpod-amber-active-bg: var(--pilpod-accent-blue-muted);
+  --pilpod-amber-active-text: var(--pilpod-accent-blue);
+  --pilpod-amber-active-ring: var(--pilpod-accent-blue-ring);
+
+  --pilpod-emerald-row: var(--pilpod-playback-row);
+  --pilpod-emerald-border: var(--pilpod-playback-border);
+  --pilpod-emerald-bg: var(--pilpod-playback-red);
+  --pilpod-emerald-bg-hover: #dc2626;
+  --pilpod-emerald-focus-ring: var(--pilpod-accent-blue);
 
   --pilpod-red-close-hover-bg: #fef2f2;
   --pilpod-red-close-hover-text: #dc2626;
@@ -50,41 +62,57 @@
   --pilpod-dismiss-ring: rgb(153 27 27 / 0.8);
 
   --pilpod-slider-track: #e4e4e7;
-  --pilpod-slider-thumb: #059669;
+  --pilpod-slider-thumb: var(--pilpod-accent-blue);
+  --pilpod-slider-fill: var(--pilpod-accent-blue);
+
+  --pilpod-card-radius: 12px;
+  --pilpod-card-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
 }
 
 html.dark {
   color-scheme: dark;
 
-  --pilpod-text: #fafafa;
+  --pilpod-text: #f4f4f5;
   --pilpod-text-secondary: #e4e4e7;
   --pilpod-text-muted: #a1a1aa;
   --pilpod-text-subtle: #71717a;
 
-  --pilpod-bg-shell: #09090b;
-  --pilpod-bg-elevated: rgb(9 9 11 / 0.5);
-  --pilpod-bg-muted: #18181b;
-  --pilpod-bg-tab-track: #18181b;
-  --pilpod-bg-tab-active: #09090b;
-  --pilpod-bg-row-hover: rgb(24 24 27 / 0.55);
-  --pilpod-bg-thumb: #18181b;
-  --pilpod-bg-thumb-letter: #09090b;
-  --pilpod-bg-overlay-open: rgb(24 24 27 / 0.93);
+  --pilpod-bg-shell: #0c0e14;
+  --pilpod-bg-frame: #06080c;
+  --pilpod-bg-elevated: rgb(18 21 30 / 0.92);
+  --pilpod-bg-muted: #151922;
+  --pilpod-bg-tab-track: #10141c;
+  --pilpod-bg-tab-active: #12161f;
+  --pilpod-bg-card: rgb(22 27 38 / 0.88);
+  --pilpod-bg-row-hover: rgb(30 36 50 / 0.65);
+  --pilpod-bg-thumb: #1a2030;
+  --pilpod-bg-thumb-letter: #0c0e14;
+  --pilpod-bg-overlay-open: rgb(12 14 20 / 0.94);
 
-  --pilpod-border: rgb(63 63 70 / 0.9);
-  --pilpod-border-strong: #52525b;
-  --pilpod-border-muted: #3f3f46;
-  --pilpod-ring-icon: rgb(63 63 70 / 0.7);
+  --pilpod-border: rgb(48 54 68 / 0.85);
+  --pilpod-border-strong: #3d4558;
+  --pilpod-border-muted: #2a3142;
+  --pilpod-ring-icon: rgb(61 69 86 / 0.75);
 
-  --pilpod-amber-active-bg: rgb(69 26 3 / 0.7);
-  --pilpod-amber-active-text: #fbbf24;
-  --pilpod-amber-active-ring: rgb(180 83 9 / 0.5);
+  --pilpod-accent-blue: #3b82f6;
+  --pilpod-accent-blue-hover: #60a5fa;
+  --pilpod-accent-blue-muted: rgb(59 130 246 / 0.18);
+  --pilpod-accent-blue-ring: rgb(59 130 246 / 0.55);
 
-  --pilpod-emerald-row: rgb(6 78 59 / 0.18);
-  --pilpod-emerald-border: #10b981;
-  --pilpod-emerald-bg: #059669;
-  --pilpod-emerald-bg-hover: #10b981;
-  --pilpod-emerald-focus-ring: #10b981;
+  --pilpod-playback-red: #f87171;
+  --pilpod-playback-red-glow: rgb(248 113 113 / 0.42);
+  --pilpod-playback-row: rgb(69 10 10 / 0.35);
+  --pilpod-playback-border: rgb(248 113 113 / 0.5);
+
+  --pilpod-amber-active-bg: var(--pilpod-accent-blue-muted);
+  --pilpod-amber-active-text: var(--pilpod-accent-blue-hover);
+  --pilpod-amber-active-ring: var(--pilpod-accent-blue-ring);
+
+  --pilpod-emerald-row: var(--pilpod-playback-row);
+  --pilpod-emerald-border: var(--pilpod-playback-border);
+  --pilpod-emerald-bg: #dc2626;
+  --pilpod-emerald-bg-hover: #ef4444;
+  --pilpod-emerald-focus-ring: var(--pilpod-accent-blue);
 
   --pilpod-red-close-hover-bg: rgb(127 29 29 / 0.6);
   --pilpod-red-close-hover-text: #fca5a5;
@@ -93,14 +121,17 @@ html.dark {
   --pilpod-error-bg: rgb(127 29 29 / 0.25);
   --pilpod-error-text: #fecaca;
 
-  --pilpod-widget-chip-bg: rgb(39 39 42 / 0.95);
-  --pilpod-widget-chip-shadow: rgb(0 0 0 / 0.4);
-  --pilpod-widget-chip-ring: rgb(82 82 91 / 0.8);
+  --pilpod-widget-chip-bg: rgb(22 27 38 / 0.95);
+  --pilpod-widget-chip-shadow: rgb(0 0 0 / 0.45);
+  --pilpod-widget-chip-ring: rgb(61 69 86 / 0.85);
 
   --pilpod-dismiss-ring: rgb(127 29 29 / 0.7);
 
-  --pilpod-slider-track: #27272a;
-  --pilpod-slider-thumb: #10b981;
+  --pilpod-slider-track: #252b3a;
+  --pilpod-slider-thumb: var(--pilpod-accent-blue);
+  --pilpod-slider-fill: var(--pilpod-accent-blue);
+
+  --pilpod-card-shadow: 0 4px 24px rgb(0 0 0 / 0.35);
 }
 
 @keyframes pilpod-spin {
@@ -151,4 +182,25 @@ body,
   display: none;
   width: 0;
   height: 0;
+}
+
+/* Shared control-card grid (browser media + Windows sessions) */
+.pilpod-control-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pilpod-control-grid--compact {
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+}
+
+@media (max-width: 340px) {
+  .pilpod-control-grid {
+    grid-template-columns: 1fr;
+  }
 }

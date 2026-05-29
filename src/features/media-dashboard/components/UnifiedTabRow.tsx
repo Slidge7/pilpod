@@ -1,5 +1,5 @@
 import "./UnifiedTabRow.css";
-import type { BrowserTab } from "../../../types/media";
+import type { AudioSessionInfoDto, BrowserTab } from "../../../types/media";
 import type { DownloadTask } from "../../downloader/types";
 import {
   downloadProgressLabel,
@@ -16,6 +16,7 @@ import {
   tabStateBadge,
   USER_IDLE_WARN_MS,
 } from "../lib/browserMedia";
+import { AppVolumeSlider } from "../../../shared/ui/AppVolumeSlider";
 import { BrowserMediaThumb } from "./BrowserMediaThumb";
 import {
   IconDownload,
@@ -32,6 +33,8 @@ type Props = {
   busy: boolean;
   /** Show play/pause button (only for media tabs). */
   showMediaControls: boolean;
+  profileAudio?: AudioSessionInfoDto;
+  onMixerVolume?: (instanceId: string, volume: number) => void;
   onPlayPause: (tab: BrowserTab, browserId: string) => void;
   onFocus: (tab: BrowserTab, browserId: string, displayName: string) => void | Promise<void>;
   onReload: (tab: BrowserTab, browserId: string) => void | Promise<void>;
@@ -49,6 +52,8 @@ export function UnifiedTabRow({
   browserDisplayName,
   busy,
   showMediaControls,
+  profileAudio,
+  onMixerVolume,
   onPlayPause,
   onFocus,
   onReload,
@@ -63,6 +68,7 @@ export function UnifiedTabRow({
   const playing = isTabPlaying(tab);
   const isMediaTab = tabIsLinkIdentifiedMedia(tab);
   const hasMediaControls = tabHasMediaControls(tab);
+  const isMediaCard = isMediaTab && showMediaControls;
 
   const fav =
     tab.favIconUrl?.trim() ||
@@ -80,204 +86,208 @@ export function UnifiedTabRow({
       : null;
   const urlShort = abbreviatedUrl(tab.url ?? "");
 
-  const rowClass = [
-    "pilpod-unified-tab-row",
-    playing ? "pilpod-unified-tab-row--playing" : "",
-    ts === "inactive" && !isMediaTab ? "pilpod-unified-tab-row--inactive" : "",
+  const cardClass = [
+    "pilpod-control-card",
+    isMediaCard ? "pilpod-control-card--media" : "pilpod-control-card--tab",
+    playing ? "pilpod-control-card--playing" : "",
+    ts === "inactive" && !isMediaTab ? "pilpod-control-card--inactive" : "",
     isMediaTab && tab.media?.pageVisible === false
-      ? "pilpod-unified-tab-row--hidden-page"
+      ? "pilpod-control-card--hidden-page"
       : "",
   ]
     .filter(Boolean)
     .join(" ");
 
+  const playClass = [
+    "pilpod-control-card__play",
+    playing ? "pilpod-control-card__play--active" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const thumb = isMediaTab ? (
+    <BrowserMediaThumb tab={tab} />
+  ) : fav ? (
+    <img
+      src={fav}
+      alt=""
+      className="pilpod-control-card__fav"
+      width={20}
+      height={20}
+      loading="lazy"
+      decoding="async"
+    />
+  ) : (
+    <span className="pilpod-control-card__fav-fallback" aria-hidden />
+  );
+
   return (
-    <li className={rowClass}>
-      {/* Favicon / media thumbnail */}
-      <div className="pilpod-unified-tab-row__thumb-wrap">
-        {isMediaTab ? (
-          <BrowserMediaThumb tab={tab} />
-        ) : (
-          <div className="pilpod-unified-tab-row__fav-wrap">
-            {fav ? (
-              <img
-                src={fav}
-                alt=""
-                className="pilpod-unified-tab-row__fav"
-                width={16}
-                height={16}
-                loading="lazy"
-                decoding="async"
-              />
-            ) : (
-              <span className="pilpod-unified-tab-row__fav-fallback" aria-hidden />
-            )}
-          </div>
-        )}
-
-        {/* Focus shortcut button */}
-        <button
-          type="button"
-          title="Open this tab in browser"
-          aria-label="Open this tab in browser"
-          className="pilpod-unified-tab-row__open-tab"
-          onClick={(e) => {
-            e.stopPropagation();
-            void onFocus(tab, browserId, browserDisplayName);
-          }}
-        >
-          <IconOpenInTab className="pilpod-icon--sm" />
-        </button>
-      </div>
-
-      {/* Title + meta */}
-      <div className="pilpod-unified-tab-row__body">
-        <p
-          className="pilpod-unified-tab-row__title-row"
-          title={tab.title?.trim() || undefined}
-        >
-          <span className="pilpod-unified-tab-row__title">
-            {tab.title?.trim() || "Untitled"}
-          </span>
-          {tab.audible && !playing ? (
-            <span
-              className="pilpod-unified-tab-row__audible"
-              title="Tab is producing sound"
-              aria-label="audible"
-            >
-              🔊
-            </span>
-          ) : null}
-          {badge ? (
-            <span
-              className="pilpod-unified-tab-row__state-badge"
-              title={`Tab state: ${tab.tabState ?? "unknown"}`}
-              aria-hidden
-            >
-              {badge}
-            </span>
-          ) : null}
-        </p>
-
-        {/* Media meta row */}
-        {(artist || timeLabel || idleWarn || stateHint) ? (
-          <p className="pilpod-unified-tab-row__meta">
-            {artist}
-            {artist && timeLabel ? (
-              <span className="pilpod-unified-tab-row__meta-sep" aria-hidden>|</span>
-            ) : null}
-            {timeLabel ?? ""}
-            {stateHint && !artist && !timeLabel ? stateHint : null}
-            {idleWarn ? (
-              <>
-                {(artist || timeLabel || stateHint) ? (
-                  <span className="pilpod-unified-tab-row__meta-sep" aria-hidden>|</span>
-                ) : null}
-                <span className="pilpod-unified-tab-row__idle-hint">
-                  Idle {Math.round((tab.media?.userIdleMs ?? 0) / 60_000)}m
-                </span>
-              </>
-            ) : null}
-          </p>
-        ) : !isMediaTab ? (
-          /* Show abbreviated URL for non-media tabs */
-          <p className="pilpod-unified-tab-row__url" title={tab.url}>
-            {urlShort}
-          </p>
-        ) : null}
-      </div>
-
-      {/* Actions */}
-      <div className="pilpod-unified-tab-row__actions">
-        {showReactivate ? (
+    <li className={cardClass}>
+      <div className="pilpod-control-card__main">
+        <div className="pilpod-control-card__thumb-wrap">
+          {thumb}
           <button
             type="button"
-            disabled={busy}
-            className="pilpod-unified-tab-row__btn"
-            title="Wake discarded or crashed tab"
-            onClick={() => void onReactivate(tab, browserId)}
-          >
-            Wake
-          </button>
-        ) : null}
-
-        {!isMediaTab ? (
-          <>
-            <button
-              type="button"
-              className="pilpod-unified-tab-row__btn"
-              disabled={busy}
-              title="Reload tab"
-              onClick={() => void onReload(tab, browserId)}
-            >
-              Reload
-            </button>
-            <button
-              type="button"
-              className="pilpod-unified-tab-row__btn pilpod-unified-tab-row__btn--danger"
-              disabled={busy}
-              title="Close tab"
-              onClick={() => void onClose(tab, browserId)}
-            >
-              Close
-            </button>
-          </>
-        ) : null}
-
-        {/* Download button or in-progress feedback for media tabs */}
-        {showMediaControls && isMediaTab && activeDownload ? (
-          <span
-            className="pilpod-unified-tab-row__dl-progress"
-            title={downloadProgressTitle(activeDownload)}
-            aria-label={downloadProgressTitle(activeDownload)}
-          >
-            {(activeDownload.status.type === "Queued" ||
-              activeDownload.status.type === "Muxing" ||
-              activeDownload.status.type === "FetchingInfo") && (
-              <Spinner className="pilpod-icon--sm" />
-            )}
-            <span>{downloadProgressLabel(activeDownload)}</span>
-          </span>
-        ) : showMediaControls && isMediaTab && onDownload && tab.url ? (
-          <button
-            type="button"
-            title="Download this video"
-            aria-label="Download this video"
-            className="pilpod-unified-tab-row__btn"
+            title="Open this tab in browser"
+            aria-label="Open this tab in browser"
+            className="pilpod-control-card__open-tab"
             onClick={(e) => {
               e.stopPropagation();
-              onDownload(tab.url!);
+              void onFocus(tab, browserId, browserDisplayName);
             }}
           >
-            <IconDownload className="pilpod-icon--sm" />
+            <IconOpenInTab className="pilpod-icon--sm" />
           </button>
-        ) : null}
+        </div>
 
-        {/* Play/pause for media tabs */}
-        {showMediaControls && hasMediaControls ? (
-          <button
-            type="button"
-            disabled={busy}
-            title={playing ? "Pause" : "Play"}
-            aria-label={playing ? "Pause" : "Play"}
-            className={[
-              "pilpod-unified-tab-row__play",
-              playing ? "pilpod-unified-tab-row__play--playing" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            onClick={() => onPlayPause(tab, browserId)}
+        <div className="pilpod-control-card__body">
+          <p
+            className="pilpod-control-card__title-row"
+            title={tab.title?.trim() || undefined}
           >
-            {busy ? (
-              <Spinner />
-            ) : playing ? (
-              <IconPause className="pilpod-icon--sm" />
-            ) : (
-              <IconPlay className="pilpod-icon--sm" />
-            )}
-          </button>
-        ) : null}
+            <span className="pilpod-control-card__title">
+              {tab.title?.trim() || "Untitled"}
+            </span>
+            {tab.audible && !playing ? (
+              <span
+                className="pilpod-control-card__audible"
+                title="Tab is producing sound"
+                aria-label="audible"
+              >
+                🔊
+              </span>
+            ) : null}
+            {badge ? (
+              <span
+                className="pilpod-control-card__state-badge"
+                title={`Tab state: ${tab.tabState ?? "unknown"}`}
+                aria-hidden
+              >
+                {badge}
+              </span>
+            ) : null}
+          </p>
+
+          {(artist || timeLabel || idleWarn || stateHint) ? (
+            <p className="pilpod-control-card__meta">
+              {artist}
+              {artist && timeLabel ? (
+                <span className="pilpod-control-card__meta-sep" aria-hidden>|</span>
+              ) : null}
+              {timeLabel ?? ""}
+              {stateHint && !artist && !timeLabel ? stateHint : null}
+              {idleWarn ? (
+                <>
+                  {(artist || timeLabel || stateHint) ? (
+                    <span className="pilpod-control-card__meta-sep" aria-hidden>|</span>
+                  ) : null}
+                  <span className="pilpod-control-card__idle-hint">
+                    Idle {Math.round((tab.media?.userIdleMs ?? 0) / 60_000)}m
+                  </span>
+                </>
+              ) : null}
+            </p>
+          ) : !isMediaTab ? (
+            <p className="pilpod-control-card__url" title={tab.url}>
+              {urlShort}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="pilpod-control-card__actions">
+          {showReactivate ? (
+            <button
+              type="button"
+              disabled={busy}
+              className="pilpod-control-card__ghost-btn"
+              title="Wake discarded or crashed tab"
+              onClick={() => void onReactivate(tab, browserId)}
+            >
+              Wake
+            </button>
+          ) : null}
+
+          {!isMediaTab ? (
+            <>
+              <button
+                type="button"
+                className="pilpod-control-card__ghost-btn"
+                disabled={busy}
+                title="Reload tab"
+                onClick={() => void onReload(tab, browserId)}
+              >
+                Reload
+              </button>
+              <button
+                type="button"
+                className="pilpod-control-card__ghost-btn pilpod-control-card__ghost-btn--danger"
+                disabled={busy}
+                title="Close tab"
+                onClick={() => void onClose(tab, browserId)}
+              >
+                Close
+              </button>
+            </>
+          ) : null}
+
+          {showMediaControls && isMediaTab && activeDownload ? (
+            <span
+              className="pilpod-control-card__dl-progress"
+              title={downloadProgressTitle(activeDownload)}
+              aria-label={downloadProgressTitle(activeDownload)}
+            >
+              {(activeDownload.status.type === "Queued" ||
+                activeDownload.status.type === "Muxing" ||
+                activeDownload.status.type === "FetchingInfo") && (
+                <Spinner className="pilpod-icon--sm" />
+              )}
+              <span>{downloadProgressLabel(activeDownload)}</span>
+            </span>
+          ) : showMediaControls && isMediaTab && onDownload && tab.url ? (
+            <button
+              type="button"
+              title="Download this video"
+              aria-label="Download this video"
+              className="pilpod-control-card__ghost-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDownload(tab.url!);
+              }}
+            >
+              <IconDownload className="pilpod-icon--sm" />
+            </button>
+          ) : null}
+
+          {showMediaControls && hasMediaControls ? (
+            <button
+              type="button"
+              disabled={busy}
+              title={playing ? "Pause" : "Play"}
+              aria-label={playing ? "Pause" : "Play"}
+              className={playClass}
+              onClick={() => onPlayPause(tab, browserId)}
+            >
+              {busy ? (
+                <Spinner />
+              ) : playing ? (
+                <IconPause className="pilpod-icon--sm" />
+              ) : (
+                <IconPlay className="pilpod-icon--sm" />
+              )}
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {isMediaCard && profileAudio && onMixerVolume ? (
+        <div className="pilpod-control-card__volume">
+          <AppVolumeSlider
+            ariaLabel={`Volume for ${tab.title?.trim() || "media"}`}
+            audio={profileAudio}
+            onVolumeChange={onMixerVolume}
+          />
+        </div>
+      ) : null}
     </li>
   );
 }

@@ -17,7 +17,6 @@ import {
   tabIsLinkIdentifiedMedia,
   type SearchTagOption,
 } from "../lib/browserMedia";
-import { AppVolumeSlider } from "../../../shared/ui/AppVolumeSlider";
 import { findActiveDownloadForUrl } from "../../downloader/lib/activeDownload";
 import type { DownloadTask } from "../../downloader/types";
 import { UnifiedTabRow } from "./UnifiedTabRow";
@@ -50,13 +49,9 @@ type Props = {
 
 function BrowserHeader({
   browser,
-  profileAudio,
-  onMixerVolume,
   onRefresh,
 }: {
   browser: DetectedBrowser;
-  profileAudio: AudioSessionInfoDto | undefined;
-  onMixerVolume: (instanceId: string, volume: number) => void;
   onRefresh: () => void;
 }) {
   const [refreshing, setRefreshing] = useState(false);
@@ -150,13 +145,6 @@ function BrowserHeader({
           </>
         ) : null}
       </span>
-      {profileAudio ? (
-        <AppVolumeSlider
-          ariaLabel={`Volume for ${browserDisplayLabel(browser)}`}
-          audio={profileAudio}
-          onVolumeChange={onMixerVolume}
-        />
-      ) : null}
       <button
         className={`pilpod-browser-profile__refresh${refreshing ? " pilpod-browser-profile__refresh--spinning" : ""}`}
         title={`Wake & sync ${browserDisplayLabel(browser)}`}
@@ -183,7 +171,7 @@ function MediaAndOtherTabLists({
   return (
     <>
       {mediaTabs.length > 0 ? (
-        <ul className="pilpod-browser-profile__list">
+        <ul className="pilpod-control-grid pilpod-browser-profile__media-grid">
           {mediaTabs.map((t) => renderTabRow(t, true))}
         </ul>
       ) : null}
@@ -196,7 +184,7 @@ function MediaAndOtherTabLists({
               {otherTabs.length}
             </span>
           </summary>
-          <ul className="pilpod-browser-profile__other-list">
+          <ul className="pilpod-control-grid pilpod-control-grid--compact pilpod-browser-profile__other-list">
             {otherTabs.map((t) => renderTabRow(t, false))}
           </ul>
         </details>
@@ -229,7 +217,7 @@ function WindowTabGroup({
         {windowGroupLabel(group, index)}
       </header>
       {searching ? (
-        <ul className="pilpod-browser-profile__list">
+        <ul className="pilpod-control-grid pilpod-browser-profile__media-grid">
           {group.tabs.map((t) => renderTabRow(t, tabIsLinkIdentifiedMedia(t)))}
         </ul>
       ) : (
@@ -255,7 +243,7 @@ function GroupedTabContent({
   if (windowGroups.length <= 1) {
     if (searching) {
       return (
-        <ul className="pilpod-browser-profile__list">
+        <ul className="pilpod-control-grid pilpod-browser-profile__media-grid">
           {tabs.map((t) => renderTabRow(t, tabIsLinkIdentifiedMedia(t)))}
         </ul>
       );
@@ -295,17 +283,21 @@ function BrowserBody({
   onClose,
   onReactivate,
   onDownload,
+  onMixerVolume,
+  profileAudio,
   downloadTasks,
 }: {
   browser: DetectedBrowser;
   pendingKeys: ReadonlySet<string>;
   searching: boolean;
+  profileAudio: AudioSessionInfoDto | undefined;
   onPlayPause: (tab: BrowserTab, browserId: string) => void;
   onFocusTab: (tab: BrowserTab, browserId: string, displayName: string) => void | Promise<void>;
   onReload: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onClose: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onReactivate: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onDownload: (url: string) => void;
+  onMixerVolume: (instanceId: string, volume: number) => void;
   downloadTasks: Map<string, DownloadTask>;
 }) {
   const slotBrowserId = browser.id;
@@ -324,6 +316,8 @@ function BrowserBody({
         browserDisplayName={browserDisplayLabel(browser)}
         busy={pendingKeys.has(rk)}
         showMediaControls={showMediaControls}
+        profileAudio={showMediaControls ? profileAudio : undefined}
+        onMixerVolume={showMediaControls ? onMixerVolume : undefined}
         onPlayPause={onPlayPause}
         onFocus={onFocusTab}
         onReload={onReload}
@@ -413,29 +407,36 @@ function TabSearchBar({
   searching: boolean;
 }) {
   return (
-    <div className="pilpod-browser-panel__search">
-      <input
-        type="search"
-        className="pilpod-browser-panel__search-input"
-        placeholder="Search tabs across all browsers…"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label="Search tabs across all browsers"
-      />
-      {value ? (
-        <button
-          type="button"
-          className="pilpod-browser-panel__search-clear"
-          aria-label="Clear search"
-          onClick={() => onChange("")}
-        >
-          ×
-        </button>
-      ) : null}
-      {searching ? (
-        <span className="pilpod-browser-panel__search-count" aria-live="polite">
-          {matchCount} {matchCount === 1 ? "tab" : "tabs"}
+    <div className="pilpod-launcher">
+      <div className="pilpod-launcher__bar">
+        <span className="pilpod-launcher__icon" aria-hidden>
+          ⌕
         </span>
+        <input
+          type="search"
+          className="pilpod-launcher__input"
+          placeholder="Find a tab across all browsers…"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label="Search tabs across all browsers"
+        />
+        {value ? (
+          <button
+            type="button"
+            className="pilpod-launcher__clear"
+            aria-label="Clear search"
+            onClick={() => onChange("")}
+          >
+            ×
+          </button>
+        ) : null}
+      </div>
+      {searching ? (
+        <div className="pilpod-launcher__results" aria-live="polite">
+          <span className="pilpod-launcher__count">
+            {matchCount} {matchCount === 1 ? "match" : "matches"}
+          </span>
+        </div>
       ) : null}
     </div>
   );
@@ -721,20 +722,20 @@ export function BrowserSessionsPanel({
             <div key={browser.id} className="pilpod-browser-profile">
               <BrowserHeader
                 browser={browser}
-                profileAudio={profileAudio}
-                onMixerVolume={onMixerVolume}
                 onRefresh={() => onRefreshBrowser(browser.id)}
               />
               <BrowserBody
                 browser={browser}
                 pendingKeys={pendingKeys}
                 searching={searching}
+                profileAudio={profileAudio}
                 onPlayPause={onPlayPause}
                 onFocusTab={onFocusTab}
                 onReload={onReload}
                 onClose={onClose}
                 onReactivate={onReactivate}
                 onDownload={handleDownload}
+                onMixerVolume={onMixerVolume}
                 downloadTasks={downloadTasks}
               />
             </div>
