@@ -23,8 +23,11 @@ import {
   IconOpenInTab,
   IconPause,
   IconPlay,
+  IconReload,
+  IconX,
   Spinner,
 } from "../../../shared/ui/icons";
+import { useTabCloseConfirm } from "../hooks/useTabCloseConfirm";
 
 type Props = {
   tab: BrowserTab;
@@ -69,6 +72,10 @@ export function UnifiedTabRow({
   const isMediaTab = tabIsLinkIdentifiedMedia(tab);
   const hasMediaControls = tabHasMediaControls(tab);
   const isMediaCard = isMediaTab && showMediaControls;
+
+  const { closeConfirm, handleClose, closeTitle } = useTabCloseConfirm({
+    onClose: () => void onClose(tab, browserId),
+  });
 
   const fav =
     tab.favIconUrl?.trim() ||
@@ -211,21 +218,23 @@ export function UnifiedTabRow({
             <>
               <button
                 type="button"
-                className="pilpod-control-card__ghost-btn"
+                className="pilpod-control-card__icon-act pilpod-control-card__icon-act--rl"
                 disabled={busy}
                 title="Reload tab"
+                aria-label="Reload tab"
                 onClick={() => void onReload(tab, browserId)}
               >
-                Reload
+                <IconReload />
               </button>
               <button
                 type="button"
-                className="pilpod-control-card__ghost-btn pilpod-control-card__ghost-btn--danger"
+                className={`pilpod-control-card__icon-act pilpod-control-card__icon-act--cl${closeConfirm ? " pilpod-control-card__icon-act--cl-confirm" : ""}`}
                 disabled={busy}
-                title="Close tab"
-                onClick={() => void onClose(tab, browserId)}
+                title={closeTitle}
+                aria-label="Close tab"
+                onClick={handleClose}
               >
-                Close
+                <IconX />
               </button>
             </>
           ) : null}

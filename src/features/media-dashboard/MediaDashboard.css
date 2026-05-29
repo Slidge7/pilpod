@@ -26,7 +26,8 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0.75rem;
+  padding: 10px;
+  padding-bottom: 4.25rem;
 }
 
 /* User-selected wallpaper covers the entire inner shell (header + body).
@@ -49,8 +50,11 @@
   background: transparent;
 }
 
-/* Section containers also become transparent so the wallpaper shows through. */
-.pilpod-dashboard-shell__inner--wallpaper .pilpod-browser-profile,
+.pilpod-dashboard-shell__inner--wallpaper .pilpod-source-tab-bar {
+  background: transparent;
+}
+
+/* Inner sections stay transparent; glass shells keep blur + border via glass-float-shell.css */
 .pilpod-dashboard-shell__inner--wallpaper .pilpod-browser-profile__head,
 .pilpod-dashboard-shell__inner--wallpaper .pilpod-browser-profile__window {
   background: transparent;

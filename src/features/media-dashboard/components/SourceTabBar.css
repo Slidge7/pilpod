@@ -1,38 +1,81 @@
 .pilpod-source-tab-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
   display: flex;
   flex-shrink: 0;
-  gap: 0.35rem;
-  padding: 0.45rem 0.65rem;
-  border-bottom: 1px solid var(--pilpod-border-muted);
-  background: var(--pilpod-bg-tab-track);
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem 0.8rem;
+  background: transparent;
+  border: none;
+  pointer-events: none;
 }
 
 .pilpod-source-tab-bar__tab {
-  flex: 1;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.4rem 0.55rem;
+  position: relative;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  flex: 0 1 auto;
+  min-width: 0;
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.01em;
-  background: transparent;
-  color: var(--pilpod-text-muted);
+  letter-spacing: 0.02em;
+  color: var(--pilpod-glass-text-muted);
   cursor: pointer;
+  overflow: hidden;
   transition:
     color 0.15s ease,
     background-color 0.15s ease,
     border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.pilpod-source-tab-bar__tab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--pilpod-glass-float-sheen);
+  pointer-events: none;
+}
+
+.pilpod-source-tab-bar__tab-icon,
+.pilpod-source-tab-bar__tab-label {
+  position: relative;
+  z-index: 1;
+}
+
+.pilpod-source-tab-bar__tab-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.pilpod-source-tab-bar__tab-label {
+  white-space: nowrap;
 }
 
 .pilpod-source-tab-bar__tab:hover:not(.pilpod-source-tab-bar__tab--active) {
-  color: var(--pilpod-text-secondary);
-  background: var(--pilpod-bg-row-hover);
+  color: var(--pilpod-glass-text);
+  border-color: color-mix(in srgb, var(--pilpod-glass-float-border) 60%, var(--pilpod-text) 40%);
 }
 
 .pilpod-source-tab-bar__tab--active {
-  border-color: var(--pilpod-accent-blue-ring);
-  background: var(--pilpod-accent-blue-muted);
-  color: var(--pilpod-accent-blue-hover);
-  box-shadow: 0 0 12px var(--pilpod-accent-blue-muted);
+  color: var(--pilpod-glass-float-active-text);
+}
+
+.pilpod-source-tab-bar__tab--active .pilpod-source-tab-bar__tab-icon {
+  opacity: 1;
+  color: var(--pilpod-glass-float-active-text);
 }

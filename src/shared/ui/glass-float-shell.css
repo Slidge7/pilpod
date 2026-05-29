@@ -1,0 +1,112 @@
+/**
+ * Floating glass shells — box-shadow must be literal (not via var()).
+ * Comma-separated values inside a custom property break when used as box-shadow.
+ */
+
+.pilpod-media-item,
+.pilpod-control-card.pilpod-control-card--tab,
+.pilpod-source-tab-bar__tab,
+.pilpod-launcher__shell,
+.pilpod-browser-profile {
+  position: relative;
+  background: var(--pilpod-glass-float-surface);
+  border: 1px solid var(--pilpod-glass-float-border);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow:
+    0 2px 0 0 rgba(255, 255, 255, 0.92) inset,
+    0 -1px 0 0 rgba(15, 23, 42, 0.07) inset,
+    -1px 5px 4px 0 rgba(15, 23, 42, 0.07),
+    0 4px 14px rgba(15, 23, 42, 0.1);
+}
+
+.pilpod-launcher__shell::before,
+.pilpod-browser-profile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--pilpod-glass-float-sheen);
+  pointer-events: none;
+}
+
+.pilpod-launcher__shell > *,
+.pilpod-browser-profile > * {
+  position: relative;
+  z-index: 1;
+}
+
+html.dark .pilpod-media-item,
+html.dark .pilpod-control-card.pilpod-control-card--tab,
+html.dark .pilpod-source-tab-bar__tab,
+html.dark .pilpod-launcher__shell,
+html.dark .pilpod-browser-profile {
+  box-shadow:
+    0 2px 0 0 rgba(255, 255, 255, 0.2) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.35) inset,
+    -1px 5px 4px 0 rgba(0, 0, 0, 0.28),
+    0 4px 16px rgba(0, 0, 0, 0.32);
+}
+
+.pilpod-media-item:hover,
+.pilpod-control-card.pilpod-control-card--tab:hover:not(.pilpod-control-card--playing),
+.pilpod-source-tab-bar__tab:hover:not(.pilpod-source-tab-bar__tab--active),
+.pilpod-launcher--expanded .pilpod-launcher__shell,
+.pilpod-launcher__shell:focus-within {
+  background: var(--pilpod-glass-float-surface);
+  box-shadow:
+    0 2px 0 0 rgba(255, 255, 255, 0.95) inset,
+    0 -1px 0 0 rgba(15, 23, 42, 0.09) inset,
+    -1px 6px 5px 0 rgba(15, 23, 42, 0.09),
+    0 8px 22px rgba(15, 23, 42, 0.12);
+}
+
+.pilpod-launcher--expanded .pilpod-launcher__shell,
+.pilpod-launcher__shell:focus-within {
+  border-color: var(--pilpod-accent-blue-ring);
+  box-shadow:
+    0 2px 0 0 rgba(255, 255, 255, 0.95) inset,
+    0 -1px 0 0 rgba(15, 23, 42, 0.09) inset,
+    -1px 6px 5px 0 rgba(15, 23, 42, 0.09),
+    0 8px 22px rgba(15, 23, 42, 0.12),
+    0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+html.dark .pilpod-launcher--expanded .pilpod-launcher__shell,
+html.dark .pilpod-launcher__shell:focus-within {
+  box-shadow:
+    0 2px 0 0 rgba(255, 255, 255, 0.24) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.38) inset,
+    -1px 6px 5px 0 rgba(0, 0, 0, 0.32),
+    0 8px 24px rgba(0, 0, 0, 0.38),
+    0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+html.dark .pilpod-media-item:hover,
+html.dark .pilpod-control-card.pilpod-control-card--tab:hover:not(.pilpod-control-card--playing),
+html.dark .pilpod-source-tab-bar__tab:hover:not(.pilpod-source-tab-bar__tab--active) {
+  box-shadow:
+    0 2px 0 0 rgba(255, 255, 255, 0.24) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.38) inset,
+    -1px 6px 5px 0 rgba(0, 0, 0, 0.32),
+    0 8px 24px rgba(0, 0, 0, 0.38);
+}
+
+.pilpod-media-item--playing,
+.pilpod-source-tab-bar__tab--active {
+  border-color: var(--pilpod-glass-float-playing-border);
+  box-shadow:
+    0 2px 0 0 rgba(255, 255, 255, 0.92) inset,
+    0 -1px 0 0 rgba(15, 23, 42, 0.08) inset,
+    0 0 0 1px rgba(37, 99, 235, 0.2),
+    0 6px 20px rgba(37, 99, 235, 0.14);
+}
+
+html.dark .pilpod-media-item--playing,
+html.dark .pilpod-source-tab-bar__tab--active {
+  box-shadow:
+    0 2px 0 0 rgba(255, 255, 255, 0.2) inset,
+    0 -1px 0 0 rgba(0, 0, 0, 0.35) inset,
+    0 0 0 1px rgba(59, 130, 246, 0.28),
+    0 6px 22px rgba(59, 130, 246, 0.18);
+}

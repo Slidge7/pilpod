@@ -68,6 +68,14 @@
   --pilpod-card-radius: 12px;
   --pilpod-card-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
 
+  /* Neutral floating glass — dock + tab row shells (light) */
+  --pilpod-glass-float-surface: transparent;
+  --pilpod-glass-float-border: rgba(15, 23, 42, 0.14);
+  --pilpod-glass-float-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 55%);
+  --pilpod-glass-float-active-border: var(--pilpod-accent-blue-ring);
+  --pilpod-glass-float-active-text: var(--pilpod-accent-blue);
+  --pilpod-glass-float-playing-border: var(--pilpod-accent-blue-ring);
+
   /* Glass media item — light mode */
   --pilpod-glass-surface: rgba(255, 255, 255, 0.62);
   --pilpod-glass-border: rgba(15, 23, 42, 0.1);
@@ -235,6 +243,14 @@ html.dark {
 
   --pilpod-card-shadow: 0 4px 24px rgb(0 0 0 / 0.35);
 
+  /* Neutral floating glass — dock + tab row shells (dark) */
+  --pilpod-glass-float-surface: transparent;
+  --pilpod-glass-float-border: rgba(255, 255, 255, 0.16);
+  --pilpod-glass-float-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 55%);
+  --pilpod-glass-float-active-border: var(--pilpod-accent-blue-ring);
+  --pilpod-glass-float-active-text: var(--pilpod-accent-blue-hover);
+  --pilpod-glass-float-playing-border: var(--pilpod-accent-blue-ring);
+
   /* Glass media item — dark mode */
   --pilpod-glass-surface: transparent;
   --pilpod-glass-border: rgba(255, 255, 255, 0.18);
@@ -368,9 +384,19 @@ body,
   list-style: none;
 }
 
+.pilpod-control-grid > li {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .pilpod-control-grid--compact {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.35rem;
+}
+
+.pilpod-control-grid--compact > li {
+  min-width: 0;
+  max-width: 100%;
 }
 
 @media (max-width: 340px) {

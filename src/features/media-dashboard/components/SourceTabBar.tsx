@@ -1,5 +1,6 @@
 import "./SourceTabBar.css";
 import type { MediaMainTab } from "../model";
+import { IconDownload, IconGlobe, IconMonitor } from "../../../shared/ui/icons";
 
 type Props = {
   mainTab: MediaMainTab;
@@ -34,7 +35,10 @@ export function SourceTabBar({
             : "pilpod-source-tab-bar__tab"
         }
       >
-        Browsers ({browserTabCount})
+        <IconGlobe className="pilpod-source-tab-bar__tab-icon" />
+        <span className="pilpod-source-tab-bar__tab-label">
+          Browsers ({browserTabCount})
+        </span>
       </button>
       <button
         type="button"
@@ -49,7 +53,10 @@ export function SourceTabBar({
             : "pilpod-source-tab-bar__tab"
         }
       >
-        Windows ({sessionCount})
+        <IconMonitor className="pilpod-source-tab-bar__tab-icon" />
+        <span className="pilpod-source-tab-bar__tab-label">
+          Windows ({sessionCount})
+        </span>
       </button>
       <button
         type="button"
@@ -64,7 +71,8 @@ export function SourceTabBar({
             : "pilpod-source-tab-bar__tab"
         }
       >
-        Download
+        <IconDownload className="pilpod-source-tab-bar__tab-icon" />
+        <span className="pilpod-source-tab-bar__tab-label">Download</span>
       </button>
     </div>
   );

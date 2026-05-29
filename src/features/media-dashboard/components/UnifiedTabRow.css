@@ -13,7 +13,7 @@
     background-color 0.2s ease;
 }
 
-.pilpod-control-card:hover:not(.pilpod-control-card--playing) {
+.pilpod-control-card:hover:not(.pilpod-control-card--playing):not(.pilpod-control-card--tab) {
   border-color: var(--pilpod-border-strong);
   background: var(--pilpod-bg-elevated);
 }
@@ -23,7 +23,30 @@
 }
 
 .pilpod-control-card--tab {
-  padding: 0.45rem 0.65rem;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.4rem 0.55rem;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.pilpod-control-card--tab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--pilpod-glass-float-sheen);
+  pointer-events: none;
+}
+
+/* glass hover shadow: see shared/ui/glass-float-shell.css */
+
+.pilpod-control-card--tab .pilpod-control-card__main {
+  position: relative;
+  z-index: 1;
 }
 
 .pilpod-control-card--playing {
@@ -45,9 +68,14 @@
 
 .pilpod-control-card__main {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.65rem;
   min-width: 0;
+  width: 100%;
+}
+
+.pilpod-control-card--tab .pilpod-control-card__main {
+  align-items: center;
 }
 
 .pilpod-control-card__thumb-wrap {
@@ -62,6 +90,9 @@
 }
 
 .pilpod-control-card--tab .pilpod-control-card__thumb-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 2rem;
   height: 2rem;
   border-radius: 6px;
@@ -69,19 +100,23 @@
 
 .pilpod-control-card__fav {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 14px;
+  height: 14px;
   object-fit: contain;
-  padding: 4px;
+}
+
+.pilpod-control-card--tab .pilpod-control-card__fav {
+  width: 16px;
+  height: 16px;
 }
 
 .pilpod-control-card__fav-fallback {
   display: block;
   width: 10px;
   height: 10px;
-  margin: auto;
   border-radius: 50%;
   background: var(--pilpod-border-strong);
+  flex-shrink: 0;
 }
 
 .pilpod-control-card__open-tab {
@@ -122,6 +157,11 @@
   min-width: 0;
   flex: 1;
   padding-top: 0.1rem;
+  overflow: hidden;
+}
+
+.pilpod-control-card--tab .pilpod-control-card__body {
+  padding-top: 0;
 }
 
 .pilpod-control-card__title-row {
@@ -181,6 +221,10 @@
   margin-left: auto;
 }
 
+.pilpod-control-card--tab .pilpod-control-card__actions {
+  gap: 0.25rem;
+}
+
 .pilpod-control-card__ghost-btn {
   flex-shrink: 0;
   cursor: pointer;
@@ -209,6 +253,74 @@
 .pilpod-control-card__ghost-btn--danger {
   border-color: color-mix(in srgb, var(--pilpod-playback-red) 35%, transparent);
   color: var(--pilpod-playback-red);
+}
+
+.pilpod-control-card__icon-act {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 1px solid var(--pilpod-glass-menu-act-border);
+  background: var(--pilpod-glass-menu-act-bg);
+  color: var(--pilpod-glass-menu-act-color);
+  transition:
+    background 0.14s,
+    border-color 0.14s,
+    transform 0.14s,
+    box-shadow 0.14s,
+    color 0.14s;
+}
+
+.pilpod-control-card__icon-act svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pilpod-control-card__icon-act:hover:not(:disabled) {
+  transform: scale(1.06);
+}
+
+.pilpod-control-card__icon-act:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.pilpod-control-card__icon-act:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.pilpod-control-card__icon-act--rl:hover:not(:disabled) {
+  background: var(--pilpod-act-rl-bg);
+  border-color: var(--pilpod-act-rl-border);
+  color: var(--pilpod-act-rl-text);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.25);
+}
+
+.pilpod-control-card__icon-act--cl:hover:not(:disabled) {
+  background: var(--pilpod-act-cl-bg);
+  border-color: var(--pilpod-act-cl-border);
+  color: var(--pilpod-act-cl-text);
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.25);
+}
+
+.pilpod-control-card__icon-act--cl-confirm {
+  background: var(--pilpod-glass-close-confirm-bg) !important;
+  border-color: var(--pilpod-glass-close-confirm-border) !important;
+  color: var(--pilpod-glass-close-confirm-text) !important;
+  box-shadow: var(--pilpod-glass-close-confirm-shadow) !important;
+  animation: pilpod-close-bounce 0.34s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes pilpod-close-bounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.35); }
+  55% { transform: scale(0.85); }
+  75% { transform: scale(1.15); }
+  100% { transform: scale(1); }
 }
 
 .pilpod-control-card__dl-progress {

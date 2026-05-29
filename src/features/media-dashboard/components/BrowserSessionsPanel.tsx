@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import "./BrowserSessionsPanel.css";
 import type { AudioSessionInfoDto, BrowserTab, DetectedBrowser } from "../../../types/media";
 import {
@@ -9,6 +9,7 @@ import {
 } from "../../../shared/groupTabsByWindow";
 import {
   applySearchTagFilters,
+  collectAllTabMatches,
   collectTextSearchMatches,
   deriveSearchTagOptions,
   groupSearchMatchesByBrowser,
@@ -420,49 +421,117 @@ function BrowserBody({
   );
 }
 
-function TabSearchBar({
+function TabSearchHub({
   value,
   onChange,
   matchCount,
   searching,
+  filterActive,
+  expanded,
+  onExpandedChange,
+  sites,
+  browsers: browserTags,
+  selectedSites,
+  selectedBrowsers,
+  onToggleSite,
+  onToggleBrowser,
+  onExcludeSite,
+  onExcludeBrowser,
 }: {
   value: string;
   onChange: (value: string) => void;
   matchCount: number;
   searching: boolean;
+  filterActive: boolean;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
+  sites: SearchTagOption[];
+  browsers: SearchTagOption[];
+  selectedSites: ReadonlySet<string>;
+  selectedBrowsers: ReadonlySet<string>;
+  onToggleSite: (key: string) => void;
+  onToggleBrowser: (key: string) => void;
+  onExcludeSite: (key: string) => void;
+  onExcludeBrowser: (key: string) => void;
 }) {
+  const shellRef = useRef<HTMLDivElement>(null);
+
+  const launcherClass = [
+    "pilpod-launcher",
+    expanded ? "pilpod-launcher--expanded" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const handleShellPointerDown = () => {
+    onExpandedChange(true);
+  };
+
+  const handleShellBlur = (e: React.FocusEvent) => {
+    const next = e.relatedTarget as Node | null;
+    if (next && shellRef.current?.contains(next)) return;
+    if (value.trim() || filterActive) return;
+    onExpandedChange(false);
+  };
+
+  const showMatchCount = searching || filterActive;
+
   return (
-    <div className="pilpod-launcher">
-      <div className="pilpod-launcher__bar">
-        <span className="pilpod-launcher__icon" aria-hidden>
-          ⌕
-        </span>
-        <input
-          type="search"
-          className="pilpod-launcher__input"
-          placeholder="Find a tab across all browsers…"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          aria-label="Search tabs across all browsers"
-        />
-        {value ? (
-          <button
-            type="button"
-            className="pilpod-launcher__clear"
-            aria-label="Clear search"
-            onClick={() => onChange("")}
-          >
-            ×
-          </button>
-        ) : null}
-      </div>
-      {searching ? (
-        <div className="pilpod-launcher__results" aria-live="polite">
-          <span className="pilpod-launcher__count">
-            {matchCount} {matchCount === 1 ? "match" : "matches"}
+    <div className={launcherClass}>
+      <div
+        ref={shellRef}
+        className="pilpod-launcher__shell"
+        onPointerDown={handleShellPointerDown}
+        onBlur={handleShellBlur}
+      >
+        <div className="pilpod-launcher__bar">
+          <span className="pilpod-launcher__icon" aria-hidden>
+            ⌕
           </span>
+          <input
+            type="search"
+            className="pilpod-launcher__input"
+            placeholder="Find a tab…"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onFocus={() => onExpandedChange(true)}
+            aria-label="Search tabs across all browsers"
+            aria-expanded={expanded}
+          />
+          {value ? (
+            <button
+              type="button"
+              className="pilpod-launcher__clear"
+              aria-label="Clear search"
+              onClick={() => onChange("")}
+            >
+              ×
+            </button>
+          ) : null}
         </div>
-      ) : null}
+
+        <div className="pilpod-launcher__panel" aria-hidden={!expanded}>
+          <div className="pilpod-launcher__panel-inner">
+            <TabSearchFilters
+              sites={sites}
+              browsers={browserTags}
+              selectedSites={selectedSites}
+              selectedBrowsers={selectedBrowsers}
+              onToggleSite={onToggleSite}
+              onToggleBrowser={onToggleBrowser}
+              onExcludeSite={onExcludeSite}
+              onExcludeBrowser={onExcludeBrowser}
+            />
+            {showMatchCount ? (
+              <div className="pilpod-launcher__results" aria-live="polite">
+                <span className="pilpod-launcher__count">
+                  {matchCount} {matchCount === 1 ? "match" : "matches"}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -529,10 +598,11 @@ function TabSearchFilters({
   onExcludeSite: (key: string) => void;
   onExcludeBrowser: (key: string) => void;
 }) {
-  if (sites.length === 0 && browsers.length === 0) return null;
-
   return (
     <div className="pilpod-browser-panel__filters">
+      {sites.length === 0 && browsers.length === 0 ? (
+        <p className="pilpod-browser-panel__filters-empty">No tabs to filter yet.</p>
+      ) : null}
       {sites.length > 0 ? (
         <div className="pilpod-browser-panel__filter-row">
           <span className="pilpod-browser-panel__filter-label">Sites</span>
@@ -601,9 +671,19 @@ export function BrowserSessionsPanel({
   const [excludedBrowsers, setExcludedBrowsers] = useState<Set<string>>(() => new Set());
   const [selectedSites, setSelectedSites] = useState<Set<string>>(() => new Set());
   const [selectedBrowsers, setSelectedBrowsers] = useState<Set<string>>(() => new Set());
+  const [searchExpanded, setSearchExpanded] = useState(false);
 
   const normalizedQuery = normalizeSearchQuery(searchQuery);
   const searching = normalizedQuery.length > 0;
+
+  const filterActive =
+    selectedSites.size > 0 ||
+    selectedBrowsers.size > 0 ||
+    excludedSites.size > 0 ||
+    excludedBrowsers.size > 0;
+
+  const narrowResults = searching || filterActive;
+  const searchExpandedEffective = searchExpanded || searching || filterActive;
 
   const resetTagFilters = useCallback(() => {
     setExcludedSites(new Set());
@@ -620,22 +700,24 @@ export function BrowserSessionsPanel({
     [resetTagFilters],
   );
 
+  const allTabMatches = useMemo(() => collectAllTabMatches(browsers), [browsers]);
+
   const textMatches = useMemo(
-    () => (searching ? collectTextSearchMatches(browsers, normalizedQuery) : []),
-    [browsers, normalizedQuery, searching],
+    () =>
+      searching
+        ? collectTextSearchMatches(browsers, normalizedQuery)
+        : allTabMatches,
+    [browsers, normalizedQuery, searching, allTabMatches],
   );
 
   const tagOptions = useMemo(
-    () =>
-      searching
-        ? deriveSearchTagOptions(textMatches, excludedSites, excludedBrowsers)
-        : { sites: [], browsers: [] },
-    [textMatches, excludedSites, excludedBrowsers, searching],
+    () => deriveSearchTagOptions(textMatches, excludedSites, excludedBrowsers),
+    [textMatches, excludedSites, excludedBrowsers],
   );
 
   const filteredMatches = useMemo(
     () =>
-      searching
+      narrowResults
         ? applySearchTagFilters(
             textMatches,
             excludedSites,
@@ -650,14 +732,14 @@ export function BrowserSessionsPanel({
       excludedBrowsers,
       selectedSites,
       selectedBrowsers,
-      searching,
+      narrowResults,
     ],
   );
 
   const displayBrowsers = useMemo(() => {
-    if (!searching) return browsers;
+    if (!narrowResults) return browsers;
     return groupSearchMatchesByBrowser(browsers, filteredMatches);
-  }, [browsers, filteredMatches, searching]);
+  }, [browsers, filteredMatches, narrowResults]);
 
   const matchCount = useMemo(
     () => displayBrowsers.reduce((sum, browser) => sum + browser.tabs.length, 0),
@@ -711,27 +793,25 @@ export function BrowserSessionsPanel({
 
   return (
     <section role="tabpanel" id="panel-browser" aria-labelledby="tab-browser">
-      <TabSearchBar
+      <TabSearchHub
         value={searchQuery}
         onChange={handleSearchChange}
         matchCount={matchCount}
         searching={searching}
+        filterActive={filterActive}
+        expanded={searchExpandedEffective}
+        onExpandedChange={setSearchExpanded}
+        sites={tagOptions.sites}
+        browsers={tagOptions.browsers}
+        selectedSites={selectedSites}
+        selectedBrowsers={selectedBrowsers}
+        onToggleSite={handleToggleSite}
+        onToggleBrowser={handleToggleBrowser}
+        onExcludeSite={handleExcludeSite}
+        onExcludeBrowser={handleExcludeBrowser}
       />
 
-      {searching ? (
-        <TabSearchFilters
-          sites={tagOptions.sites}
-          browsers={tagOptions.browsers}
-          selectedSites={selectedSites}
-          selectedBrowsers={selectedBrowsers}
-          onToggleSite={handleToggleSite}
-          onToggleBrowser={handleToggleBrowser}
-          onExcludeSite={handleExcludeSite}
-          onExcludeBrowser={handleExcludeBrowser}
-        />
-      ) : null}
-
-      {searching && displayBrowsers.length === 0 ? (
+      {narrowResults && displayBrowsers.length === 0 ? (
         <p className="pilpod-browser-panel__empty">
           {textMatches.length === 0
             ? <>No tabs match &ldquo;{searchQuery.trim()}&rdquo;.</>
@@ -752,7 +832,7 @@ export function BrowserSessionsPanel({
               <BrowserBody
                 browser={browser}
                 pendingKeys={pendingKeys}
-                searching={searching}
+                searching={narrowResults}
                 profileAudio={profileAudio}
                 onPlayPause={onPlayPause}
                 onFocusTab={onFocusTab}

@@ -1,38 +1,41 @@
-/* Launcher-style tab search */
+/* ── Tab search hub (compact → expanded) ─────────────────── */
+
 .pilpod-launcher {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  padding-inline: 0.25rem;
+  justify-content: center;
+  margin-bottom: 0.85rem;
+  padding-top: 0.15rem;
+}
+
+.pilpod-launcher__shell {
+  width: min(100%, 15.5rem);
+  border-radius: 999px;
+  transition:
+    width 0.38s cubic-bezier(0.34, 1.1, 0.64, 1),
+    border-radius 0.38s cubic-bezier(0.34, 1.1, 0.64, 1),
+    border-color 0.22s ease,
+    box-shadow 0.28s ease;
+}
+
+.pilpod-launcher--expanded .pilpod-launcher__shell {
+  width: min(100%, 34rem);
+  border-radius: 16px;
 }
 
 .pilpod-launcher__bar {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  width: min(100%, 28rem);
-  padding: 0.45rem 0.65rem;
-  border-radius: 999px;
-  border: 1px solid var(--pilpod-border-strong);
-  background: var(--pilpod-bg-elevated);
-  box-shadow: var(--pilpod-card-shadow);
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.pilpod-launcher__bar:focus-within {
-  border-color: var(--pilpod-accent-blue);
-  box-shadow:
-    var(--pilpod-card-shadow),
-    0 0 0 3px var(--pilpod-accent-blue-muted);
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.42rem 0.7rem;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .pilpod-launcher__icon {
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
   color: var(--pilpod-text-muted);
 }
@@ -42,7 +45,7 @@
   min-width: 0;
   border: none;
   background: transparent;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--pilpod-text);
   outline: none;
@@ -57,18 +60,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.35rem;
+  height: 1.35rem;
   flex-shrink: 0;
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: var(--pilpod-bg-muted);
+  background: rgba(15, 23, 42, 0.06);
   color: var(--pilpod-text-muted);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+html.dark .pilpod-launcher__clear {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .pilpod-launcher__clear:hover {
@@ -76,12 +83,29 @@
   color: var(--pilpod-text);
 }
 
+.pilpod-launcher__panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.38s cubic-bezier(0.34, 1.1, 0.64, 1);
+}
+
+.pilpod-launcher--expanded .pilpod-launcher__panel {
+  grid-template-rows: 1fr;
+}
+
+.pilpod-launcher__panel-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.pilpod-launcher--expanded .pilpod-launcher__panel-inner {
+  padding: 0 0.65rem 0.65rem;
+}
+
 .pilpod-launcher__results {
-  width: min(100%, 28rem);
-  padding: 0.5rem 0.85rem;
-  border-radius: var(--pilpod-card-radius);
-  border: 1px solid var(--pilpod-border-muted);
-  background: var(--pilpod-bg-card);
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--pilpod-glass-float-border);
 }
 
 .pilpod-launcher__count {
@@ -91,17 +115,27 @@
   color: var(--pilpod-accent-blue-hover);
 }
 
+/* glass surface + shadow on .pilpod-launcher__shell: shared/ui/glass-float-shell.css */
+
+/* ── Filters (inside expanded hub) ───────────────────────── */
+
 .pilpod-browser-panel__filters {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  width: min(100%, 32rem);
-  margin-inline: auto;
-  margin-bottom: 0.85rem;
-  padding: 0.65rem 0.85rem;
-  border-radius: var(--pilpod-card-radius);
-  border: 1px solid var(--pilpod-border-muted);
-  background: var(--pilpod-bg-card);
+  gap: 0.55rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.pilpod-browser-panel__filters-empty {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--pilpod-text-subtle);
+  text-align: center;
 }
 
 .pilpod-browser-panel__filter-row {
@@ -112,11 +146,11 @@
 
 .pilpod-browser-panel__filter-label {
   flex-shrink: 0;
-  width: 3.5rem;
-  padding-top: 4px;
-  font-size: 10px;
+  width: 3.75rem;
+  padding-top: 5px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--pilpod-text-subtle);
 }
@@ -126,27 +160,48 @@
   flex-wrap: wrap;
   gap: 0.35rem;
   min-width: 0;
+  flex: 1;
 }
 
 .pilpod-search-tag {
   display: inline-flex;
   align-items: stretch;
   overflow: hidden;
-  border: 1px solid var(--pilpod-border-muted);
+  border: 1px solid var(--pilpod-glass-float-border);
   border-radius: 999px;
-  background: var(--pilpod-bg-muted);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.5) inset,
+    0 2px 6px rgba(15, 23, 42, 0.06);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+html.dark .pilpod-search-tag {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.12) inset,
+    0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .pilpod-search-tag--selected {
-  border-color: var(--pilpod-accent-blue);
+  border-color: var(--pilpod-accent-blue-ring);
   background: var(--pilpod-accent-blue-muted);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.55) inset,
+    0 0 0 1px rgba(37, 99, 235, 0.15),
+    0 3px 10px rgba(37, 99, 235, 0.12);
 }
 
 .pilpod-search-tag__label {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 3px 8px 3px 10px;
+  padding: 4px 8px 4px 10px;
   border: none;
   background: transparent;
   color: var(--pilpod-text-secondary);
@@ -178,17 +233,22 @@
   width: 1.35rem;
   padding: 0;
   border: none;
-  border-left: 1px solid var(--pilpod-border-muted);
+  border-left: 1px solid var(--pilpod-glass-float-border);
   background: transparent;
   color: var(--pilpod-text-muted);
   font-size: 12px;
   line-height: 1;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .pilpod-search-tag__exclude:hover {
   color: var(--pilpod-text);
-  background: var(--pilpod-bg-row-hover);
+  background: rgba(15, 23, 42, 0.06);
+}
+
+html.dark .pilpod-search-tag__exclude:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .pilpod-search-tag--selected .pilpod-search-tag__exclude {
@@ -203,6 +263,11 @@
   color: var(--pilpod-text-muted);
 }
 
+.pilpod-browser-panel__empty--inline {
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+}
+
 .pilpod-browser-panel__groups {
   display: flex;
   flex-direction: column;
@@ -210,11 +275,11 @@
 }
 
 .pilpod-browser-profile {
-  overflow: visible;
-  border-radius: var(--pilpod-card-radius);
-  border: 1px solid var(--pilpod-border-muted);
-  background: var(--pilpod-bg-elevated);
+  overflow: hidden;
+  border-radius: 14px;
 }
+
+/* glass surface + shadow: shared/ui/glass-float-shell.css */
 
 .pilpod-browser-profile__head {
   display: flex;
@@ -222,10 +287,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  border-bottom: 1px solid var(--pilpod-border-muted);
-  background: var(--pilpod-bg-muted);
+  border-bottom: 1px solid var(--pilpod-glass-float-border);
+  background: transparent;
   padding: 0.35rem 0.75rem;
-  border-radius: var(--pilpod-card-radius) var(--pilpod-card-radius) 0 0;
+  border-radius: 14px 14px 0 0;
 }
 
 .pilpod-browser-profile__label {
@@ -266,7 +331,7 @@
 }
 
 .pilpod-browser-profile__other {
-  border-top: 1px solid var(--pilpod-border-muted);
+  border-top: 1px solid var(--pilpod-glass-float-border);
 }
 
 .pilpod-browser-profile__other-summary {
@@ -311,17 +376,15 @@
 }
 
 .pilpod-browser-profile__label-offline {
-  opacity: 0.55;
-  font-weight: 400;
+  font-weight: 500;
+  color: var(--pilpod-text-subtle);
 }
 
 .pilpod-browser-profile__badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: 0.35rem;
-  border-radius: 6px;
-  padding: 2px 6px;
+  flex-shrink: 0;
+  margin-left: 0.25rem;
+  border-radius: 4px;
+  padding: 1px 5px;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -329,74 +392,67 @@
 }
 
 .pilpod-browser-profile__badge--warn {
-  background: color-mix(in srgb, #f59e0b 18%, transparent);
-  color: #f59e0b;
+  background: rgba(251, 191, 36, 0.15);
+  color: #b45309;
 }
 
 .pilpod-browser-profile__tab-count {
+  flex-shrink: 0;
+  margin-left: auto;
+  margin-right: 0.35rem;
   font-size: 10px;
   font-weight: 500;
-  color: var(--pilpod-text-muted);
-  margin-right: auto;
-  margin-left: 0.35rem;
-}
-
-.pilpod-browser-panel__empty--inline {
-  padding: 0.85rem 1rem;
-  text-align: left;
+  color: var(--pilpod-text-subtle);
+  white-space: nowrap;
 }
 
 .pilpod-browser-profile__badge--offline {
-  background: color-mix(in srgb, var(--pilpod-text-muted) 18%, transparent);
-  color: var(--pilpod-text-muted);
+  background: rgba(248, 113, 113, 0.12);
+  color: #dc2626;
 }
 
 .pilpod-browser-profile__badge--reconnecting {
   background: var(--pilpod-accent-blue-muted);
-  color: var(--pilpod-accent-blue-hover);
-  animation: pilpod-badge-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes pilpod-badge-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
+  color: var(--pilpod-accent-blue);
 }
 
 .pilpod-browser-profile__refresh {
   display: inline-flex;
+  width: 1.65rem;
+  height: 1.65rem;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  width: 1.75rem;
-  height: 1.75rem;
   padding: 0;
-  border: none;
+  border: 1px solid var(--pilpod-glass-float-border);
   border-radius: 8px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.08);
   color: var(--pilpod-text-muted);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-  user-select: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .pilpod-browser-profile__refresh:hover:not(:disabled) {
-  color: var(--pilpod-accent-blue-hover);
-  background: var(--pilpod-accent-blue-muted);
+  border-color: var(--pilpod-accent-blue-ring);
+  color: var(--pilpod-accent-blue);
 }
 
 .pilpod-browser-profile__refresh:disabled {
-  cursor: default;
-  opacity: 0.5;
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .pilpod-browser-profile__refresh--spinning {
-  animation: pilpod-spin 0.7s linear infinite;
+  animation: pilpod-spin 0.8s linear infinite;
 }
 
 .pilpod-browser-profile__stale {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 
 .pilpod-browser-profile__windows {
@@ -407,23 +463,24 @@
 }
 
 .pilpod-browser-profile__window {
-  overflow: visible;
-  border: 1px solid var(--pilpod-border-muted);
   border-radius: 10px;
-  background: var(--pilpod-bg-card);
+  border: 1px solid var(--pilpod-glass-float-border);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html.dark .pilpod-browser-profile__window {
+  background: rgba(0, 0, 0, 0.12);
 }
 
 .pilpod-browser-profile__window--focused {
   border-color: var(--pilpod-accent-blue-ring);
-  box-shadow: 0 0 0 1px var(--pilpod-accent-blue-muted);
 }
 
 .pilpod-browser-profile__window-head {
-  padding: 0.35rem 0.65rem;
-  border-bottom: 1px solid var(--pilpod-border-muted);
+  padding: 0.3rem 0.55rem;
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--pilpod-text-subtle);
 }
@@ -433,5 +490,11 @@
 }
 
 .pilpod-browser-profile__window .pilpod-browser-profile__other {
-  border-top: 1px solid var(--pilpod-border-muted);
+  border-top-color: var(--pilpod-glass-float-border);
+}
+
+@keyframes pilpod-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

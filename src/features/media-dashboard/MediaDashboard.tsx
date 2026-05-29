@@ -164,13 +164,6 @@ export function MediaDashboard() {
           onOpenDevLab={openDevLab}
         />
 
-        <SourceTabBar
-          mainTab={mainTab}
-          onMainTabChange={setMainTab}
-          browserTabCount={browserTabCount}
-          sessionCount={sessions.length}
-        />
-
         <main className="pilpod-dashboard-shell__main">
           {error ? (
             <div className="pilpod-alert-error">{error}</div>
@@ -206,6 +199,13 @@ export function MediaDashboard() {
             />
           )}
         </main>
+
+        <SourceTabBar
+          mainTab={mainTab}
+          onMainTabChange={setMainTab}
+          browserTabCount={browserTabCount}
+          sessionCount={sessions.length}
+        />
       </div>
     </div>
   );

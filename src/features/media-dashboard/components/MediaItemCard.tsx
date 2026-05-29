@@ -31,10 +31,10 @@ import {
   IconX,
   Spinner,
 } from "../../../shared/ui/icons";
+import { useTabCloseConfirm } from "../hooks/useTabCloseConfirm";
 
 const VOL_SLIDER_MAX = 600;
 const MENU_CLOSE_DELAY_MS = 1500;
-const CONFIRM_RESET_MS = 2800;
 
 type Props = {
   tab: BrowserTab;
@@ -100,14 +100,12 @@ export function MediaItemCard({
   const artist = tab.media ? mediaArtist(tab.media) : null;
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [closeConfirm, setCloseConfirm] = useState(false);
   const [muted, setMuted] = useState(false);
   const [reloadSpin, setReloadSpin] = useState(false);
   const [volLayout, setVolLayout] = useState({ fillPx: 0, thumbPx: 0 });
 
   const prevVolRef = useRef(1);
   const menuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const volTrackRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const expandRef = useRef<HTMLDivElement>(null);
@@ -157,7 +155,6 @@ export function MediaItemCard({
   useEffect(() => {
     return () => {
       if (menuCloseTimerRef.current) clearTimeout(menuCloseTimerRef.current);
-      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
     };
   }, []);
 
@@ -168,24 +165,25 @@ export function MediaItemCard({
     }
   }, []);
 
+  const { closeConfirm, handleClose, closeTitle, resetCloseConfirm } = useTabCloseConfirm({
+    onClose: () => void onClose(tab, browserId),
+    onBeforeInteract: cancelMenuClose,
+  });
+
   const closeMenu = useCallback(() => {
     cancelMenuClose();
     setMenuOpen(false);
-    setCloseConfirm(false);
-    if (confirmTimerRef.current) {
-      clearTimeout(confirmTimerRef.current);
-      confirmTimerRef.current = null;
-    }
-  }, [cancelMenuClose]);
+    resetCloseConfirm();
+  }, [cancelMenuClose, resetCloseConfirm]);
 
   const scheduleMenuClose = useCallback(() => {
     cancelMenuClose();
     menuCloseTimerRef.current = setTimeout(() => {
       menuCloseTimerRef.current = null;
       setMenuOpen(false);
-      setCloseConfirm(false);
+      resetCloseConfirm();
     }, MENU_CLOSE_DELAY_MS);
-  }, [cancelMenuClose]);
+  }, [cancelMenuClose, resetCloseConfirm]);
 
   const openMenu = useCallback(() => {
     cancelMenuClose();
@@ -200,11 +198,11 @@ export function MediaItemCard({
       if (expandRef.current?.contains(target)) return;
       cancelMenuClose();
       setMenuOpen(false);
-      setCloseConfirm(false);
+      resetCloseConfirm();
     };
     document.addEventListener("click", onDocClick);
     return () => document.removeEventListener("click", onDocClick);
-  }, [menuOpen, cancelMenuClose]);
+  }, [menuOpen, cancelMenuClose, resetCloseConfirm]);
 
   const handleToggleMenu = useCallback(
     (e: React.MouseEvent) => {
@@ -265,32 +263,6 @@ export function MediaItemCard({
       window.setTimeout(() => setReloadSpin(false), 520);
     },
     [onReload, tab, browserId, cancelMenuClose],
-  );
-
-  const resetCloseConfirm = useCallback(() => {
-    if (confirmTimerRef.current) {
-      clearTimeout(confirmTimerRef.current);
-      confirmTimerRef.current = null;
-    }
-    setCloseConfirm(false);
-  }, []);
-
-  const handleClose = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      cancelMenuClose();
-      if (!closeConfirm) {
-        setCloseConfirm(true);
-        confirmTimerRef.current = setTimeout(() => {
-          confirmTimerRef.current = null;
-          setCloseConfirm(false);
-        }, CONFIRM_RESET_MS);
-      } else {
-        resetCloseConfirm();
-        void onClose(tab, browserId);
-      }
-    },
-    [closeConfirm, onClose, tab, browserId, cancelMenuClose, resetCloseConfirm],
   );
 
   const volFillClass = [
@@ -503,7 +475,7 @@ export function MediaItemCard({
             type="button"
             className={`pilpod-media-item__menu-act pilpod-media-item__menu-act--cl${closeConfirm ? " pilpod-media-item__menu-act--cl-confirm" : ""}`}
             onClick={handleClose}
-            title={closeConfirm ? "Click again to close" : "Close tab"}
+            title={closeTitle}
             aria-label="Close tab"
           >
             <IconX />

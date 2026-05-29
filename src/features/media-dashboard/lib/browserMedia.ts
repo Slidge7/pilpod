@@ -90,6 +90,29 @@ export type SearchTagOption = {
   count: number;
 };
 
+/** Every open tab as a search match (for filters before any text query). */
+export function collectAllTabMatches(
+  browsers: ReadonlyArray<{
+    id: string;
+    displayName: string;
+    profileLabel?: string | null;
+    tabs: BrowserTab[];
+  }>,
+): SearchTabMatch[] {
+  const matches: SearchTabMatch[] = [];
+  for (const browser of browsers) {
+    const label = browser.profileLabel ?? browser.displayName;
+    for (const tab of browser.tabs) {
+      matches.push({
+        browserId: browser.id,
+        browserDisplayName: label,
+        tab,
+      });
+    }
+  }
+  return matches;
+}
+
 /** Flat list of tabs that match the text query across all browsers. */
 export function collectTextSearchMatches(
   browsers: ReadonlyArray<{
