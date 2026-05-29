@@ -1,0 +1,113 @@
+.pilpod-slide-menu {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.pilpod-slide-menu__panel {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem 0.9rem 0.75rem;
+  border-bottom: 1px solid var(--pilpod-border-muted);
+  background: var(--pilpod-bg-elevated);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 0.28);
+  transform: translateY(-100%);
+  transition:
+    transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
+  opacity: 0;
+}
+
+.pilpod-slide-menu--open {
+  pointer-events: auto;
+}
+
+.pilpod-slide-menu--open .pilpod-slide-menu__panel {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.pilpod-slide-menu__backdrop {
+  flex: 1;
+  min-height: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: rgb(0 0 0 / 0.32);
+  cursor: default;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.pilpod-slide-menu--open .pilpod-slide-menu__backdrop {
+  opacity: 1;
+}
+
+.pilpod-slide-menu__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.pilpod-slide-menu__btn {
+  display: flex;
+  height: 2.6rem;
+  min-width: 2.6rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: none;
+  background: var(--pilpod-bg-muted);
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pilpod-slide-menu__btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.pilpod-slide-menu__btn:hover {
+  background: var(--pilpod-bg-row-hover);
+  color: var(--pilpod-text);
+}
+
+.pilpod-slide-menu__btn--active {
+  background: var(--pilpod-accent-blue-muted);
+  color: var(--pilpod-accent-blue-hover);
+  box-shadow: inset 0 0 0 1px var(--pilpod-accent-blue-ring);
+}
+
+.pilpod-slide-menu__btn--active:hover {
+  background: color-mix(in srgb, var(--pilpod-accent-blue) 22%, transparent);
+  color: var(--pilpod-accent-blue-hover);
+}
+
+.pilpod-slide-menu__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pilpod-slide-menu__credit,
+.pilpod-slide-menu__stats {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--pilpod-text-subtle);
+}

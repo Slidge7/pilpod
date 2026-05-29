@@ -1,18 +1,23 @@
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./MediaDashboard.css";
-import { DashboardFooter } from "./components/DashboardFooter";
 import { DashboardHeader } from "./components/DashboardHeader";
+import { SlideMenu } from "./components/SlideMenu";
 import { BrowserSessionsPanel } from "./components/BrowserSessionsPanel";
 import { SourceTabBar } from "./components/SourceTabBar";
 import { WidgetMediaPanel } from "./components/WidgetMediaPanel";
 import { WidgetView } from "./components/WidgetView";
 import { useAppearance } from "./hooks/useAppearance";
 import { useMediaDashboard } from "./hooks/useMediaDashboard";
+import { useWallpaper } from "./hooks/useWallpaper";
 import { WindowsSessionsPanel } from "../windows-media";
 import { DownloadPanel } from "../downloader";
 
 export function MediaDashboard() {
   const { appearance, toggle } = useAppearance();
+  const { wallpaper, hasWallpaper, pickWallpaper, clearWallpaper } =
+    useWallpaper();
+  const [menuOpen, setMenuOpen] = useState(false);
   const {
     error,
     mainTab,
@@ -56,6 +61,15 @@ export function MediaDashboard() {
     (sum, b) => sum + (b.extensionInstalled ? b.tabCount : 0),
     0,
   );
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   if (isWidget) {
     if (isWidgetExpanded) {
@@ -103,17 +117,39 @@ export function MediaDashboard() {
     .filter(Boolean)
     .join(" ");
 
+  const openDevLab = () => {
+    void invoke("open_dev_lab_window").catch((err: unknown) => {
+      console.error("[dev-lab] open_dev_lab_window failed:", err);
+    });
+  };
+
   return (
     <div className={shellClass}>
       <div className="pilpod-dashboard-shell__inner">
         <DashboardHeader
-          browserTabCount={browserTabCount}
-          sessionCount={sessions.length}
-          alwaysOnTop={alwaysOnTop}
+          menuOpen={menuOpen}
           widgetEnabled={widgetEnabled}
-          onToggleAlwaysOnTop={toggleAlwaysOnTop}
+          onToggleMenu={() => setMenuOpen((o) => !o)}
           onMinimize={minimizeApp}
           onClose={closeApp}
+        />
+
+        <SlideMenu
+          open={menuOpen}
+          appearance={appearance}
+          alwaysOnTop={alwaysOnTop}
+          widgetEnabled={widgetEnabled}
+          hasWallpaper={hasWallpaper}
+          browserTabCount={browserTabCount}
+          sessionCount={sessions.length}
+          onClose={() => setMenuOpen(false)}
+          onToggleAlwaysOnTop={toggleAlwaysOnTop}
+          onToggleAppearance={toggle}
+          onRefresh={refresh}
+          onToggleWidgetEnabled={toggleWidgetEnabled}
+          onPickWallpaper={() => void pickWallpaper()}
+          onClearWallpaper={clearWallpaper}
+          onOpenDevLab={openDevLab}
         />
 
         <SourceTabBar
@@ -123,7 +159,19 @@ export function MediaDashboard() {
           sessionCount={sessions.length}
         />
 
-        <main className="pilpod-dashboard-shell__main">
+        <main
+          className={[
+            "pilpod-dashboard-shell__main",
+            hasWallpaper ? "pilpod-dashboard-shell__main--wallpaper" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          style={
+            wallpaper
+              ? { backgroundImage: `url("${wallpaper}")` }
+              : undefined
+          }
+        >
           {error ? (
             <div className="pilpod-alert-error">{error}</div>
           ) : null}
@@ -158,19 +206,6 @@ export function MediaDashboard() {
             />
           )}
         </main>
-
-        <DashboardFooter
-          appearance={appearance}
-          widgetEnabled={widgetEnabled}
-          onToggleAppearance={toggle}
-          onRefresh={refresh}
-          onToggleWidgetEnabled={toggleWidgetEnabled}
-          onOpenDevLab={() => {
-            void invoke("open_dev_lab_window").catch((err: unknown) => {
-              console.error("[dev-lab] open_dev_lab_window failed:", err);
-            });
-          }}
-        />
       </div>
     </div>
   );

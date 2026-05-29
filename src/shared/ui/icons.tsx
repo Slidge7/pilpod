@@ -282,6 +282,47 @@ export function IconFolderOpen({ className }: { className?: string }) {
   );
 }
 
+export function IconImage({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+    </svg>
+  );
+}
+
+export function IconMenu({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 8h16" />
+      <path d="M4 14h16" />
+    </svg>
+  );
+}
+
 export function Spinner({ className }: { className?: string }) {
   const cn = ["pilpod-spinner", className].filter(Boolean).join(" ");
   return <span className={cn} aria-hidden />;

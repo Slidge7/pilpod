@@ -1,26 +1,22 @@
 import "./DashboardHeader.css";
 import {
   IconClose,
+  IconMenu,
   IconMinimize,
-  IconStayOnTop,
 } from "../../../shared/ui/icons";
 
 type Props = {
-  browserTabCount: number;
-  sessionCount: number;
-  alwaysOnTop: boolean;
+  menuOpen: boolean;
   widgetEnabled: boolean;
-  onToggleAlwaysOnTop: () => void;
+  onToggleMenu: () => void;
   onMinimize: () => void;
   onClose: () => void;
 };
 
 export function DashboardHeader({
-  browserTabCount,
-  sessionCount,
-  alwaysOnTop,
+  menuOpen,
   widgetEnabled,
-  onToggleAlwaysOnTop,
+  onToggleMenu,
   onMinimize,
   onClose,
 }: Props) {
@@ -28,10 +24,9 @@ export function DashboardHeader({
     ? "Minimize to floating widget"
     : "Minimize to taskbar";
 
-  const pinClass = [
-    "pilpod-dash-header__btn",
-    "pilpod-dash-header__btn--pin",
-    alwaysOnTop ? "pilpod-dash-header__btn--pin-active" : "",
+  const menuBtnClass = [
+    "pilpod-dash-header__menu-toggle",
+    menuOpen ? "pilpod-dash-header__menu-toggle--open" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -47,25 +42,21 @@ export function DashboardHeader({
           className="pilpod-dash-header__logo"
           aria-hidden
         />
-        <div className="pilpod-dash-header__brand">
-          <span className="pilpod-dash-header__title">PilPod</span>
-          <span className="pilpod-dash-header__stats">
-            {browserTabCount} browser · {sessionCount} Windows
-          </span>
-        </div>
+        <span className="pilpod-dash-header__title">PilPod</span>
       </div>
-      <div className="pilpod-dash-header__actions">
+      <div className="pilpod-dash-header__center">
         <button
           type="button"
-          onClick={onToggleAlwaysOnTop}
-          className={pinClass}
-          title={alwaysOnTop ? "Unpin window" : "Pin window (always on top)"}
-          aria-label={alwaysOnTop ? "Unpin window" : "Pin window"}
-          aria-pressed={alwaysOnTop}
+          onClick={onToggleMenu}
+          className={menuBtnClass}
+          title={menuOpen ? "Close menu" : "Open menu"}
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={menuOpen}
         >
-          <IconStayOnTop />
-          <span className="pilpod-dash-header__pin-label">Pin</span>
+          <IconMenu />
         </button>
+      </div>
+      <div className="pilpod-dash-header__actions">
         <button
           type="button"
           onClick={onMinimize}

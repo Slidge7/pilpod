@@ -1,6 +1,7 @@
 export const BROWSERS_UPDATE_EVENT = "browsers://update";
 export const ALWAYS_ON_TOP_STORAGE_KEY = "pilpod-always-on-top";
 export const WIDGET_ENABLED_STORAGE_KEY = "pilpod-widget-enabled";
+export const WALLPAPER_PATH_STORAGE_KEY = "pilpod-wallpaper-path";
 export const WIDGET_TRANSITION_MS = 230;
 export const WIDGET_DRAG_THRESHOLD_PX = 6;
 /** Logical inner size for the widget chip (matches Rust `WIDGET_LOGICAL`). */

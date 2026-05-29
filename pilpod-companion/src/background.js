@@ -16,6 +16,7 @@ import { registerLifecycleListeners } from "./background/tabs/lifecycle.js";
 import { syncDynamicContentScripts, setCachedConfig } from "./background/dynamicInjection.js";
 import { registerPopupBridge }        from "./background/popupBridge.js";
 import { registerDiscoveryListeners } from "./background/discovery.js";
+import { registerStandalonePopupBridge } from "./background/standalonePopupBridge.js";
 
 /** @type {import("./shared/pilpodConfig.js").PilPodConfig} */
 let pilpodConfig;
@@ -152,5 +153,7 @@ function _seedFocusedWindow() {
     });
   });
 }
+
+registerStandalonePopupBridge();
 
 void init();

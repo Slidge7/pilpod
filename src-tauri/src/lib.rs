@@ -21,6 +21,7 @@ mod browser_focus_win;
 #[cfg(windows)]
 mod audio_mixer;
 mod gsmtc;
+mod wallpaper;
 #[cfg(not(windows))]
 mod platform;
 #[cfg(windows)]

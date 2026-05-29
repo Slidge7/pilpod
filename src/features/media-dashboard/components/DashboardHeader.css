@@ -28,13 +28,6 @@
   outline: 1px solid var(--pilpod-ring-icon);
 }
 
-.pilpod-dash-header__brand {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
 .pilpod-dash-header__title {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -45,19 +38,47 @@
   color: var(--pilpod-text);
 }
 
-.pilpod-dash-header__stats {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--pilpod-text-subtle);
+.pilpod-dash-header__center {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.pilpod-dash-header__menu-toggle {
+  display: flex;
+  height: 1.6rem;
+  min-width: 2.4rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: none;
+  background: var(--pilpod-bg-muted);
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pilpod-dash-header__menu-toggle:hover {
+  background: var(--pilpod-bg-row-hover);
+  color: var(--pilpod-text);
+}
+
+.pilpod-dash-header__menu-toggle--open {
+  background: var(--pilpod-accent-blue-muted);
+  color: var(--pilpod-accent-blue-hover);
+  box-shadow: inset 0 0 0 1px var(--pilpod-accent-blue-ring);
 }
 
 .pilpod-dash-header__actions {
   display: flex;
+  flex: 1;
   flex-shrink: 0;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.25rem;
   padding-right: 0.5rem;
 }
@@ -85,43 +106,7 @@
   color: var(--pilpod-text);
 }
 
-.pilpod-dash-header__btn--pin {
-  min-width: auto;
-  padding-inline: 0.55rem;
-  margin-right: 0.15rem;
-}
-
-.pilpod-dash-header__pin-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.pilpod-dash-header__btn--pin-active {
-  background: var(--pilpod-accent-blue-muted);
-  color: var(--pilpod-accent-blue-hover);
-  box-shadow:
-    inset 0 0 0 1px var(--pilpod-accent-blue-ring),
-    0 0 16px var(--pilpod-accent-blue-muted);
-}
-
-.pilpod-dash-header__btn--pin-active:hover {
-  background: color-mix(in srgb, var(--pilpod-accent-blue) 22%, transparent);
-  color: var(--pilpod-accent-blue-hover);
-}
-
 .pilpod-dash-header__btn--close:hover {
   background: var(--pilpod-red-close-hover-bg);
   color: var(--pilpod-red-close-hover-text);
-}
-
-@media (max-width: 300px) {
-  .pilpod-dash-header__pin-label {
-    display: none;
-  }
-
-  .pilpod-dash-header__btn--pin {
-    min-width: 2rem;
-    padding-inline: 0;
-  }
 }

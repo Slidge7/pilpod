@@ -9,6 +9,7 @@
 }
 
 .pilpod-dashboard-shell__inner {
+  position: relative;
   display: flex;
   min-height: 0;
   flex: 1;
@@ -26,6 +27,23 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0.75rem;
+}
+
+/* User-selected wallpaper fills the main body. The wallpaper is set via an
+   inline `background-image` style; these rules control how it is painted. */
+.pilpod-dashboard-shell__main--wallpaper {
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: local;
+}
+
+/* With a wallpaper active, the section "containers" become transparent so the
+   image shows through, while media items and buttons keep their own surfaces. */
+.pilpod-dashboard-shell__main--wallpaper .pilpod-browser-profile,
+.pilpod-dashboard-shell__main--wallpaper .pilpod-browser-profile__head,
+.pilpod-dashboard-shell__main--wallpaper .pilpod-browser-profile__window {
+  background: transparent;
 }
 
 .pilpod-alert-error {

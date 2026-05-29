@@ -6,6 +6,8 @@ mod setup;
 pub fn run() {
     let mut builder = tauri::Builder::default();
 
+    builder = builder.plugin(tauri_plugin_dialog::init());
+
     #[cfg(windows)]
     {
         builder = builder.manage(crate::window_widget::RestoreBounds::default());

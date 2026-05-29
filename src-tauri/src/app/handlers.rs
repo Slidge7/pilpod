@@ -31,6 +31,9 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::dev_lab::open_dev_lab_window,
         crate::dev_lab::dev_scan_os_browsers,
         crate::dev_lab::dev_wake_and_sync_browser,
+        // Wallpaper commands
+        crate::wallpaper::pick_wallpaper,
+        crate::wallpaper::read_wallpaper,
     ])
 }
 
@@ -61,5 +64,7 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::platform::stub_commands::open_dev_lab_window,
         crate::platform::stub_commands::dev_scan_os_browsers,
         crate::platform::stub_commands::dev_wake_and_sync_browser,
+        crate::wallpaper::pick_wallpaper,
+        crate::wallpaper::read_wallpaper,
     ])
 }
