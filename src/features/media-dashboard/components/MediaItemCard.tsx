@@ -40,6 +40,10 @@ type Props = {
   tab: BrowserTab;
   browserId: string;
   browserDisplayName: string;
+  /** Float = standalone card; inset = flush row inside a browser profile card. */
+  variant?: "float" | "inset";
+  rootClassName?: string;
+  flipId?: string;
   busy: boolean;
   profileAudio?: AudioSessionInfoDto;
   onMixerVolume?: (instanceId: string, volume: number) => void;
@@ -85,6 +89,9 @@ export function MediaItemCard({
   tab,
   browserId,
   browserDisplayName,
+  variant = "float",
+  rootClassName,
+  flipId,
   busy,
   profileAudio,
   onMixerVolume,
@@ -281,7 +288,9 @@ export function MediaItemCard({
 
   const cardClass = [
     "pilpod-media-item",
+    variant === "float" ? "pilpod-media-item--float" : "pilpod-media-item--inset",
     playing ? "pilpod-media-item--playing" : "",
+    rootClassName,
   ]
     .filter(Boolean)
     .join(" ");
@@ -315,7 +324,7 @@ export function MediaItemCard({
     .join(" ");
 
   return (
-    <li className={cardClass}>
+    <li className={cardClass} {...(flipId ? { "data-flip-id": flipId } : {})}>
       <div className="pilpod-media-item__thumb-wrap">
         {art ? (
           <img

@@ -41,6 +41,52 @@ export function tabHasMediaControls(t: BrowserTab): boolean {
   return state === "playing" || state === "paused";
 }
 
+/** True when the tab has an active media session (playing or paused). */
+export function tabIsActiveMediaSession(t: BrowserTab): boolean {
+  return tabHasMediaControls(t);
+}
+
+function activeMediaSortRank(tab: BrowserTab): number {
+  const state = (tab.media?.playbackState ?? "").toLowerCase();
+  if (state === "playing") return 0;
+  if (state === "paused") return 1;
+  return 2;
+}
+
+/** All tabs with an active media session across connected browsers. */
+export function collectActiveMediaTabs(
+  browsers: ReadonlyArray<{
+    id: string;
+    displayName: string;
+    profileLabel?: string | null;
+    extensionConnected: boolean;
+    tabs: BrowserTab[];
+  }>,
+): SearchTabMatch[] {
+  const matches: SearchTabMatch[] = [];
+
+  for (const browser of browsers) {
+    if (!browser.extensionConnected) continue;
+    const label = browser.profileLabel ?? browser.displayName;
+    for (const tab of browser.tabs) {
+      if (!tabIsActiveMediaSession(tab)) continue;
+      matches.push({
+        browserId: browser.id,
+        browserDisplayName: label,
+        tab,
+      });
+    }
+  }
+
+  return matches.sort((a, b) => {
+    const rank = activeMediaSortRank(a.tab) - activeMediaSortRank(b.tab);
+    if (rank !== 0) return rank;
+    return (a.tab.title ?? "").localeCompare(b.tab.title ?? "", undefined, {
+      sensitivity: "base",
+    });
+  });
+}
+
 /** Stable pending key for any browser tab row. */
 export function tabRowKey(t: BrowserTab): string {
   return `tab:${t.browserId ?? ""}:${t.tabId}`;

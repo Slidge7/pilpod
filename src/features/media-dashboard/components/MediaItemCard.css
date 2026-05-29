@@ -4,16 +4,22 @@
   position: relative;
   width: 100%;
   height: 72px;
-  border-radius: 14px;
   display: flex;
   align-items: center;
   overflow: hidden;
-  transition: box-shadow 0.2s, border-color 0.2s;
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s,
+    background-color 0.2s;
   cursor: default;
   user-select: none;
 }
 
-.pilpod-media-item::before {
+.pilpod-media-item--float {
+  border-radius: 14px;
+}
+
+.pilpod-media-item--float::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -22,7 +28,7 @@
   pointer-events: none;
 }
 
-/* box-shadow + glass surface: see shared/ui/glass-float-shell.css */
+/* box-shadow + glass surface on --float: see shared/ui/glass-float-shell.css */
 
 /* ── THUMBNAIL ───────────────────────────────────────────── */
 
@@ -584,4 +590,51 @@
 
 .pilpod-media-item__progress-fill--playing {
   background: var(--pilpod-glass-progress-fill-playing);
+}
+
+/* ── INSET (browser profile card) ────────────────────────── */
+
+.pilpod-media-item--inset {
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--pilpod-glass-float-border);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.pilpod-media-item--inset:last-child {
+  border-bottom: none;
+}
+
+.pilpod-media-item--inset:hover {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: none;
+}
+
+html.dark .pilpod-media-item--inset:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pilpod-media-item--inset.pilpod-media-item--playing {
+  background: color-mix(in srgb, var(--pilpod-accent-blue) 8%, transparent);
+  box-shadow: none;
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--pilpod-glass-float-border) 70%,
+    var(--pilpod-accent-blue) 30%
+  );
+}
+
+html.dark .pilpod-media-item--inset.pilpod-media-item--playing {
+  background: color-mix(in srgb, var(--pilpod-accent-blue) 14%, transparent);
+}
+
+.pilpod-media-item--inset .pilpod-media-item__thumb-wrap {
+  border-radius: 0;
+}
+
+.pilpod-media-item--inset .pilpod-media-item__progress-bar {
+  border-radius: 0;
 }

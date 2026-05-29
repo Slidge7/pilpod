@@ -22,6 +22,7 @@ import { findActiveDownloadForUrl } from "../../downloader/lib/activeDownload";
 import type { DownloadTask } from "../../downloader/types";
 import { UnifiedTabRow } from "./UnifiedTabRow";
 import { MediaItemCard } from "./MediaItemCard";
+import { ActiveMediaStrip } from "./ActiveMediaStrip";
 
 function browserDisplayLabel(browser: DetectedBrowser): string {
   return browser.profileLabel ?? browser.displayName;
@@ -319,6 +320,7 @@ function BrowserBody({
           tab={t}
           browserId={slotBrowserId}
           browserDisplayName={browserDisplayLabel(browser)}
+          variant="inset"
           busy={pendingKeys.has(rk)}
           profileAudio={profileAudio}
           onMixerVolume={onMixerVolume}
@@ -809,6 +811,19 @@ export function BrowserSessionsPanel({
         onToggleBrowser={handleToggleBrowser}
         onExcludeSite={handleExcludeSite}
         onExcludeBrowser={handleExcludeBrowser}
+      />
+
+      <ActiveMediaStrip
+        browsers={browsers}
+        pendingKeys={pendingKeys}
+        browserAudio={browserAudio}
+        onPlayPause={onPlayPause}
+        onFocusTab={onFocusTab}
+        onReload={onReload}
+        onClose={onClose}
+        onMixerVolume={onMixerVolume}
+        onDownload={handleDownload}
+        downloadTasks={downloadTasks}
       />
 
       {narrowResults && displayBrowsers.length === 0 ? (
