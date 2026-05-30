@@ -101,7 +101,15 @@ pub struct TabMediaPost {
     pub user_idle_ms: u64,
     #[serde(default)]
     pub document_state: String,
+    /// Tab volume 0–600 (100 = native 100%, above 100 uses Web Audio gain).
+    #[serde(default = "default_tab_volume")]
+    pub tab_volume: f64,
+    /// True when the tab is muted via the content script or chrome.tabs API.
+    #[serde(default)]
+    pub tab_muted: bool,
 }
+
+fn default_tab_volume() -> f64 { 100.0 }
 
 pub fn convert_tab(post: BrowserTabPost, browser_id: &str) -> BrowserTab {
     BrowserTab {
@@ -128,6 +136,8 @@ pub fn convert_tab(post: BrowserTabPost, browser_id: &str) -> BrowserTab {
             page_visible: m.page_visible,
             user_idle_ms: m.user_idle_ms,
             document_state: m.document_state,
+            tab_volume: m.tab_volume,
+            tab_muted: m.tab_muted,
         }),
         browser_id: browser_id.to_string(),
     }

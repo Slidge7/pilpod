@@ -37,7 +37,7 @@ async function initTransport() {
       const tabId  = c?.tabId;
       const action = String(c?.action ?? "");
       if (tabId == null || !action) continue;
-      await commandHandler.dispatch(tabId, action);
+      await commandHandler.dispatch(tabId, action, c?.value);
     }
   };
 

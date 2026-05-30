@@ -41,8 +41,13 @@ pub type BrowserCommandsQueue = Arc<Mutex<HashMap<String, HashMap<i32, BrowserMe
 #[serde(rename_all = "camelCase")]
 pub struct BrowserMediaCommand {
     pub tab_id: i32,
-    /// `playPause`, `next`, `previous`, `focusTab`, `reactivateTab`, `reloadTab`, or `closeTab`
+    /// `playPause`, `next`, `previous`, `focusTab`, `reactivateTab`, `reloadTab`, `closeTab`,
+    /// `seek`, `setTabVolume`, `muteTab`, `skipAd`, `pip`
     pub action: String,
+    /// Optional numeric parameter for commands that need it (e.g. seek position in seconds,
+    /// volume as 0–600 percentage).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<f64>,
     /// Timestamp of when the command was enqueued; used to drop stale entries.
     #[serde(skip)]
     pub enqueued_at: Instant,
@@ -54,10 +59,12 @@ pub fn enqueue_browser_command(
     browser_id: &str,
     tab_id: i32,
     action: &str,
+    value: Option<f64>,
 ) {
     let cmd = BrowserMediaCommand {
         tab_id,
         action: action.to_string(),
+        value,
         enqueued_at: Instant::now(),
     };
 
@@ -89,6 +96,8 @@ fn hash_media(h: &mut DefaultHasher, media: &TabMedia) {
     media.page_visible.hash(h);
     media.user_idle_ms.hash(h);
     hash_str(h, &media.document_state);
+    media.tab_volume.to_bits().hash(h);
+    media.tab_muted.hash(h);
 }
 
 fn hash_tab(h: &mut DefaultHasher, tab: &BrowserTab) {
@@ -149,10 +158,10 @@ mod tests {
     #[test]
     fn enqueue_dedupes_per_tab() {
         let q: BrowserCommandsQueue = Arc::new(Mutex::new(HashMap::new()));
-        enqueue_browser_command(&q, None, "b1", 10, "next");
-        enqueue_browser_command(&q, None, "b1", 10, "playPause");
-        enqueue_browser_command(&q, None, "b1", 11, "previous");
-        enqueue_browser_command(&q, None, "b2", 20, "playPause");
+        enqueue_browser_command(&q, None, "b1", 10, "next", None);
+        enqueue_browser_command(&q, None, "b1", 10, "playPause", None);
+        enqueue_browser_command(&q, None, "b1", 11, "previous", None);
+        enqueue_browser_command(&q, None, "b2", 20, "playPause", None);
         let g = q.lock().expect("lock");
         assert_eq!(g["b1"].len(), 2);
         assert_eq!(g["b1"][&10].action, "playPause");

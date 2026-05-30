@@ -76,6 +76,9 @@ export function detectMedia(url, activityTracker) {
   const album       = String(sessionMeta?.album ?? "");
   const active      = activeMediaElement();
 
+  const nativeVolume = active?.volume ?? 1;
+  const tabVolume    = Math.round(nativeVolume * 100);
+
   return {
     hasSignal: resolveHasSignal(),
     title,
@@ -89,6 +92,8 @@ export function detectMedia(url, activityTracker) {
     pageVisible: document.visibilityState === "visible",
     userIdleMs: activityTracker.idleMs,
     documentState: document.readyState,
+    tabVolume,
+    tabMuted: active?.muted ?? false,
   };
 }
 

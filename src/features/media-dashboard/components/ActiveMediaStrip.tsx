@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import "./ActiveMediaStrip.css";
-import type { AudioSessionInfoDto, BrowserTab, DetectedBrowser } from "../../../types/media";
+import type { BrowserTab, DetectedBrowser } from "../../../types/media";
 import { collectActiveMediaTabs, tabRowKey } from "../lib/browserMedia";
 import { findActiveDownloadForUrl } from "../../downloader/lib/activeDownload";
 import type { DownloadTask } from "../../downloader/types";
@@ -10,14 +10,19 @@ import { MediaItemCard } from "./MediaItemCard";
 type Props = {
   browsers: DetectedBrowser[];
   pendingKeys: ReadonlySet<string>;
-  browserAudio: Readonly<Record<string, AudioSessionInfoDto>>;
   /** When true, strip animates out (search hub expanded / active). */
   searchModeActive?: boolean;
   onPlayPause: (tab: BrowserTab, browserId: string) => void;
   onFocusTab: (tab: BrowserTab, browserId: string, displayName: string) => void | Promise<void>;
   onReload: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onClose: (tab: BrowserTab, browserId: string) => void | Promise<void>;
-  onMixerVolume: (instanceId: string, volume: number) => void;
+  onSeekTab?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
+  onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
+  onSkipAd?: (tab: BrowserTab, browserId: string) => void;
+  onPip?: (tab: BrowserTab, browserId: string) => void;
+  onResetVolume?: (tab: BrowserTab, browserId: string) => void;
+  onPauseAll?: () => void;
+  onMuteAll?: () => void;
   onDownload?: (url: string) => void;
   downloadTasks: Map<string, DownloadTask>;
 };
@@ -25,13 +30,18 @@ type Props = {
 export function ActiveMediaStrip({
   browsers,
   pendingKeys,
-  browserAudio,
   searchModeActive = false,
   onPlayPause,
   onFocusTab,
   onReload,
   onClose,
-  onMixerVolume,
+  onSeekTab,
+  onSetTabVolume,
+  onSkipAd,
+  onPip,
+  onResetVolume,
+  onPauseAll,
+  onMuteAll,
   onDownload,
   downloadTasks,
 }: Props) {
@@ -66,12 +76,17 @@ export function ActiveMediaStrip({
               variant="float"
               rootClassName="pilpod-active-media-strip__item"
               busy={pendingKeys.has(rk)}
-              profileAudio={browserAudio[browserId]}
-              onMixerVolume={onMixerVolume}
               onPlayPause={onPlayPause}
               onFocus={onFocusTab}
               onReload={onReload}
               onClose={onClose}
+              onSeek={onSeekTab}
+              onSetTabVolume={onSetTabVolume}
+              onSkipAd={onSkipAd}
+              onPip={onPip}
+              onResetVolume={onResetVolume}
+              onPauseAll={onPauseAll}
+              onMuteAll={onMuteAll}
               onDownload={onDownload}
               activeDownload={
                 tab.url ? findActiveDownloadForUrl(downloadTasks, tab.url) : undefined

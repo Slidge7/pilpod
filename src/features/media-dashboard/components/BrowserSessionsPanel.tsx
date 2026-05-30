@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import "./BrowserSessionsPanel.css";
 import type { AudioSessionInfoDto, BrowserTab, DetectedBrowser } from "../../../types/media";
+import { IconVolumeIndicator } from "../../../shared/ui/icons";
 import {
   groupTabsByWindow,
   windowCountForTabs,
@@ -48,16 +49,28 @@ type Props = {
   onRefreshBrowser: (browserId: string) => void | Promise<void>;
   onDownloadFromTab?: (url: string) => void;
   downloadTasks: Map<string, DownloadTask>;
+  onSeekTab?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
+  onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
+  onSkipAd?: (tab: BrowserTab, browserId: string) => void;
+  onPip?: (tab: BrowserTab, browserId: string) => void;
+  onResetVolume?: (tab: BrowserTab, browserId: string) => void;
+  onPauseAll?: () => void;
+  onMuteAll?: () => void;
 };
 
 function BrowserHeader({
   browser,
+  profileAudio,
   onRefresh,
+  onMixerVolume,
 }: {
   browser: DetectedBrowser;
+  profileAudio?: AudioSessionInfoDto;
   onRefresh: () => void;
+  onMixerVolume?: (instanceId: string, volume: number) => void;
 }) {
   const [refreshing, setRefreshing] = useState(false);
+  const [volSliderOpen, setVolSliderOpen] = useState(false);
 
   const handleRefresh = useCallback(async () => {
     if (refreshing) return;
@@ -70,6 +83,10 @@ function BrowserHeader({
       setTimeout(() => setRefreshing(false), 800);
     }
   }, [onRefresh, refreshing]);
+
+  const wasapiVolPct = profileAudio
+    ? (profileAudio.muted ? 0 : Math.round(profileAudio.volume * 100))
+    : null;
 
   const showReconnecting =
     browser.extensionInstalled &&
@@ -148,6 +165,40 @@ function BrowserHeader({
           </>
         ) : null}
       </span>
+
+      {wasapiVolPct !== null && profileAudio && onMixerVolume ? (
+        <div className="pilpod-browser-profile__vol-wrap">
+          <button
+            type="button"
+            className="pilpod-browser-profile__vol-badge"
+            title={`Browser volume: ${wasapiVolPct}% (click to adjust)`}
+            aria-label={`Browser system volume ${wasapiVolPct}%`}
+            onClick={() => setVolSliderOpen((v) => !v)}
+          >
+            <IconVolumeIndicator />
+            <span>{wasapiVolPct}%</span>
+          </button>
+          {volSliderOpen ? (
+            <div className="pilpod-browser-profile__vol-popup">
+              <input
+                type="range"
+                className="pilpod-browser-profile__vol-slider"
+                min="0"
+                max="600"
+                step="5"
+                value={wasapiVolPct}
+                aria-label={`Browser volume: ${wasapiVolPct}%`}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10) / 100;
+                  onMixerVolume(profileAudio.instanceId, v);
+                }}
+              />
+              <span className="pilpod-browser-profile__vol-popup-pct">{wasapiVolPct}%</span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <button
         className={`pilpod-browser-profile__refresh${refreshing ? " pilpod-browser-profile__refresh--spinning" : ""}`}
         title={`Wake & sync ${browserDisplayLabel(browser)}`}
@@ -289,6 +340,13 @@ function BrowserBody({
   onMixerVolume,
   profileAudio,
   downloadTasks,
+  onSeekTab,
+  onSetTabVolume,
+  onSkipAd,
+  onPip,
+  onResetVolume,
+  onPauseAll,
+  onMuteAll,
 }: {
   browser: DetectedBrowser;
   pendingKeys: ReadonlySet<string>;
@@ -302,6 +360,13 @@ function BrowserBody({
   onDownload: (url: string) => void;
   onMixerVolume: (instanceId: string, volume: number) => void;
   downloadTasks: Map<string, DownloadTask>;
+  onSeekTab?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
+  onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
+  onSkipAd?: (tab: BrowserTab, browserId: string) => void;
+  onPip?: (tab: BrowserTab, browserId: string) => void;
+  onResetVolume?: (tab: BrowserTab, browserId: string) => void;
+  onPauseAll?: () => void;
+  onMuteAll?: () => void;
 }) {
   const slotBrowserId = browser.id;
   const isStale = !browser.extensionConnected && browser.tabs.length > 0;
@@ -322,12 +387,17 @@ function BrowserBody({
           browserDisplayName={browserDisplayLabel(browser)}
           variant="inset"
           busy={pendingKeys.has(rk)}
-          profileAudio={profileAudio}
-          onMixerVolume={onMixerVolume}
           onPlayPause={onPlayPause}
           onFocus={onFocusTab}
           onReload={onReload}
           onClose={onClose}
+          onSeek={onSeekTab}
+          onSetTabVolume={onSetTabVolume}
+          onSkipAd={onSkipAd}
+          onPip={onPip}
+          onResetVolume={onResetVolume}
+          onPauseAll={onPauseAll}
+          onMuteAll={onMuteAll}
           onDownload={onDownload}
           activeDownload={
             t.url ? findActiveDownloadForUrl(downloadTasks, t.url) : undefined
@@ -667,6 +737,13 @@ export function BrowserSessionsPanel({
   onRefreshBrowser,
   onDownloadFromTab,
   downloadTasks,
+  onSeekTab,
+  onSetTabVolume,
+  onSkipAd,
+  onPip,
+  onResetVolume,
+  onPauseAll,
+  onMuteAll,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [excludedSites, setExcludedSites] = useState<Set<string>>(() => new Set());
@@ -816,13 +893,18 @@ export function BrowserSessionsPanel({
       <ActiveMediaStrip
         browsers={browsers}
         pendingKeys={pendingKeys}
-        browserAudio={browserAudio}
         searchModeActive={searchExpandedEffective}
         onPlayPause={onPlayPause}
         onFocusTab={onFocusTab}
         onReload={onReload}
         onClose={onClose}
-        onMixerVolume={onMixerVolume}
+        onSeekTab={onSeekTab}
+        onSetTabVolume={onSetTabVolume}
+        onSkipAd={onSkipAd}
+        onPip={onPip}
+        onResetVolume={onResetVolume}
+        onPauseAll={onPauseAll}
+        onMuteAll={onMuteAll}
         onDownload={handleDownload}
         downloadTasks={downloadTasks}
       />
@@ -843,6 +925,8 @@ export function BrowserSessionsPanel({
             <div key={browser.id} className="pilpod-browser-profile">
               <BrowserHeader
                 browser={browser}
+                profileAudio={profileAudio}
+                onMixerVolume={onMixerVolume}
                 onRefresh={() => onRefreshBrowser(browser.id)}
               />
               <BrowserBody
@@ -858,6 +942,13 @@ export function BrowserSessionsPanel({
                 onDownload={handleDownload}
                 onMixerVolume={onMixerVolume}
                 downloadTasks={downloadTasks}
+                onSeekTab={onSeekTab}
+                onSetTabVolume={onSetTabVolume}
+                onSkipAd={onSkipAd}
+                onPip={onPip}
+                onResetVolume={onResetVolume}
+                onPauseAll={onPauseAll}
+                onMuteAll={onMuteAll}
               />
             </div>
           );

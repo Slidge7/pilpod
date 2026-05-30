@@ -13,6 +13,7 @@ pub fn browser_media_control(
     action: String,
     tab_title_for_focus: Option<String>,
     browser_window_hint: Option<String>,
+    value: Option<f64>,
 ) -> Result<(), String> {
     if browser_id.is_empty() {
         return Err("browserId is required".into());
@@ -26,6 +27,11 @@ pub fn browser_media_control(
         "reactivatetab" | "reactivate_tab" => "reactivateTab",
         "reloadtab" | "reload_tab" => "reloadTab",
         "closetab" | "close_tab" => "closeTab",
+        "seek" => "seek",
+        "settabvolume" | "set_tab_volume" => "setTabVolume",
+        "mutetab" | "mute_tab" => "muteTab",
+        "skipad" | "skip_ad" => "skipAd",
+        "pip" | "pictureinpicture" | "picture_in_picture" => "pip",
         _ => return Err(format!("unknown action: {action}")),
     };
     enqueue_browser_command(
@@ -34,6 +40,7 @@ pub fn browser_media_control(
         &browser_id,
         tab_id,
         normalized,
+        value,
     );
     if normalized == "focusTab" {
         let title = tab_title_for_focus.unwrap_or_default();

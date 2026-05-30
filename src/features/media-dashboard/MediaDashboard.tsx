@@ -50,6 +50,13 @@ export function MediaDashboard() {
     reactivateBrowserTab,
     reloadBrowserTab,
     closeBrowserTab,
+    seekBrowserTab,
+    setTabVolumeBrowserTab,
+    skipAdBrowserTab,
+    pipBrowserTab,
+    resetTabVolumeBrowserTab,
+    pauseAllBrowserTabs,
+    muteAllBrowserTabs,
     minimizeApp,
     expandWidgetPanel,
     restoreFromWidget,
@@ -199,6 +206,13 @@ export function MediaDashboard() {
               onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
               onDownloadFromTab={(url) => void downloadFromBrowserTab(url)}
               downloadTasks={downloader.tasks}
+              onSeekTab={seekBrowserTab}
+              onSetTabVolume={setTabVolumeBrowserTab}
+              onSkipAd={skipAdBrowserTab}
+              onPip={pipBrowserTab}
+              onResetVolume={resetTabVolumeBrowserTab}
+              onPauseAll={() => void pauseAllBrowserTabs()}
+              onMuteAll={() => void muteAllBrowserTabs()}
             />
           ) : mainTab === "windows" ? (
             <WindowsSessionsPanel

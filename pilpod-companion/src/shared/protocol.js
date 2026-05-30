@@ -21,6 +21,11 @@ export const Command = Object.freeze({
   PLAY_PAUSE:     "playPause",
   NEXT:           "next",
   PREVIOUS:       "previous",
+  SEEK:           "seek",
+  SET_TAB_VOLUME: "setTabVolume",
+  MUTE_TAB:       "muteTab",
+  SKIP_AD:        "skipAd",
+  PIP:            "pip",
 });
 
 // ─── Tab states (extension → Rust) ───────────────────────────────────────────
@@ -51,6 +56,8 @@ export const TabState = Object.freeze({
  * @property {boolean} pageVisible
  * @property {number}  userIdleMs
  * @property {string}  documentState
+ * @property {number}  tabVolume         - Tab volume as 0–600 (100 = 100%, >100 uses Web Audio gain).
+ * @property {boolean} tabMuted          - True when the tab is muted via the content script.
  */
 
 /**

@@ -152,6 +152,124 @@ export function useMediaDashboard() {
     [clearBrowserPending, markBrowserPending],
   );
 
+  const seekBrowserTab = useCallback(
+    async (t: BrowserTab, browserId: string, seekTo: number) => {
+      setBrowserError(null);
+      try {
+        await invoke("browser_media_control", {
+          browserId,
+          tabId: t.tabId,
+          action: "seek",
+          value: seekTo,
+        });
+      } catch (e) {
+        setBrowserError(String(e));
+      }
+    },
+    [],
+  );
+
+  const setTabVolumeBrowserTab = useCallback(
+    async (t: BrowserTab, browserId: string, volume: number) => {
+      setBrowserError(null);
+      try {
+        await invoke("browser_media_control", {
+          browserId,
+          tabId: t.tabId,
+          action: "setTabVolume",
+          value: volume,
+        });
+      } catch (e) {
+        setBrowserError(String(e));
+      }
+    },
+    [],
+  );
+
+  const skipAdBrowserTab = useCallback(
+    async (t: BrowserTab, browserId: string) => {
+      setBrowserError(null);
+      try {
+        await invoke("browser_media_control", {
+          browserId,
+          tabId: t.tabId,
+          action: "skipAd",
+        });
+      } catch (e) {
+        setBrowserError(String(e));
+      }
+    },
+    [],
+  );
+
+  const pipBrowserTab = useCallback(
+    async (t: BrowserTab, browserId: string) => {
+      setBrowserError(null);
+      try {
+        await invoke("browser_media_control", {
+          browserId,
+          tabId: t.tabId,
+          action: "pip",
+        });
+      } catch (e) {
+        setBrowserError(String(e));
+      }
+    },
+    [],
+  );
+
+  const resetTabVolumeBrowserTab = useCallback(
+    async (t: BrowserTab, browserId: string) => {
+      setBrowserError(null);
+      try {
+        await invoke("browser_media_control", {
+          browserId,
+          tabId: t.tabId,
+          action: "setTabVolume",
+          value: 100,
+        });
+      } catch (e) {
+        setBrowserError(String(e));
+      }
+    },
+    [],
+  );
+
+  const pauseAllBrowserTabs = useCallback(async () => {
+    setBrowserError(null);
+    for (const b of browsers) {
+      for (const t of b.tabs) {
+        if (t.media?.playbackState === "playing") {
+          try {
+            await invoke("browser_media_control", {
+              browserId: b.id,
+              tabId: t.tabId,
+              action: "playPause",
+            });
+          } catch { /* best effort */ }
+        }
+      }
+    }
+  }, [browsers]);
+
+  const muteAllBrowserTabs = useCallback(async () => {
+    setBrowserError(null);
+    for (const b of browsers) {
+      for (const t of b.tabs) {
+        if (t.media) {
+          try {
+            await invoke("browser_media_control", {
+              browserId: b.id,
+              tabId: t.tabId,
+              action: "muteTab",
+              value: 1,
+            });
+          } catch { /* best effort */ }
+        }
+      }
+    }
+  }, [browsers]);
+
   const focusBrowserTab = useCallback(
     async (t: BrowserTab, browserId: string, browserDisplayName: string) => {
       setBrowserError(null);
@@ -567,6 +685,13 @@ export function useMediaDashboard() {
     reactivateBrowserTab,
     reloadBrowserTab,
     closeBrowserTab,
+    seekBrowserTab,
+    setTabVolumeBrowserTab,
+    skipAdBrowserTab,
+    pipBrowserTab,
+    resetTabVolumeBrowserTab,
+    pauseAllBrowserTabs,
+    muteAllBrowserTabs,
     browserPendingKeys,
     minimizeApp,
     expandWidgetPanel,

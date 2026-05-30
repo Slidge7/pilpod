@@ -127,7 +127,16 @@ pub struct TabMedia {
     /// document.readyState: "loading" | "interactive" | "complete"
     #[serde(default)]
     pub document_state: String,
+    /// Tab-level volume 0–600 (100 = 100%, >100 uses Web Audio gain in content script).
+    /// Defaults to 100 when not reported.
+    #[serde(default = "default_tab_volume")]
+    pub tab_volume: f64,
+    /// True when the tab audio is muted via the content script.
+    #[serde(default)]
+    pub tab_muted: bool,
 }
+
+fn default_tab_volume() -> f64 { 100.0 }
 
 // ── WASAPI / GSMTC audio types ───────────────────────────────────────────────
 

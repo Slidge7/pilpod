@@ -161,4 +161,8 @@ export type TabMedia = {
   userIdleMs?: number;
   /** document.readyState: "loading" | "interactive" | "complete" */
   documentState?: string;
+  /** Tab-level volume 0–600 (100 = 100%). Defaults to 100 when not reported. */
+  tabVolume?: number;
+  /** True when the tab audio is muted via the content script. */
+  tabMuted?: boolean;
 };

@@ -11,7 +11,16 @@ import {
   hasActiveMedia,
   needsMediaSessionFallback,
 } from "./content/media/mediaDetector.js";
-import { doNext, doPlayPause, doPrevious } from "./content/media/mediaController.js";
+import {
+  doNext,
+  doPlayPause,
+  doPrevious,
+  doSeek,
+  doSetTabVolume,
+  doMuteTab,
+  doSkipAd,
+  doPip,
+} from "./content/media/mediaController.js";
 
 if (!globalThis.__pilpodCompanionContent) {
   globalThis.__pilpodCompanionContent = true;
@@ -25,10 +34,16 @@ if (!globalThis.__pilpodCompanionContent) {
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (!msg || msg.type !== MSG_MEDIA_CONTROL) return false;
+    const value = msg.value;
     switch (String(msg.action ?? "")) {
-      case "playPause": doPlayPause(); break;
-      case "next":      doNext();      break;
-      case "previous":  doPrevious();  break;
+      case "playPause":    doPlayPause();                              break;
+      case "next":         doNext();                                   break;
+      case "previous":     doPrevious();                               break;
+      case "seek":         doSeek(Number(value));                     break;
+      case "setTabVolume": doSetTabVolume(Number(value));             break;
+      case "muteTab":      doMuteTab(value !== undefined ? Boolean(value) : undefined); break;
+      case "skipAd":       doSkipAd();                                break;
+      case "pip":          void doPip();                              break;
       default: break;
     }
     sendResponse({ ok: true });

@@ -25,8 +25,9 @@ export class CommandHandler {
   /**
    * @param {number} tabId
    * @param {string} action
+   * @param {number|undefined} [value] - Optional numeric payload (seek seconds, volume pct).
    */
-  async dispatch(tabId, action) {
+  async dispatch(tabId, action, value) {
     switch (action) {
       case Command.FOCUS_TAB:      return this.#focusTab(tabId);
       case Command.REACTIVATE_TAB: return this.#reactivateTab(tabId);
@@ -37,11 +38,11 @@ export class CommandHandler {
     const meta = this.#registry.get(tabId);
     if (!meta?.media) return;
 
+    const msg = { type: MSG_MEDIA_CONTROL, action };
+    if (value !== undefined && value !== null) msg.value = value;
+
     try {
-      await chrome.tabs.sendMessage(tabId, {
-        type: MSG_MEDIA_CONTROL,
-        action,
-      });
+      await chrome.tabs.sendMessage(tabId, msg);
     } catch {
       if (this.#registry.clearMedia(tabId)) this.#schedulePush();
     }

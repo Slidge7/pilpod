@@ -566,19 +566,101 @@
   box-shadow: var(--pilpod-glass-play-playing-hover-shadow);
 }
 
-/* ── PROGRESS BAR ────────────────────────────────────────── */
+/* ── TITLE CLICK MENU ────────────────────────────────────── */
+
+.pilpod-media-item-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  height: auto !important;
+}
+
+.pilpod-media-item__control-menu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: var(--pilpod-glass-menu-bg);
+  border: 1px solid var(--pilpod-glass-menu-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  width: fit-content;
+}
+
+.pilpod-media-item__control-menu-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid var(--pilpod-glass-menu-act-border);
+  background: var(--pilpod-glass-menu-act-bg);
+  color: var(--pilpod-glass-menu-act-color);
+  transition: background 0.13s, border-color 0.13s, transform 0.13s, color 0.13s;
+  flex-shrink: 0;
+}
+
+.pilpod-media-item__control-menu-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pilpod-media-item__control-menu-btn:hover {
+  background: var(--pilpod-glass-play-hover-bg);
+  border-color: var(--pilpod-glass-play-hover-border);
+  color: var(--pilpod-glass-accent);
+  transform: scale(1.1);
+}
+
+.pilpod-media-item__control-menu-btn:active {
+  transform: scale(0.92);
+}
+
+/* ── SEEKBAR ─────────────────────────────────────────────── */
+
+/*
+ * Two-layer design:
+ *  - .pilpod-media-item__seek-zone  = large transparent hit area (12px tall)
+ *  - .pilpod-media-item__progress-bar = visual track + fill (3px, grows on hover)
+ */
+
+.pilpod-media-item__seek-zone {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;        /* collapsed when not seekable */
+  z-index: 4;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.pilpod-media-item__seek-zone--active {
+  height: 14px;       /* tall transparent hit area */
+  cursor: pointer;
+  pointer-events: all;
+}
 
 .pilpod-media-item__progress-bar {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 2px;
-  z-index: 4;
+  height: 3px;
   background: var(--pilpod-glass-progress-track);
   border-radius: 0 0 13px 13px;
   overflow: hidden;
   pointer-events: none;
+  transition: height 0.15s ease;
+}
+
+.pilpod-media-item__seek-zone--active:hover .pilpod-media-item__progress-bar,
+.pilpod-media-item__seek-zone--active:active .pilpod-media-item__progress-bar {
+  height: 6px;
 }
 
 .pilpod-media-item__progress-fill {
@@ -590,6 +672,24 @@
 
 .pilpod-media-item__progress-fill--playing {
   background: var(--pilpod-glass-progress-fill-playing);
+}
+
+.pilpod-media-item__seek-tooltip {
+  position: absolute;
+  bottom: 100%;
+  transform: translateX(-50%);
+  margin-bottom: 6px;
+  background: var(--pilpod-glass-menu-bg);
+  border: 1px solid var(--pilpod-glass-menu-border);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 /* ── INSET (browser profile card) ────────────────────────── */
