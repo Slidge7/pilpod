@@ -1,5 +1,5 @@
 /** Ms without user activity before dashboard idle mode activates. */
-export const DASHBOARD_IDLE_TIMEOUT_MS = 10_000;
+export const DASHBOARD_IDLE_TIMEOUT_MS = 60_000;
 
 /** Opacity for browser profile cards while idle (0–1). */
 export const DASHBOARD_IDLE_BROWSER_OPACITY = 0.1;
