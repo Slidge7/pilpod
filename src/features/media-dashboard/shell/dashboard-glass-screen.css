@@ -1,0 +1,66 @@
+/**
+ * Screen glass — edge-only overlay on top of all dashboard content.
+ * Center stays fully transparent so wallpaper shows through untouched.
+ * No blur, no fill, no full-surface sheen.
+ */
+
+.pilpod-dashboard-shell__inner {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--pilpod-screen-radius, 10px);
+}
+
+/* Solid fill only when there is no wallpaper photo behind the UI. */
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) {
+  background: var(--pilpod-bg-shell);
+}
+
+/* Full-screen glass rim — sits above header, body, and tab bar. */
+.pilpod-dashboard-glass-edge {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 30;
+  background: transparent;
+  box-shadow:
+    inset 0 2px 0 0 var(--pilpod-screen-shine),
+    inset 1px 0 0 0 color-mix(in srgb, var(--pilpod-screen-shine) 38%, transparent),
+    inset 0 -1px 0 0 var(--pilpod-screen-shade),
+    inset -1px 0 0 0 color-mix(in srgb, var(--pilpod-screen-shade) 55%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--pilpod-glass-float-border) 85%, transparent);
+}
+
+/* Shiny rounded caps on the lit (top) edge only */
+.pilpod-dashboard-glass-edge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(
+      ellipse 26px 22px at 0 0,
+      var(--pilpod-screen-shine) 0%,
+      var(--pilpod-screen-shine-soft) 38%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 26px 22px at 100% 0,
+      color-mix(in srgb, var(--pilpod-screen-shine) 82%, transparent) 0%,
+      var(--pilpod-screen-shine-soft) 38%,
+      transparent 72%
+    );
+}
+
+/* Thin top highlight band — fades out quickly, never washes the wallpaper */
+.pilpod-dashboard-glass-edge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--pilpod-screen-shine) 42%, transparent) 0%,
+    transparent 10px
+  );
+}

@@ -1,0 +1,12 @@
+/**
+ * Dashboard idle mode — dims browser profile cards after inactivity.
+ * Shell class is toggled by useDashboardIdleMode in MediaDashboard.
+ */
+
+.pilpod-browser-profile {
+  transition: opacity 0.4s ease;
+}
+
+.pilpod-dashboard-shell__inner--user-idle .pilpod-browser-panel__groups .pilpod-browser-profile {
+  opacity: var(--pilpod-idle-browser-opacity, 0.1);
+}

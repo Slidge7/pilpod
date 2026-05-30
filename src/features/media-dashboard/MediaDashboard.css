@@ -9,16 +9,10 @@
 }
 
 .pilpod-dashboard-shell__inner {
-  position: relative;
   display: flex;
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  overflow: hidden;
-  border-radius: 10px;
-  border: 1px solid var(--pilpod-border-muted);
-  background: var(--pilpod-bg-shell);
-  box-shadow: var(--pilpod-card-shadow);
 }
 
 .pilpod-dashboard-shell__main {

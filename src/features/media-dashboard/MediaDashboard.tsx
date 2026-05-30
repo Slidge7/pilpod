@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./MediaDashboard.css";
+import "./shell/dashboard-glass-screen.css";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { SlideMenu } from "./components/SlideMenu";
 import { BrowserSessionsPanel } from "./components/BrowserSessionsPanel";
@@ -10,6 +11,12 @@ import { WidgetView } from "./components/WidgetView";
 import { useAppearance } from "./hooks/useAppearance";
 import { useMediaDashboard } from "./hooks/useMediaDashboard";
 import { useWallpaper } from "./hooks/useWallpaper";
+import {
+  DASHBOARD_IDLE_BROWSER_OPACITY,
+  DASHBOARD_IDLE_SHELL_CLASS,
+  useDashboardIdleMode,
+} from "./idle";
+import "./idle/dashboard-idle-mode.css";
 import { WindowsSessionsPanel } from "../windows-media";
 import { DownloadPanel } from "../downloader";
 
@@ -61,6 +68,8 @@ export function MediaDashboard() {
     (sum, b) => sum + (b.extensionInstalled ? b.tabCount : 0),
     0,
   );
+
+  const isUserIdle = useDashboardIdleMode({ enabled: !isWidget });
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -129,14 +138,21 @@ export function MediaDashboard() {
         className={[
           "pilpod-dashboard-shell__inner",
           hasWallpaper ? "pilpod-dashboard-shell__inner--wallpaper" : "",
+          isUserIdle ? DASHBOARD_IDLE_SHELL_CLASS : "",
         ]
           .filter(Boolean)
           .join(" ")}
-        style={
-          wallpaper
+        style={{
+          ...(wallpaper
             ? { backgroundImage: `url("${wallpaper}")` }
-            : undefined
-        }
+            : undefined),
+          ...(isUserIdle
+            ? {
+                ["--pilpod-idle-browser-opacity" as string]:
+                  String(DASHBOARD_IDLE_BROWSER_OPACITY),
+              }
+            : undefined),
+        }}
       >
         <DashboardHeader
           menuOpen={menuOpen}
@@ -206,6 +222,8 @@ export function MediaDashboard() {
           browserTabCount={browserTabCount}
           sessionCount={sessions.length}
         />
+
+        <div className="pilpod-dashboard-glass-edge" aria-hidden="true" />
       </div>
     </div>
   );

@@ -68,6 +68,12 @@
   --pilpod-card-radius: 12px;
   --pilpod-card-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
 
+  /* Dashboard screen shell — lit-edge glass (light) */
+  --pilpod-screen-radius: 10px;
+  --pilpod-screen-shine: rgb(255 255 255 / 0.94);
+  --pilpod-screen-shine-soft: rgb(255 255 255 / 0.34);
+  --pilpod-screen-shade: rgb(15 23 42 / 0.09);
+
   /* Neutral floating glass — dock + tab row shells (light) */
   --pilpod-glass-float-surface: transparent;
   --pilpod-glass-float-border: rgba(15, 23, 42, 0.14);
@@ -242,6 +248,11 @@ html.dark {
   --pilpod-slider-fill: var(--pilpod-accent-blue);
 
   --pilpod-card-shadow: 0 4px 24px rgb(0 0 0 / 0.35);
+
+  /* Dashboard screen shell — lit-edge glass (dark) */
+  --pilpod-screen-shine: rgb(255 255 255 / 0.24);
+  --pilpod-screen-shine-soft: rgb(255 255 255 / 0.08);
+  --pilpod-screen-shade: rgb(0 0 0 / 0.38);
 
   /* Neutral floating glass — dock + tab row shells (dark) */
   --pilpod-glass-float-surface: transparent;

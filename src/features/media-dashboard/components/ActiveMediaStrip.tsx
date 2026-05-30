@@ -11,6 +11,8 @@ type Props = {
   browsers: DetectedBrowser[];
   pendingKeys: ReadonlySet<string>;
   browserAudio: Readonly<Record<string, AudioSessionInfoDto>>;
+  /** When true, strip animates out (search hub expanded / active). */
+  searchModeActive?: boolean;
   onPlayPause: (tab: BrowserTab, browserId: string) => void;
   onFocusTab: (tab: BrowserTab, browserId: string, displayName: string) => void | Promise<void>;
   onReload: (tab: BrowserTab, browserId: string) => void | Promise<void>;
@@ -24,6 +26,7 @@ export function ActiveMediaStrip({
   browsers,
   pendingKeys,
   browserAudio,
+  searchModeActive = false,
   onPlayPause,
   onFocusTab,
   onReload,
@@ -39,20 +42,18 @@ export function ActiveMediaStrip({
   );
   const listRef = useFlipList(activeMedia, getFlipKey);
 
-  if (activeMedia.length === 0) {
-    return (
-      <section className="pilpod-active-media-strip" aria-live="polite">
-        <p className="pilpod-active-media-strip__empty">no media playing now</p>
-      </section>
-    );
-  }
+  const shellClass = [
+    "pilpod-active-media-strip-shell",
+    searchModeActive ? "pilpod-active-media-strip-shell--hidden" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  return (
-    <section className="pilpod-active-media-strip">
-      <ul
-        ref={listRef}
-        className="pilpod-control-grid pilpod-active-media-strip__grid"
-      >
+  const stripContent =
+    activeMedia.length === 0 ? (
+      <p className="pilpod-active-media-strip__empty">no media playing now</p>
+    ) : (
+      <ul ref={listRef} className="pilpod-active-media-strip__grid">
         {activeMedia.map(({ browserId, browserDisplayName, tab }) => {
           const rk = tabRowKey(tab);
           return (
@@ -79,6 +80,19 @@ export function ActiveMediaStrip({
           );
         })}
       </ul>
-    </section>
+    );
+
+  return (
+    <div
+      className={shellClass}
+      aria-hidden={searchModeActive}
+      inert={searchModeActive ? true : undefined}
+    >
+      <div className="pilpod-active-media-strip-shell__clip">
+        <section className="pilpod-active-media-strip" aria-live="polite">
+          {stripContent}
+        </section>
+      </div>
+    </div>
   );
 }

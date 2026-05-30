@@ -817,6 +817,7 @@ export function BrowserSessionsPanel({
         browsers={browsers}
         pendingKeys={pendingKeys}
         browserAudio={browserAudio}
+        searchModeActive={searchExpandedEffective}
         onPlayPause={onPlayPause}
         onFocusTab={onFocusTab}
         onReload={onReload}
