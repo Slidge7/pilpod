@@ -1,7 +1,20 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import "./BrowserSessionsPanel.css";
 import type { AudioSessionInfoDto, BrowserTab, DetectedBrowser } from "../../../types/media";
-import { IconMuteAll, IconPauseAll, IconResetVolume, IconVolumeIndicator } from "../../../shared/ui/icons";
+import {
+  IconBrowserClosed,
+  IconChevronRight,
+  IconExtensionMissing,
+  IconLaunchBrowser,
+  IconMuteAll,
+  IconPauseAll,
+  IconRefresh,
+  IconResetVolume,
+  IconStatusConnected,
+  IconStatusOffline,
+  IconStatusReconnecting,
+  IconVolumeIndicator,
+} from "../../../shared/ui/icons";
 import {
   groupTabsByWindow,
   windowCountForTabs,
@@ -34,6 +47,90 @@ function formatAge(secs: number): string {
   if (secs < 60) return `${secs}s ago`;
   if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
   return `${Math.floor(secs / 3600)}h ago`;
+}
+
+type BrowserConnectionStatus =
+  | "closed"
+  | "connected"
+  | "offline"
+  | "reconnecting"
+  | "no-ext";
+
+function resolveBrowserStatus(browser: DetectedBrowser): BrowserConnectionStatus {
+  if (!browser.running) return "closed";
+  if (!browser.extensionInstalled) return "no-ext";
+  if (
+    browser.extensionReconnecting === true &&
+    !browser.extensionConnected
+  ) {
+    return "reconnecting";
+  }
+  if (!browser.extensionConnected) return "offline";
+  return "connected";
+}
+
+function browserStatusMeta(
+  status: BrowserConnectionStatus,
+  browser: DetectedBrowser,
+): { title: string; label: string } {
+  const name = browserDisplayLabel(browser);
+  switch (status) {
+    case "closed":
+      return { title: "Browser closed", label: `${name}: closed` };
+    case "connected":
+      return { title: "Extension connected", label: `${name}: connected` };
+    case "reconnecting":
+      return {
+        title: "Reconnecting to PilPod after wake…",
+        label: `${name}: reconnecting`,
+      };
+    case "offline": {
+      const cacheHint =
+        browser.lastSyncSecs != null
+          ? `cached ${formatAge(browser.lastSyncSecs)}`
+          : null;
+      return {
+        title: cacheHint
+          ? `Extension not responding (${cacheHint}) — click Refresh`
+          : "Extension not responding — click Refresh",
+        label: `${name}: offline`,
+      };
+    }
+    case "no-ext":
+      return {
+        title: "Companion extension not detected in this browser",
+        label: `${name}: extension not installed`,
+      };
+  }
+}
+
+function BrowserStatusIndicator({ browser }: { browser: DetectedBrowser }) {
+  const status = resolveBrowserStatus(browser);
+  const { title, label } = browserStatusMeta(status, browser);
+
+  const icon =
+    status === "closed" ? (
+      <IconBrowserClosed />
+    ) : status === "connected" ? (
+      <IconStatusConnected />
+    ) : status === "reconnecting" ? (
+      <IconStatusReconnecting />
+    ) : status === "offline" ? (
+      <IconStatusOffline />
+    ) : (
+      <IconExtensionMissing />
+    );
+
+  return (
+    <span
+      className={`pilpod-browser-profile__status pilpod-browser-profile__status--${status}`}
+      title={title}
+      role="status"
+      aria-label={label}
+    >
+      {icon}
+    </span>
+  );
 }
 
 type Props = {
@@ -95,26 +192,21 @@ function BrowserHeader({
     ? (profileAudio.muted ? 0 : Math.round(profileAudio.volume * 100))
     : null;
 
-  const showReconnecting =
-    browser.extensionInstalled &&
-    browser.extensionReconnecting === true &&
-    !browser.extensionConnected;
-
-  const showOffline =
-    browser.extensionInstalled &&
-    !browser.extensionConnected &&
-    !showReconnecting;
-
-  const cacheHint =
-    showOffline && browser.lastSyncSecs != null
-      ? `cached ${formatAge(browser.lastSyncSecs)}`
-      : null;
-
+  const isOpen = browser.running;
+  const hasMediaTabs = browser.tabs.some(tabIsLinkIdentifiedMedia);
   const windowCount = windowCountForTabs(browser.tabs);
+  const displayName = browserDisplayLabel(browser);
+
+  const headClass = [
+    "pilpod-browser-profile__head",
+    !isOpen ? "pilpod-browser-profile__head--solo" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <header className="pilpod-browser-profile__head">
-      <span className="pilpod-browser-profile__label">
+    <header className={headClass}>
+      <span className="pilpod-browser-profile__identity">
         {browser.iconUrl ? (
           <img
             src={browser.iconUrl}
@@ -130,128 +222,166 @@ function BrowserHeader({
           />
         )}
         <span className="pilpod-browser-profile__label-text">
-          {browserDisplayLabel(browser)}
-          {!browser.running ? (
-            <span className="pilpod-browser-profile__label-offline">
-              {" "}· not running
-            </span>
-          ) : null}
-          {!browser.extensionInstalled ? (
-            <span
-              className="pilpod-browser-profile__badge pilpod-browser-profile__badge--warn"
-              title="Companion extension not detected in this browser"
-            >
-              no ext
-            </span>
-          ) : showReconnecting ? (
-            <span
-              className="pilpod-browser-profile__badge pilpod-browser-profile__badge--reconnecting"
-              title="Reconnecting to PilPod after wake…"
-            >
-              reconnecting…
-            </span>
-          ) : showOffline ? (
-            <span
-              className="pilpod-browser-profile__badge pilpod-browser-profile__badge--offline"
-              title={
-                cacheHint
-                  ? `Extension not responding (${cacheHint}) — click Refresh`
-                  : "Extension not responding — click Refresh"
-              }
-            >
-              {cacheHint ? `offline · ${cacheHint}` : "offline"}
-            </span>
-          ) : null}
+          {displayName}
         </span>
-      </span>
-      <span className="pilpod-browser-profile__tab-count">
-        {browser.tabCount > 0 ? (
-          <>
-            {browser.tabCount} tabs
-            {windowCount > 1 ? <> · {windowCount} windows</> : null}
-          </>
-        ) : null}
+        <BrowserStatusIndicator browser={browser} />
       </span>
 
-      {onResetAllVolumes ? (
-        <button
-          type="button"
-          className="pilpod-browser-profile__header-btn"
-          onClick={onResetAllVolumes}
-          title="Reset all tab volumes to 100%"
-          aria-label="Reset all tab volumes"
-        >
-          <IconResetVolume />
-        </button>
-      ) : null}
+      {isOpen ? (
+        <>
+          <span className="pilpod-browser-profile__tab-count">
+            {browser.tabCount > 0 ? (
+              <>
+                {browser.tabCount} tabs
+                {windowCount > 1 ? <> · {windowCount} windows</> : null}
+              </>
+            ) : null}
+          </span>
 
-      {onPauseAll ? (
-        <button
-          type="button"
-          className="pilpod-browser-profile__header-btn"
-          onClick={onPauseAll}
-          title="Pause all tabs"
-          aria-label="Pause all browser tabs"
-        >
-          <IconPauseAll />
-        </button>
-      ) : null}
+          {hasMediaTabs && onResetAllVolumes ? (
+            <button
+              type="button"
+              className="pilpod-browser-profile__header-btn"
+              onClick={onResetAllVolumes}
+              title="Reset all tab volumes to 100%"
+              aria-label="Reset all tab volumes"
+            >
+              <IconResetVolume />
+            </button>
+          ) : null}
 
-      {onMuteAll ? (
-        <button
-          type="button"
-          className="pilpod-browser-profile__header-btn"
-          onClick={onMuteAll}
-          title="Mute all tabs"
-          aria-label="Mute all browser tabs"
-        >
-          <IconMuteAll />
-        </button>
-      ) : null}
+          {hasMediaTabs && onPauseAll ? (
+            <button
+              type="button"
+              className="pilpod-browser-profile__header-btn"
+              onClick={onPauseAll}
+              title="Pause all media tabs"
+              aria-label="Pause all media tabs"
+            >
+              <IconPauseAll />
+            </button>
+          ) : null}
 
-      {wasapiVolPct !== null && profileAudio && onMixerVolume ? (
-        <div className="pilpod-browser-profile__vol-wrap">
-          <button
-            type="button"
-            className="pilpod-browser-profile__vol-badge"
-            title={`Browser volume: ${wasapiVolPct}% (click to adjust)`}
-            aria-label={`Browser system volume ${wasapiVolPct}%`}
-            onClick={() => setVolSliderOpen((v) => !v)}
-          >
-            <IconVolumeIndicator />
-            <span>{wasapiVolPct}%</span>
-          </button>
-          {volSliderOpen ? (
-            <div className="pilpod-browser-profile__vol-popup">
-              <input
-                type="range"
-                className="pilpod-browser-profile__vol-slider"
-                min="0"
-                max="600"
-                step="5"
-                value={wasapiVolPct}
-                aria-label={`Browser volume: ${wasapiVolPct}%`}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10) / 100;
-                  onMixerVolume(profileAudio.instanceId, v);
-                }}
-              />
-              <span className="pilpod-browser-profile__vol-popup-pct">{wasapiVolPct}%</span>
+          {hasMediaTabs && onMuteAll ? (
+            <button
+              type="button"
+              className="pilpod-browser-profile__header-btn"
+              onClick={onMuteAll}
+              title="Mute all media tabs"
+              aria-label="Mute all media tabs"
+            >
+              <IconMuteAll />
+            </button>
+          ) : null}
+
+          {wasapiVolPct !== null && profileAudio && onMixerVolume ? (
+            <div className="pilpod-browser-profile__vol-wrap">
+              <button
+                type="button"
+                className="pilpod-browser-profile__vol-badge"
+                title={`Browser volume: ${wasapiVolPct}% (click to adjust)`}
+                aria-label={`Browser system volume ${wasapiVolPct}%`}
+                onClick={() => setVolSliderOpen((v) => !v)}
+              >
+                <IconVolumeIndicator />
+                <span>{wasapiVolPct}%</span>
+              </button>
+              {volSliderOpen ? (
+                <div className="pilpod-browser-profile__vol-popup">
+                  <input
+                    type="range"
+                    className="pilpod-browser-profile__vol-slider"
+                    min="0"
+                    max="600"
+                    step="5"
+                    value={wasapiVolPct}
+                    aria-label={`Browser volume: ${wasapiVolPct}%`}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10) / 100;
+                      onMixerVolume(profileAudio.instanceId, v);
+                    }}
+                  />
+                  <span className="pilpod-browser-profile__vol-popup-pct">
+                    {wasapiVolPct}%
+                  </span>
+                </div>
+              ) : null}
             </div>
           ) : null}
-        </div>
-      ) : null}
 
-      <button
-        className={`pilpod-browser-profile__refresh${refreshing ? " pilpod-browser-profile__refresh--spinning" : ""}`}
-        title={`Wake & sync ${browserDisplayLabel(browser)}`}
-        aria-label={`Wake and sync ${browserDisplayLabel(browser)}`}
-        onClick={handleRefresh}
-        disabled={refreshing}
-      >
-        ↺
-      </button>
+          <button
+            type="button"
+            className={[
+              "pilpod-browser-profile__header-btn",
+              "pilpod-browser-profile__refresh",
+              refreshing ? "pilpod-browser-profile__refresh--spinning" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            title={`Wake & sync ${displayName}`}
+            aria-label={`Wake and sync ${displayName}`}
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <IconRefresh />
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          className={[
+            "pilpod-browser-profile__header-btn",
+            "pilpod-browser-profile__open-browser",
+            refreshing ? "pilpod-browser-profile__refresh--spinning" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          title={`Open ${displayName}`}
+          aria-label={`Open ${displayName}`}
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          <IconLaunchBrowser />
+        </button>
+      )}
     </header>
+  );
+}
+
+function OpenTabsCollapsible({
+  label,
+  count,
+  children,
+}: {
+  label: string;
+  count: number;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <div
+      className={[
+        "pilpod-browser-profile__other",
+        open ? "pilpod-browser-profile__other--open" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <button
+        type="button"
+        className="pilpod-browser-profile__other-summary"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <IconChevronRight className="pilpod-browser-profile__other-chevron" />
+        <span className="pilpod-browser-profile__other-summary-label">{label}</span>
+        <span className="pilpod-browser-profile__other-count">{count}</span>
+      </button>
+      <div className="pilpod-browser-profile__other-panel">
+        <div className="pilpod-browser-profile__other-panel-inner">{children}</div>
+      </div>
+    </div>
   );
 }
 
@@ -274,17 +404,14 @@ function MediaAndOtherTabLists({
       ) : null}
 
       {otherTabs.length > 0 ? (
-        <details className="pilpod-browser-profile__other">
-          <summary className="pilpod-browser-profile__other-summary">
-            {mediaTabs.length > 0 ? "Other open tabs" : "Open tabs"}
-            <span className="pilpod-browser-profile__other-count">
-              {otherTabs.length}
-            </span>
-          </summary>
+        <OpenTabsCollapsible
+          label={mediaTabs.length > 0 ? "Other open tabs" : "Open tabs"}
+          count={otherTabs.length}
+        >
           <ul className="pilpod-control-grid pilpod-control-grid--compact pilpod-browser-profile__other-list">
             {otherTabs.map((t) => renderTabRow(t, false))}
           </ul>
-        </details>
+        </OpenTabsCollapsible>
       ) : null}
     </>
   );
@@ -387,9 +514,6 @@ function BrowserBody({
   onSetTabVolume,
   onSkipAd,
   onPip,
-  onResetVolume,
-  onPauseAll,
-  onMuteAll,
 }: {
   browser: DetectedBrowser;
   pendingKeys: ReadonlySet<string>;
@@ -407,9 +531,6 @@ function BrowserBody({
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
   onSkipAd?: (tab: BrowserTab, browserId: string) => void;
   onPip?: (tab: BrowserTab, browserId: string) => void;
-  onResetVolume?: (tab: BrowserTab, browserId: string) => void;
-  onPauseAll?: () => void;
-  onMuteAll?: () => void;
 }) {
   const slotBrowserId = browser.id;
   const isStale = !browser.extensionConnected && browser.tabs.length > 0;
@@ -781,7 +902,6 @@ export function BrowserSessionsPanel({
   onSetTabVolume,
   onSkipAd,
   onPip,
-  onResetVolume,
   onPauseAll,
   onMuteAll,
   onResetAllVolumes,
@@ -959,8 +1079,15 @@ export function BrowserSessionsPanel({
         {displayBrowsers.map((browser) => {
           const profileAudio = browserAudio[browser.id];
 
+          const profileClass = [
+            "pilpod-browser-profile",
+            !browser.running ? "pilpod-browser-profile--header-only" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+
           return (
-            <div key={browser.id} className="pilpod-browser-profile">
+            <div key={browser.id} className={profileClass}>
               <BrowserHeader
                 browser={browser}
                 profileAudio={profileAudio}
@@ -970,27 +1097,26 @@ export function BrowserSessionsPanel({
                 onMuteAll={onMuteAll}
                 onResetAllVolumes={onResetAllVolumes}
               />
-              <BrowserBody
-                browser={browser}
-                pendingKeys={pendingKeys}
-                searching={narrowResults}
-                profileAudio={profileAudio}
-                onPlayPause={onPlayPause}
-                onFocusTab={onFocusTab}
-                onReload={onReload}
-                onClose={onClose}
-                onReactivate={onReactivate}
-                onDownload={handleDownload}
-                onMixerVolume={onMixerVolume}
-                downloadTasks={downloadTasks}
-                onSeekTab={onSeekTab}
-                onSetTabVolume={onSetTabVolume}
-                onSkipAd={onSkipAd}
-                onPip={onPip}
-                onResetVolume={onResetVolume}
-                onPauseAll={onPauseAll}
-                onMuteAll={onMuteAll}
-              />
+              {browser.running ? (
+                <BrowserBody
+                  browser={browser}
+                  pendingKeys={pendingKeys}
+                  searching={narrowResults}
+                  profileAudio={profileAudio}
+                  onPlayPause={onPlayPause}
+                  onFocusTab={onFocusTab}
+                  onReload={onReload}
+                  onClose={onClose}
+                  onReactivate={onReactivate}
+                  onDownload={handleDownload}
+                  onMixerVolume={onMixerVolume}
+                  downloadTasks={downloadTasks}
+                  onSeekTab={onSeekTab}
+                  onSetTabVolume={onSetTabVolume}
+                  onSkipAd={onSkipAd}
+                  onPip={onPip}
+                />
+              ) : null}
             </div>
           );
         })}
