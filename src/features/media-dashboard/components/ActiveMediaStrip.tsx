@@ -20,9 +20,6 @@ type Props = {
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
   onSkipAd?: (tab: BrowserTab, browserId: string) => void;
   onPip?: (tab: BrowserTab, browserId: string) => void;
-  onResetVolume?: (tab: BrowserTab, browserId: string) => void;
-  onPauseAll?: () => void;
-  onMuteAll?: () => void;
   onDownload?: (url: string) => void;
   downloadTasks: Map<string, DownloadTask>;
 };
@@ -39,9 +36,6 @@ export function ActiveMediaStrip({
   onSetTabVolume,
   onSkipAd,
   onPip,
-  onResetVolume,
-  onPauseAll,
-  onMuteAll,
   onDownload,
   downloadTasks,
 }: Props) {
@@ -84,9 +78,6 @@ export function ActiveMediaStrip({
               onSetTabVolume={onSetTabVolume}
               onSkipAd={onSkipAd}
               onPip={onPip}
-              onResetVolume={onResetVolume}
-              onPauseAll={onPauseAll}
-              onMuteAll={onMuteAll}
               onDownload={onDownload}
               activeDownload={
                 tab.url ? findActiveDownloadForUrl(downloadTasks, tab.url) : undefined

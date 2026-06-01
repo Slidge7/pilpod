@@ -270,6 +270,24 @@ export function useMediaDashboard() {
     }
   }, [browsers]);
 
+  const resetAllBrowserTabVolumes = useCallback(async () => {
+    setBrowserError(null);
+    for (const b of browsers) {
+      for (const t of b.tabs) {
+        if (t.media) {
+          try {
+            await invoke("browser_media_control", {
+              browserId: b.id,
+              tabId: t.tabId,
+              action: "setTabVolume",
+              value: 100,
+            });
+          } catch { /* best effort */ }
+        }
+      }
+    }
+  }, [browsers]);
+
   const focusBrowserTab = useCallback(
     async (t: BrowserTab, browserId: string, browserDisplayName: string) => {
       setBrowserError(null);
@@ -690,6 +708,7 @@ export function useMediaDashboard() {
     skipAdBrowserTab,
     pipBrowserTab,
     resetTabVolumeBrowserTab,
+    resetAllBrowserTabVolumes,
     pauseAllBrowserTabs,
     muteAllBrowserTabs,
     browserPendingKeys,

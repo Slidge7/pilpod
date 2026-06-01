@@ -437,6 +437,66 @@ html.dark .pilpod-search-tag__exclude:hover {
     border-color 0.15s ease;
 }
 
+.pilpod-browser-profile__header-btn {
+  display: inline-flex;
+  width: 1.65rem;
+  height: 1.65rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--pilpod-glass-float-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.pilpod-browser-profile__header-btn:hover {
+  border-color: var(--pilpod-accent-blue-ring);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--pilpod-accent-blue);
+}
+
+.pilpod-browser-profile__header-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pilpod-browser-profile__pause-all {
+  display: inline-flex;
+  width: 1.65rem;
+  height: 1.65rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--pilpod-glass-float-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.pilpod-browser-profile__pause-all:hover {
+  border-color: var(--pilpod-accent-blue-ring);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--pilpod-accent-blue);
+}
+
+.pilpod-browser-profile__pause-all svg {
+  width: 14px;
+  height: 14px;
+}
+
 .pilpod-browser-profile__refresh:hover:not(:disabled) {
   border-color: var(--pilpod-accent-blue-ring);
   color: var(--pilpod-accent-blue);

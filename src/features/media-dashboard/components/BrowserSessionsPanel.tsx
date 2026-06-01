@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import "./BrowserSessionsPanel.css";
 import type { AudioSessionInfoDto, BrowserTab, DetectedBrowser } from "../../../types/media";
-import { IconVolumeIndicator } from "../../../shared/ui/icons";
+import { IconMuteAll, IconPauseAll, IconResetVolume, IconVolumeIndicator } from "../../../shared/ui/icons";
 import {
   groupTabsByWindow,
   windowCountForTabs,
@@ -56,6 +56,7 @@ type Props = {
   onResetVolume?: (tab: BrowserTab, browserId: string) => void;
   onPauseAll?: () => void;
   onMuteAll?: () => void;
+  onResetAllVolumes?: () => void;
 };
 
 function BrowserHeader({
@@ -63,11 +64,17 @@ function BrowserHeader({
   profileAudio,
   onRefresh,
   onMixerVolume,
+  onPauseAll,
+  onMuteAll,
+  onResetAllVolumes,
 }: {
   browser: DetectedBrowser;
   profileAudio?: AudioSessionInfoDto;
   onRefresh: () => void;
   onMixerVolume?: (instanceId: string, volume: number) => void;
+  onPauseAll?: () => void;
+  onMuteAll?: () => void;
+  onResetAllVolumes?: () => void;
 }) {
   const [refreshing, setRefreshing] = useState(false);
   const [volSliderOpen, setVolSliderOpen] = useState(false);
@@ -165,6 +172,42 @@ function BrowserHeader({
           </>
         ) : null}
       </span>
+
+      {onResetAllVolumes ? (
+        <button
+          type="button"
+          className="pilpod-browser-profile__header-btn"
+          onClick={onResetAllVolumes}
+          title="Reset all tab volumes to 100%"
+          aria-label="Reset all tab volumes"
+        >
+          <IconResetVolume />
+        </button>
+      ) : null}
+
+      {onPauseAll ? (
+        <button
+          type="button"
+          className="pilpod-browser-profile__header-btn"
+          onClick={onPauseAll}
+          title="Pause all tabs"
+          aria-label="Pause all browser tabs"
+        >
+          <IconPauseAll />
+        </button>
+      ) : null}
+
+      {onMuteAll ? (
+        <button
+          type="button"
+          className="pilpod-browser-profile__header-btn"
+          onClick={onMuteAll}
+          title="Mute all tabs"
+          aria-label="Mute all browser tabs"
+        >
+          <IconMuteAll />
+        </button>
+      ) : null}
 
       {wasapiVolPct !== null && profileAudio && onMixerVolume ? (
         <div className="pilpod-browser-profile__vol-wrap">
@@ -395,9 +438,6 @@ function BrowserBody({
           onSetTabVolume={onSetTabVolume}
           onSkipAd={onSkipAd}
           onPip={onPip}
-          onResetVolume={onResetVolume}
-          onPauseAll={onPauseAll}
-          onMuteAll={onMuteAll}
           onDownload={onDownload}
           activeDownload={
             t.url ? findActiveDownloadForUrl(downloadTasks, t.url) : undefined
@@ -744,6 +784,7 @@ export function BrowserSessionsPanel({
   onResetVolume,
   onPauseAll,
   onMuteAll,
+  onResetAllVolumes,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [excludedSites, setExcludedSites] = useState<Set<string>>(() => new Set());
@@ -902,9 +943,6 @@ export function BrowserSessionsPanel({
         onSetTabVolume={onSetTabVolume}
         onSkipAd={onSkipAd}
         onPip={onPip}
-        onResetVolume={onResetVolume}
-        onPauseAll={onPauseAll}
-        onMuteAll={onMuteAll}
         onDownload={handleDownload}
         downloadTasks={downloadTasks}
       />
@@ -928,6 +966,9 @@ export function BrowserSessionsPanel({
                 profileAudio={profileAudio}
                 onMixerVolume={onMixerVolume}
                 onRefresh={() => onRefreshBrowser(browser.id)}
+                onPauseAll={onPauseAll}
+                onMuteAll={onMuteAll}
+                onResetAllVolumes={onResetAllVolumes}
               />
               <BrowserBody
                 browser={browser}

@@ -55,6 +55,7 @@ export function MediaDashboard() {
     skipAdBrowserTab,
     pipBrowserTab,
     resetTabVolumeBrowserTab,
+    resetAllBrowserTabVolumes,
     pauseAllBrowserTabs,
     muteAllBrowserTabs,
     minimizeApp,
@@ -213,6 +214,7 @@ export function MediaDashboard() {
               onResetVolume={resetTabVolumeBrowserTab}
               onPauseAll={() => void pauseAllBrowserTabs()}
               onMuteAll={() => void muteAllBrowserTabs()}
+              onResetAllVolumes={() => void resetAllBrowserTabVolumes()}
             />
           ) : mainTab === "windows" ? (
             <WindowsSessionsPanel

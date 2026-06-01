@@ -1,4 +1,22 @@
-/* MediaItemCard — glass media item (v6, light + dark via tokens) */
+/* MediaItemCard — glass media item (v8 — bottom extended pin section) */
+
+/* ── WRAPPER ─────────────────────────────────────────────── */
+
+.pilpod-media-item-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  height: auto !important;
+  transition: gap 0.2s ease;
+}
+
+/* Collapse the gap completely when menu is pinned underneath */
+.pilpod-media-item-wrapper--pinned {
+  gap: 0px !important;
+}
+
+/* ── CARD ────────────────────────────────────────────────── */
 
 .pilpod-media-item {
   position: relative;
@@ -10,13 +28,20 @@
   transition:
     box-shadow 0.2s,
     border-color 0.2s,
-    background-color 0.2s;
+    background-color 0.2s,
+    border-radius 0.2s ease;
   cursor: default;
   user-select: none;
 }
 
 .pilpod-media-item--float {
   border-radius: 14px;
+}
+
+/* Flatten bottom corners when extended section is attached underneath */
+.pilpod-media-item-wrapper--pinned .pilpod-media-item--float {
+  border-bottom-left-radius: 0px;
+  border-bottom-right-radius: 0px;
 }
 
 .pilpod-media-item--float::before {
@@ -28,7 +53,10 @@
   pointer-events: none;
 }
 
-/* box-shadow + glass surface on --float: see shared/ui/glass-float-shell.css */
+.pilpod-media-item-wrapper--pinned .pilpod-media-item--float::before {
+  border-bottom-left-radius: 0px;
+  border-bottom-right-radius: 0px;
+}
 
 /* ── THUMBNAIL ───────────────────────────────────────────── */
 
@@ -40,6 +68,10 @@
   border-radius: 13px 0 0 13px;
   overflow: hidden;
   z-index: 2;
+}
+
+.pilpod-media-item-wrapper--pinned .pilpod-media-item--float .pilpod-media-item__thumb-wrap {
+  border-bottom-left-radius: 0px;
 }
 
 .pilpod-media-item__thumb-img {
@@ -58,7 +90,7 @@
 }
 
 .pilpod-media-item__thumb-wrap:hover .pilpod-media-item__thumb-img {
-  filter: brightness(0.42);
+  filter: brightness(0.38);
 }
 
 .pilpod-media-item__thumb-letter {
@@ -74,21 +106,25 @@
   color: var(--pilpod-glass-thumb-letter-color);
 }
 
+/* ── THUMB OVERLAY (go-to) ───────────────────────────────── */
+
 .pilpod-media-item__thumb-overlay {
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: stretch;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.18s;
   pointer-events: none;
 }
 
-.pilpod-media-item__thumb-wrap:hover .pilpod-media-item__thumb-overlay {
+.pilpod-media-item__thumb-overlay--visible {
   opacity: 1;
   pointer-events: all;
 }
 
+/* Go-to-tab — fills thumbnail portion */
 .pilpod-media-item__goto-area {
   flex: 1;
   display: flex;
@@ -120,43 +156,7 @@
   transform: scale(1.1);
 }
 
-.pilpod-media-item__expand-strip {
-  width: 22px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  background: var(--pilpod-glass-expand-bg);
-  border-left: 1px solid var(--pilpod-glass-expand-border);
-  transition: background 0.15s;
-}
-
-.pilpod-media-item__expand-strip:hover {
-  background: var(--pilpod-glass-expand-hover);
-}
-
-.pilpod-media-item__expand-icon {
-  width: 14px;
-  height: 14px;
-  color: var(--pilpod-glass-expand-icon);
-  transition: transform 0.2s, color 0.15s;
-}
-
-.pilpod-media-item__expand-strip:hover .pilpod-media-item__expand-icon {
-  color: var(--pilpod-glass-accent);
-}
-
-.pilpod-media-item__expand-strip--active {
-  background: var(--pilpod-glass-expand-active);
-}
-
-.pilpod-media-item__expand-strip--active .pilpod-media-item__expand-icon {
-  transform: scaleX(-1);
-  color: var(--pilpod-glass-accent);
-}
-
+/* Duration badge */
 .pilpod-media-item__thumb-duration {
   position: absolute;
   bottom: 5px;
@@ -182,6 +182,8 @@
   z-index: 1;
 }
 
+/* ── CONTENT (title + volume) ────────────────────────────── */
+
 .pilpod-media-item__content {
   position: absolute;
   inset: 0;
@@ -189,23 +191,32 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.22s ease;
 }
 
-/* ── SLIDE MENU ──────────────────────────────────────────── */
+.pilpod-media-item__content--hidden {
+  opacity: 0;
+  transform: translateX(-10px);
+  pointer-events: none;
+}
+
+/* ── HOVER BODY MENU OVERLAY ─────────────────────────────── */
 
 .pilpod-media-item__body-menu {
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 0;
   background: var(--pilpod-glass-menu-bg);
   border-left: 1px solid var(--pilpod-glass-menu-border);
   transform: translateX(100%);
   opacity: 0;
-  transition: transform 0.26s cubic-bezier(0.34, 1.2, 0.64, 1), opacity 0.2s ease;
+  transition:
+    transform 0.26s cubic-bezier(0.34, 1.2, 0.64, 1),
+    opacity 0.2s ease;
   pointer-events: none;
   z-index: 3;
 }
@@ -216,15 +227,110 @@
   pointer-events: all;
 }
 
-.pilpod-media-item__body--menu-open .pilpod-media-item__content {
-  opacity: 0;
-  transform: translateX(-12px);
-  pointer-events: none;
+/* ── PINNED BOTTOM MENU EXTENSION ────────────────────────── */
+
+.pilpod-media-item__pinned-menu {
+  position: relative;
+  width: 100%;
+  height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--pilpod-glass-menu-bg);
+  border: 1px solid var(--pilpod-glass-menu-border);
+  box-sizing: border-box;
+  z-index: 1;
+  animation: pilpod-pinned-slide 0.2s ease-out;
 }
 
+.pilpod-media-item__pinned-menu--float {
+  border-top: none;
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.pilpod-media-item__pinned-menu--inset {
+  border: none;
+  border-bottom: 1px solid var(--pilpod-glass-float-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+@keyframes pilpod-pinned-slide {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── SHARED MENU INNER ELEMENTS ──────────────────────────── */
+
+.pilpod-media-item__menu-acts {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+  width: 100%;
+  padding: 0 8px;
+  margin-top: 8px; /* Room below absolute pin slider */
+}
+
+/* Pin Toggle Switch button shared absolute top center placement */
+.pilpod-media-item__menu-pin-btn {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--pilpod-glass-menu-act-border);
+  border: none;
+  color: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  z-index: 4;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    height 0.18s ease,
+    width 0.18s ease,
+    border-radius 0.18s ease;
+  overflow: hidden;
+}
+
+.pilpod-media-item__menu-pin-btn:hover {
+  background: color-mix(in srgb, var(--pilpod-glass-accent) 35%, var(--pilpod-glass-menu-act-border));
+  color: var(--pilpod-glass-accent);
+  height: 18px;
+  width: 42px;
+  border-radius: 9px;
+}
+
+.pilpod-media-item__menu-pin-btn--active {
+  background: color-mix(in srgb, var(--pilpod-glass-accent) 30%, var(--pilpod-glass-menu-act-border));
+}
+
+.pilpod-media-item__menu-pin-icon {
+  width: 11px;
+  height: 11px;
+  opacity: 0;
+  transition: opacity 0.14s;
+  flex-shrink: 0;
+}
+
+.pilpod-media-item__menu-pin-btn:hover .pilpod-media-item__menu-pin-icon {
+  opacity: 1;
+}
+
+/* Individual action buttons */
 .pilpod-media-item__menu-act {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -233,17 +339,36 @@
   border: 1px solid var(--pilpod-glass-menu-act-border);
   background: var(--pilpod-glass-menu-act-bg);
   color: var(--pilpod-glass-menu-act-color);
-  transition: background 0.14s, border-color 0.14s, transform 0.14s, box-shadow 0.14s, color 0.14s;
+  transition:
+    background 0.14s,
+    border-color 0.14s,
+    transform 0.14s,
+    box-shadow 0.14s,
+    color 0.14s;
   flex-shrink: 0;
 }
 
 .pilpod-media-item__menu-act svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .pilpod-media-item__menu-act:active {
   transform: scale(0.9);
+}
+
+.pilpod-media-item__menu-act--skip-ad:hover {
+  background: color-mix(in srgb, #f59e0b 18%, var(--pilpod-glass-menu-act-bg));
+  border-color: #f59e0b;
+  color: #f59e0b;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.28);
+}
+
+.pilpod-media-item__menu-act--pip:hover {
+  background: color-mix(in srgb, var(--pilpod-glass-accent) 20%, var(--pilpod-glass-menu-act-bg));
+  border-color: var(--pilpod-glass-accent);
+  color: var(--pilpod-glass-accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--pilpod-glass-accent) 32%, transparent);
 }
 
 .pilpod-media-item__menu-act--dl:hover {
@@ -282,7 +407,7 @@
 
 .pilpod-media-item__menu-act--dl-status {
   width: auto;
-  min-width: 34px;
+  min-width: 32px;
   padding: 0 8px;
   gap: 4px;
   cursor: default;
@@ -294,10 +419,10 @@
 }
 
 @keyframes pilpod-close-bounce {
-  0% { transform: scale(1); }
-  30% { transform: scale(1.35); }
-  55% { transform: scale(0.85); }
-  75% { transform: scale(1.15); }
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.35); }
+  55%  { transform: scale(0.85); }
+  75%  { transform: scale(1.15); }
   100% { transform: scale(1); }
 }
 
@@ -449,17 +574,9 @@
   transition: width 0.04s;
 }
 
-.pilpod-media-item__vol-fill--boost {
-  background: var(--pilpod-vol-boost);
-}
-
-.pilpod-media-item__vol-fill--high {
-  background: var(--pilpod-vol-high);
-}
-
-.pilpod-media-item__vol-fill--muted {
-  background: var(--pilpod-vol-muted);
-}
+.pilpod-media-item__vol-fill--boost { background: var(--pilpod-vol-boost); }
+.pilpod-media-item__vol-fill--high  { background: var(--pilpod-vol-high); }
+.pilpod-media-item__vol-fill--muted { background: var(--pilpod-vol-muted); }
 
 .pilpod-media-item__vol-thumb {
   position: absolute;
@@ -475,9 +592,7 @@
   transition: opacity 0.15s;
 }
 
-.pilpod-media-item__vol-track:hover .pilpod-media-item__vol-thumb {
-  opacity: 1;
-}
+.pilpod-media-item__vol-track:hover .pilpod-media-item__vol-thumb { opacity: 1; }
 
 .pilpod-media-item__vol-input {
   position: absolute;
@@ -501,17 +616,9 @@
   flex-shrink: 0;
 }
 
-.pilpod-media-item__vol-pct--boost {
-  color: var(--pilpod-vol-pct-boost);
-}
-
-.pilpod-media-item__vol-pct--high {
-  color: var(--pilpod-vol-pct-high);
-}
-
-.pilpod-media-item__vol-pct--muted {
-  color: var(--pilpod-glass-vol-pct-muted);
-}
+.pilpod-media-item__vol-pct--boost { color: var(--pilpod-vol-pct-boost); }
+.pilpod-media-item__vol-pct--high  { color: var(--pilpod-vol-pct-high); }
+.pilpod-media-item__vol-pct--muted { color: var(--pilpod-glass-vol-pct-muted); }
 
 /* ── PLAY BUTTON ─────────────────────────────────────────── */
 
@@ -545,14 +652,8 @@
   box-shadow: var(--pilpod-glass-play-hover-shadow);
 }
 
-.pilpod-media-item__play-btn:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
-.pilpod-media-item__play-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.pilpod-media-item__play-btn:active:not(:disabled) { transform: scale(0.95); }
+.pilpod-media-item__play-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .pilpod-media-item__play-btn--playing {
   background: var(--pilpod-glass-play-playing-bg);
@@ -566,81 +667,80 @@
   box-shadow: var(--pilpod-glass-play-playing-hover-shadow);
 }
 
-/* ── TITLE CLICK MENU ────────────────────────────────────── */
+/* ── SEEK ROW (prev | bar | next) ────────────────────────── */
 
-.pilpod-media-item-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  height: auto !important;
-}
-
-.pilpod-media-item__control-menu {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  border-radius: 10px;
-  background: var(--pilpod-glass-menu-bg);
-  border: 1px solid var(--pilpod-glass-menu-border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  width: fit-content;
-}
-
-.pilpod-media-item__control-menu-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border: 1px solid var(--pilpod-glass-menu-act-border);
-  background: var(--pilpod-glass-menu-act-bg);
-  color: var(--pilpod-glass-menu-act-color);
-  transition: background 0.13s, border-color 0.13s, transform 0.13s, color 0.13s;
-  flex-shrink: 0;
-}
-
-.pilpod-media-item__control-menu-btn svg {
-  width: 14px;
-  height: 14px;
-}
-
-.pilpod-media-item__control-menu-btn:hover {
-  background: var(--pilpod-glass-play-hover-bg);
-  border-color: var(--pilpod-glass-play-hover-border);
-  color: var(--pilpod-glass-accent);
-  transform: scale(1.1);
-}
-
-.pilpod-media-item__control-menu-btn:active {
-  transform: scale(0.92);
-}
-
-/* ── SEEKBAR ─────────────────────────────────────────────── */
-
-/*
- * Two-layer design:
- *  - .pilpod-media-item__seek-zone  = large transparent hit area (12px tall)
- *  - .pilpod-media-item__progress-bar = visual track + fill (3px, grows on hover)
- */
-
-.pilpod-media-item__seek-zone {
+.pilpod-media-item__seek-row {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 3px;        /* collapsed when not seekable */
+  height: 14px;
   z-index: 4;
+  display: flex;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+/* Flank buttons */
+.pilpod-media-item__seek-flank {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pilpod-glass-progress-track);
+  border: 1px solid var(--pilpod-glass-menu-act-border);
+  color: var(--pilpod-glass-progress-fill);
+  cursor: pointer;
+  flex-shrink: 0;
+  pointer-events: all;
+  position: relative;
+  bottom: 0;
+  opacity: 0;
+  transform: scale(0.65);
+  transition:
+    opacity 0.2s ease,
+    transform 0.22s cubic-bezier(0.34, 1.3, 0.64, 1),
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.pilpod-media-item__seek-flank svg {
+  width: 9px;
+  height: 9px;
+}
+
+/* Show on row hover OR when track is playing */
+.pilpod-media-item__seek-row:hover .pilpod-media-item__seek-flank,
+.pilpod-media-item--playing .pilpod-media-item__seek-flank {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.pilpod-media-item__seek-flank:hover {
+  background: var(--pilpod-glass-progress-fill-playing);
+  border-color: var(--pilpod-glass-progress-fill-playing);
+  color: #fff;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--pilpod-glass-progress-fill-playing) 55%, transparent);
+  transform: scale(1.18) !important;
+}
+
+.pilpod-media-item__seek-flank:active { transform: scale(0.88) !important; }
+
+/* ── SEEKBAR ─────────────────────────────────────────────── */
+
+.pilpod-media-item__seek-zone {
+  flex: 1;
+  height: 14px;
+  position: relative;
   pointer-events: none;
   overflow: visible;
 }
 
 .pilpod-media-item__seek-zone--active {
-  height: 14px;       /* tall transparent hit area */
   cursor: pointer;
   pointer-events: all;
 }
@@ -656,6 +756,10 @@
   overflow: hidden;
   pointer-events: none;
   transition: height 0.15s ease;
+}
+
+.pilpod-media-item-wrapper--pinned .pilpod-media-item--float .pilpod-media-item__progress-bar {
+  border-radius: 0;
 }
 
 .pilpod-media-item__seek-zone--active:hover .pilpod-media-item__progress-bar,
@@ -692,7 +796,7 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-/* ── INSET (browser profile card) ────────────────────────── */
+/* ── INSET VARIANT ───────────────────────────────────────── */
 
 .pilpod-media-item--inset {
   border-radius: 0;
@@ -704,18 +808,14 @@
   -webkit-backdrop-filter: none;
 }
 
-.pilpod-media-item--inset:last-child {
-  border-bottom: none;
-}
+.pilpod-media-item--inset:last-child { border-bottom: none; }
 
 .pilpod-media-item--inset:hover {
   background: rgba(255, 255, 255, 0.06);
   box-shadow: none;
 }
 
-html.dark .pilpod-media-item--inset:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
+html.dark .pilpod-media-item--inset:hover { background: rgba(255, 255, 255, 0.04); }
 
 .pilpod-media-item--inset.pilpod-media-item--playing {
   background: color-mix(in srgb, var(--pilpod-accent-blue) 8%, transparent);
@@ -731,10 +831,5 @@ html.dark .pilpod-media-item--inset.pilpod-media-item--playing {
   background: color-mix(in srgb, var(--pilpod-accent-blue) 14%, transparent);
 }
 
-.pilpod-media-item--inset .pilpod-media-item__thumb-wrap {
-  border-radius: 0;
-}
-
-.pilpod-media-item--inset .pilpod-media-item__progress-bar {
-  border-radius: 0;
-}
+.pilpod-media-item--inset .pilpod-media-item__thumb-wrap { border-radius: 0; }
+.pilpod-media-item--inset .pilpod-media-item__progress-bar { border-radius: 0; }
