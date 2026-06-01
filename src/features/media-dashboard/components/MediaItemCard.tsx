@@ -8,11 +8,6 @@ import {
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { BrowserTab } from "../../../types/media";
-import type { DownloadTask } from "../../downloader/types";
-import {
-  downloadProgressLabel,
-  downloadProgressTitle,
-} from "../../downloader/lib/activeDownload";
 import {
   isTabPlaying,
   tabHasMediaControls,
@@ -21,7 +16,6 @@ import {
   faviconFromUrl,
 } from "../lib/browserMedia";
 import {
-  IconDownload,
   IconOpenInTab,
   IconPause,
   IconPip,
@@ -77,8 +71,6 @@ type Props = {
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
   onSkipAd?: (tab: BrowserTab, browserId: string) => void;
   onPip?: (tab: BrowserTab, browserId: string) => void;
-  onDownload?: (url: string) => void;
-  activeDownload?: DownloadTask;
 };
 
 function getStateBadgeClass(tabState?: string): string {
@@ -122,8 +114,6 @@ export function MediaItemCard({
   onSetTabVolume,
   onSkipAd,
   onPip,
-  onDownload,
-  activeDownload,
 }: Props) {
   const playing = isTabPlaying(tab);
   const hasMediaControls = tabHasMediaControls(tab);
@@ -312,11 +302,6 @@ export function MediaItemCard({
     void invoke("browser_media_control", { browserId, tabId: tab.tabId, action: "next" });
   }, [browserId, tab.tabId]);
 
-  const handleDownload = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onDownload && tab.url) onDownload(tab.url);
-  }, [onDownload, tab.url]);
-
   const handleReload = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setReloadSpin(true);
@@ -363,25 +348,6 @@ export function MediaItemCard({
               onClick={(e) => { e.stopPropagation(); onPip(tab, browserId); }}
               title="Picture in Picture" aria-label="Picture in Picture">
               <IconPip />
-            </button>
-          ) : null}
-
-          {activeDownload ? (
-            <span
-              className="pilpod-media-item__menu-act pilpod-media-item__menu-act--dl-status"
-              title={downloadProgressTitle(activeDownload)}
-            >
-              {(activeDownload.status.type === "Queued" ||
-                activeDownload.status.type === "Muxing" ||
-                activeDownload.status.type === "FetchingInfo") && (
-                <Spinner className="pilpod-icon--sm" />
-              )}
-              <span className="pilpod-media-item__dl-label">{downloadProgressLabel(activeDownload)}</span>
-            </span>
-          ) : onDownload && tab.url ? (
-            <button type="button" className="pilpod-media-item__menu-act pilpod-media-item__menu-act--dl"
-              onClick={handleDownload} title="Download" aria-label="Download">
-              <IconDownload />
             </button>
           ) : null}
 

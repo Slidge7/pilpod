@@ -6,8 +6,6 @@ import { useDevLabScans } from "./hooks/useDevLabScans";
 
 export function DevLabApp() {
   const {
-    mediaSnapshot,
-    mediaScannedAt,
     browsers,
     browsersScannedAt,
     browserTabScans,
@@ -16,7 +14,6 @@ export function DevLabApp() {
     wakingBrowsers,
     loading,
     error,
-    scanMedia,
     scanBrowsers,
     scanTabsForBrowser,
     wakeAndSyncBrowser,
@@ -30,9 +27,7 @@ export function DevLabApp() {
     <div className="dev-lab-shell">
       <div className="dev-lab-shell__inner">
         <DevLabHeader
-          loadingMedia={loading === "media"}
           loadingBrowsers={loading === "browsers"}
-          onScanMedia={scanMedia}
           onScanBrowsers={scanBrowsers}
           onClose={closeWindow}
         />
@@ -40,8 +35,6 @@ export function DevLabApp() {
         <main className="dev-lab-shell__main">
           {error ? <div className="dev-lab-alert-error">{error}</div> : null}
           <DevLabResults
-            mediaSnapshot={mediaSnapshot}
-            mediaScannedAt={mediaScannedAt}
             browsers={browsers}
             browsersScannedAt={browsersScannedAt}
             browserTabScans={browserTabScans}

@@ -1,10 +1,5 @@
 import "./UnifiedTabRow.css";
 import type { AudioSessionInfoDto, BrowserTab } from "../../../types/media";
-import type { DownloadTask } from "../../downloader/types";
-import {
-  downloadProgressLabel,
-  downloadProgressTitle,
-} from "../../downloader/lib/activeDownload";
 import {
   abbreviatedUrl,
   faviconFromUrl,
@@ -19,7 +14,6 @@ import {
 import { AppVolumeSlider } from "../../../shared/ui/AppVolumeSlider";
 import { BrowserMediaThumb } from "./BrowserMediaThumb";
 import {
-  IconDownload,
   IconOpenInTab,
   IconPause,
   IconPlay,
@@ -43,10 +37,6 @@ type Props = {
   onReload: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onClose: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onReactivate: (tab: BrowserTab, browserId: string) => void | Promise<void>;
-  /** Called when the user clicks the download icon on a media tab. */
-  onDownload?: (url: string) => void;
-  /** In-progress download for this tab URL, if any. */
-  activeDownload?: DownloadTask;
 };
 
 export function UnifiedTabRow({
@@ -62,8 +52,6 @@ export function UnifiedTabRow({
   onReload,
   onClose,
   onReactivate,
-  onDownload,
-  activeDownload,
 }: Props) {
   const ts = (tab.tabState ?? "").toLowerCase();
   const badge = tabStateBadge(tab.tabState);
@@ -237,34 +225,6 @@ export function UnifiedTabRow({
                 <IconX />
               </button>
             </>
-          ) : null}
-
-          {showMediaControls && isMediaTab && activeDownload ? (
-            <span
-              className="pilpod-control-card__dl-progress"
-              title={downloadProgressTitle(activeDownload)}
-              aria-label={downloadProgressTitle(activeDownload)}
-            >
-              {(activeDownload.status.type === "Queued" ||
-                activeDownload.status.type === "Muxing" ||
-                activeDownload.status.type === "FetchingInfo") && (
-                <Spinner className="pilpod-icon--sm" />
-              )}
-              <span>{downloadProgressLabel(activeDownload)}</span>
-            </span>
-          ) : showMediaControls && isMediaTab && onDownload && tab.url ? (
-            <button
-              type="button"
-              title="Download this video"
-              aria-label="Download this video"
-              className="pilpod-control-card__ghost-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDownload(tab.url!);
-              }}
-            >
-              <IconDownload className="pilpod-icon--sm" />
-            </button>
           ) : null}
 
           {showMediaControls && hasMediaControls ? (

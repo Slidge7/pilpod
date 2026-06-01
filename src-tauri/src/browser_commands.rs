@@ -5,14 +5,14 @@ use std::sync::atomic::Ordering;
 use tauri::{AppHandle, State};
 
 use crate::browser_bridge::{
-    connections::{push_ws_sync_all, ws_connected_ids}, SyncRequestedFlag, WsConnectionMap,
+    connections::push_ws_sync_all, SyncRequestedFlag, WsConnectionMap,
 };
 use crate::browser_detector::{
-    emit_browsers_to_ui, merge_detected_and_slots,
+    build_browsers_payload, emit_browsers_to_ui,
     DetectedBrowsersState, ExtensionInstalledState, ReconnectingBrowsersState,
 };
+use crate::browser_dto::BrowsersUpdatePayload;
 use crate::browser_tabs::BrowserSlotsMap;
-use crate::gsmtc::dto::DetectedBrowser;
 
 #[tauri::command]
 pub fn get_browsers(
@@ -21,21 +21,13 @@ pub fn get_browsers(
     ext_store: State<'_, ExtensionInstalledState>,
     reconnecting: State<'_, ReconnectingBrowsersState>,
     ws_connections: State<'_, WsConnectionMap>,
-) -> Vec<DetectedBrowser> {
-    let detected_list = detected
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .clone();
-    let slots_map = slots.lock().unwrap_or_else(|e| e.into_inner());
-    let store = ext_store.lock().unwrap_or_else(|e| e.into_inner());
-    let reconnecting_set = reconnecting.lock().unwrap_or_else(|e| e.into_inner());
-    let ws_connected = ws_connected_ids(&ws_connections);
-    merge_detected_and_slots(
-        &detected_list,
-        &*slots_map,
-        &*store,
-        &*reconnecting_set,
-        &ws_connected,
+) -> BrowsersUpdatePayload {
+    build_browsers_payload(
+        &detected,
+        &slots,
+        &ext_store,
+        &reconnecting,
+        &ws_connections,
     )
 }
 

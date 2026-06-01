@@ -5,7 +5,6 @@ import "./shell/dashboard-glass-screen.css";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { SlideMenu } from "./components/SlideMenu";
 import { BrowserSessionsPanel } from "./components/BrowserSessionsPanel";
-import { SourceTabBar } from "./components/SourceTabBar";
 import { WidgetMediaPanel } from "./components/WidgetMediaPanel";
 import { WidgetView } from "./components/WidgetView";
 import { useAppearance } from "./hooks/useAppearance";
@@ -18,8 +17,6 @@ import {
   useDashboardIdleMode,
 } from "./idle";
 import "./idle/dashboard-idle-mode.css";
-import { WindowsSessionsPanel } from "../windows-media";
-import { DownloadPanel } from "../downloader";
 
 export function MediaDashboard() {
   const { appearance, toggle } = useAppearance();
@@ -29,14 +26,7 @@ export function MediaDashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
   const {
     error,
-    mainTab,
-    setMainTab,
-    pendingDownloadUrl,
-    clearPendingDownloadUrl,
-    downloadFromBrowserTab,
-    downloader,
     browserPendingKeys,
-    winPendingKeys,
     alwaysOnTop,
     toggleAlwaysOnTop,
     refresh,
@@ -66,10 +56,8 @@ export function MediaDashboard() {
     dismissWidgetAndDisable,
     closeApp,
     widgetGestures,
-    toggleWinSession,
     setMixerVolume,
     refreshBrowserConnection,
-    sessions,
     browsers,
     browserAudio,
   } = useMediaDashboard();
@@ -94,26 +82,19 @@ export function MediaDashboard() {
     if (isWidgetExpanded) {
       return (
         <WidgetMediaPanel
-          mainTab={mainTab}
-          onMainTabChange={setMainTab}
           error={error}
           browserPendingKeys={browserPendingKeys}
-          winPendingKeys={winPendingKeys}
           browsers={browsers}
           browserAudio={browserAudio}
-          sessions={sessions}
           onPlayPauseBrowser={toggleBrowserTab}
           onFocusBrowserTab={focusBrowserTab}
           onReloadBrowserTab={reloadBrowserTab}
           onCloseBrowserTab={closeBrowserTab}
           onReactivateBrowserTab={reactivateBrowserTab}
           onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
-          onToggleWinSession={toggleWinSession}
           onMixerVolume={(id, v) => void setMixerVolume(id, v)}
           onOpenFullWindow={() => void restoreFromWidget()}
           onDismissWidget={() => void dismissWidgetAndDisable()}
-          onDownloadFromTab={(url) => void downloadFromBrowserTab(url)}
-          downloadTasks={downloader.tasks}
         />
       );
     }
@@ -179,7 +160,6 @@ export function MediaDashboard() {
           widgetEnabled={widgetEnabled}
           hasWallpaper={hasWallpaper}
           browserTabCount={browserTabCount}
-          sessionCount={sessions.length}
           glassStrength={glassStrength}
           onGlassStrengthChange={setGlassStrength}
           onClose={() => setMenuOpen(false)}
@@ -197,51 +177,27 @@ export function MediaDashboard() {
             <div className="pilpod-alert-error">{error}</div>
           ) : null}
 
-          {mainTab === "browser" ? (
-            <BrowserSessionsPanel
-              browsers={browsers}
-              pendingKeys={browserPendingKeys}
-              browserAudio={browserAudio}
-              onPlayPause={toggleBrowserTab}
-              onFocusTab={focusBrowserTab}
-              onReload={reloadBrowserTab}
-              onClose={closeBrowserTab}
-              onReactivate={reactivateBrowserTab}
-              onMixerVolume={(id, v) => void setMixerVolume(id, v)}
-              onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
-              onDownloadFromTab={(url) => void downloadFromBrowserTab(url)}
-              downloadTasks={downloader.tasks}
-              onSeekTab={seekBrowserTab}
-              onSetTabVolume={setTabVolumeBrowserTab}
-              onSkipAd={skipAdBrowserTab}
-              onPip={pipBrowserTab}
-              onResetVolume={resetTabVolumeBrowserTab}
-              onPauseAll={() => void pauseAllBrowserTabs()}
-              onMuteAll={() => void muteAllBrowserTabs()}
-              onResetAllVolumes={() => void resetAllBrowserTabVolumes()}
-            />
-          ) : mainTab === "windows" ? (
-            <WindowsSessionsPanel
-              sessions={sessions}
-              pendingKeys={winPendingKeys}
-              onToggleSession={toggleWinSession}
-              onMixerVolume={(id, v) => void setMixerVolume(id, v)}
-            />
-          ) : (
-            <DownloadPanel
-              pendingUrl={pendingDownloadUrl}
-              onPendingUrlConsumed={clearPendingDownloadUrl}
-              downloader={downloader}
-            />
-          )}
+          <BrowserSessionsPanel
+            browsers={browsers}
+            pendingKeys={browserPendingKeys}
+            browserAudio={browserAudio}
+            onPlayPause={toggleBrowserTab}
+            onFocusTab={focusBrowserTab}
+            onReload={reloadBrowserTab}
+            onClose={closeBrowserTab}
+            onReactivate={reactivateBrowserTab}
+            onMixerVolume={(id, v) => void setMixerVolume(id, v)}
+            onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
+            onSeekTab={seekBrowserTab}
+            onSetTabVolume={setTabVolumeBrowserTab}
+            onSkipAd={skipAdBrowserTab}
+            onPip={pipBrowserTab}
+            onResetVolume={resetTabVolumeBrowserTab}
+            onPauseAll={() => void pauseAllBrowserTabs()}
+            onMuteAll={() => void muteAllBrowserTabs()}
+            onResetAllVolumes={() => void resetAllBrowserTabVolumes()}
+          />
         </main>
-
-        <SourceTabBar
-          mainTab={mainTab}
-          onMainTabChange={setMainTab}
-          browserTabCount={browserTabCount}
-          sessionCount={sessions.length}
-        />
 
         <div className="pilpod-dashboard-glass-edge" aria-hidden="true" />
       </div>

@@ -2,8 +2,6 @@ import { useCallback, useMemo } from "react";
 import "./ActiveMediaStrip.css";
 import type { BrowserTab, DetectedBrowser } from "../../../types/media";
 import { collectActiveMediaTabs, tabRowKey } from "../lib/browserMedia";
-import { findActiveDownloadForUrl } from "../../downloader/lib/activeDownload";
-import type { DownloadTask } from "../../downloader/types";
 import { useFlipList } from "../hooks/useFlipList";
 import { MediaItemCard } from "./MediaItemCard";
 
@@ -20,8 +18,6 @@ type Props = {
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
   onSkipAd?: (tab: BrowserTab, browserId: string) => void;
   onPip?: (tab: BrowserTab, browserId: string) => void;
-  onDownload?: (url: string) => void;
-  downloadTasks: Map<string, DownloadTask>;
 };
 
 export function ActiveMediaStrip({
@@ -36,8 +32,6 @@ export function ActiveMediaStrip({
   onSetTabVolume,
   onSkipAd,
   onPip,
-  onDownload,
-  downloadTasks,
 }: Props) {
   const activeMedia = useMemo(() => collectActiveMediaTabs(browsers), [browsers]);
   const getFlipKey = useCallback(
@@ -78,10 +72,6 @@ export function ActiveMediaStrip({
               onSetTabVolume={onSetTabVolume}
               onSkipAd={onSkipAd}
               onPip={onPip}
-              onDownload={onDownload}
-              activeDownload={
-                tab.url ? findActiveDownloadForUrl(downloadTasks, tab.url) : undefined
-              }
             />
           );
         })}

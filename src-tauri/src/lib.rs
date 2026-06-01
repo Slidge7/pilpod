@@ -1,9 +1,10 @@
 mod app;
+mod browser_dto;
 mod browser_tabs;
 #[cfg(windows)]
-mod dev_lab;
+mod browser_audio;
 #[cfg(windows)]
-mod downloader;
+mod dev_lab;
 #[cfg(windows)]
 mod browser_bridge;
 #[cfg(windows)]
@@ -20,7 +21,6 @@ mod browser_os_scan;
 mod browser_focus_win;
 #[cfg(windows)]
 mod audio_mixer;
-mod gsmtc;
 mod wallpaper;
 #[cfg(not(windows))]
 mod platform;

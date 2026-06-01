@@ -1,5 +1,4 @@
 import "./DevLabResults.css";
-import type { GsmtcSnapshot } from "../../../types/media";
 import type {
   DevBrowserTabScan,
   DevOsBrowserRow,
@@ -8,8 +7,6 @@ import type {
 import { DevLabBrowserRow } from "./DevLabBrowserRow";
 
 type Props = {
-  mediaSnapshot: GsmtcSnapshot | null;
-  mediaScannedAt: Date | null;
   browsers: DevOsBrowserRow[];
   browsersScannedAt: Date | null;
   browserTabScans: Record<string, DevBrowserTabScan>;
@@ -29,8 +26,6 @@ function formatTime(date: Date): string {
 }
 
 export function DevLabResults({
-  mediaSnapshot,
-  mediaScannedAt,
   browsers,
   browsersScannedAt,
   browserTabScans,
@@ -41,46 +36,12 @@ export function DevLabResults({
   onWakeAndSyncBrowser,
 }: Props) {
   const rawJson = {
-    media: mediaSnapshot,
     browsers,
     browserTabScans,
   };
 
   return (
     <div className="dev-lab-results">
-      <section className="dev-lab-results__section">
-        <h2 className="dev-lab-results__heading">
-          {mediaScannedAt
-            ? `Last media scan · ${formatTime(mediaScannedAt)}`
-            : "Media scan"}
-        </h2>
-        {mediaSnapshot === null ? (
-          <p className="dev-lab-results__empty">No scan yet.</p>
-        ) : mediaSnapshot.sessions.length === 0 ? (
-          <p className="dev-lab-results__empty">No GSMTC sessions found.</p>
-        ) : (
-          <ul className="dev-lab-results__list">
-            {mediaSnapshot.sessions.map((session) => (
-              <li key={session.sourceAppUserModelId} className="dev-lab-results__item">
-                <span className="dev-lab-results__item-title">
-                  {session.title || session.sourceAppUserModelId}
-                </span>
-                {session.artist ? (
-                  <span className="dev-lab-results__item-meta">
-                    {" "}
-                    — {session.artist}
-                  </span>
-                ) : null}
-                <span className="dev-lab-results__item-status">
-                  {" "}
-                  ({session.playbackStatus})
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
       <section className="dev-lab-results__section">
         <h2 className="dev-lab-results__heading">
           {browsersScannedAt

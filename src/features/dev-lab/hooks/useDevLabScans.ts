@@ -1,6 +1,10 @@
 import { useCallback, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { BrowserTab, DetectedBrowser, GsmtcSnapshot } from "../../../types/media";
+import type {
+  BrowserTab,
+  BrowsersUpdatePayload,
+  DetectedBrowser,
+} from "../../../types/media";
 
 export type DevBrowserProcessState =
   | "notInstalled"
@@ -47,7 +51,7 @@ export type DevBrowserTabScan = {
   profiles: DevBrowserTabProfile[];
 };
 
-type ScanKind = "media" | "browsers" | null;
+type ScanKind = "browsers" | null;
 
 const TAB_SYNC_WAIT_MS = 450;
 
@@ -68,8 +72,6 @@ function profilesForOsBrowser(
 }
 
 export function useDevLabScans() {
-  const [mediaSnapshot, setMediaSnapshot] = useState<GsmtcSnapshot | null>(null);
-  const [mediaScannedAt, setMediaScannedAt] = useState<Date | null>(null);
   const [browsers, setBrowsers] = useState<DevOsBrowserRow[]>([]);
   const [browsersScannedAt, setBrowsersScannedAt] = useState<Date | null>(null);
   const [browserTabScans, setBrowserTabScans] = useState<
@@ -82,20 +84,6 @@ export function useDevLabScans() {
   >({});
   const [wakingBrowsers, setWakingBrowsers] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
-
-  const scanMedia = useCallback(async () => {
-    setLoading("media");
-    setError(null);
-    try {
-      const snapshot = await invoke<GsmtcSnapshot>("gsmtc_refresh");
-      setMediaSnapshot(snapshot);
-      setMediaScannedAt(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(null);
-    }
-  }, []);
 
   const scanBrowsers = useCallback(async () => {
     setLoading("browsers");
@@ -118,7 +106,8 @@ export function useDevLabScans() {
       await invoke("request_browser_sync");
       await new Promise((resolve) => setTimeout(resolve, TAB_SYNC_WAIT_MS));
 
-      let all = await invoke<DetectedBrowser[]>("get_browsers");
+      let payload = await invoke<BrowsersUpdatePayload>("get_browsers");
+      let all = payload.browsers;
       const matching = all.filter((b) => b.osBrowserId === osBrowserId);
 
       for (const browser of matching) {
@@ -130,7 +119,8 @@ export function useDevLabScans() {
       if (matching.some((b) => b.extensionInstalled)) {
         await invoke("request_browser_sync");
         await new Promise((resolve) => setTimeout(resolve, TAB_SYNC_WAIT_MS));
-        all = await invoke<DetectedBrowser[]>("get_browsers");
+        payload = await invoke<BrowsersUpdatePayload>("get_browsers");
+        all = payload.browsers;
       }
 
       setBrowserTabScans((prev) => ({
@@ -203,8 +193,6 @@ export function useDevLabScans() {
   }, []);
 
   return {
-    mediaSnapshot,
-    mediaScannedAt,
     browsers,
     browsersScannedAt,
     browserTabScans,
@@ -213,7 +201,6 @@ export function useDevLabScans() {
     wakingBrowsers,
     loading,
     error,
-    scanMedia,
     scanBrowsers,
     scanTabsForBrowser,
     wakeAndSyncBrowser,

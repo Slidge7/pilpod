@@ -32,8 +32,6 @@ import {
   tabIsLinkIdentifiedMedia,
   type SearchTagOption,
 } from "../lib/browserMedia";
-import { findActiveDownloadForUrl } from "../../downloader/lib/activeDownload";
-import type { DownloadTask } from "../../downloader/types";
 import { UnifiedTabRow } from "./UnifiedTabRow";
 import { MediaItemCard } from "./MediaItemCard";
 import { ActiveMediaStrip } from "./ActiveMediaStrip";
@@ -144,8 +142,6 @@ type Props = {
   onReactivate: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onMixerVolume: (instanceId: string, volume: number) => void;
   onRefreshBrowser: (browserId: string) => void | Promise<void>;
-  onDownloadFromTab?: (url: string) => void;
-  downloadTasks: Map<string, DownloadTask>;
   onSeekTab?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
   onSkipAd?: (tab: BrowserTab, browserId: string) => void;
@@ -506,10 +502,8 @@ function BrowserBody({
   onReload,
   onClose,
   onReactivate,
-  onDownload,
   onMixerVolume,
   profileAudio,
-  downloadTasks,
   onSeekTab,
   onSetTabVolume,
   onSkipAd,
@@ -524,9 +518,7 @@ function BrowserBody({
   onReload: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onClose: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onReactivate: (tab: BrowserTab, browserId: string) => void | Promise<void>;
-  onDownload: (url: string) => void;
   onMixerVolume: (instanceId: string, volume: number) => void;
-  downloadTasks: Map<string, DownloadTask>;
   onSeekTab?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
   onSkipAd?: (tab: BrowserTab, browserId: string) => void;
@@ -559,10 +551,6 @@ function BrowserBody({
           onSetTabVolume={onSetTabVolume}
           onSkipAd={onSkipAd}
           onPip={onPip}
-          onDownload={onDownload}
-          activeDownload={
-            t.url ? findActiveDownloadForUrl(downloadTasks, t.url) : undefined
-          }
         />
       );
     }
@@ -582,12 +570,6 @@ function BrowserBody({
         onReload={onReload}
         onClose={onClose}
         onReactivate={onReactivate}
-        onDownload={showMediaControls ? onDownload : undefined}
-        activeDownload={
-          showMediaControls && t.url
-            ? findActiveDownloadForUrl(downloadTasks, t.url)
-            : undefined
-        }
       />
     );
   };
@@ -896,8 +878,6 @@ export function BrowserSessionsPanel({
   onReactivate,
   onMixerVolume,
   onRefreshBrowser,
-  onDownloadFromTab,
-  downloadTasks,
   onSeekTab,
   onSetTabVolume,
   onSkipAd,
@@ -1014,12 +994,6 @@ export function BrowserSessionsPanel({
     });
   }, []);
 
-  const handleDownload = useCallback(
-    (url: string) => {
-      onDownloadFromTab?.(url);
-    },
-    [onDownloadFromTab],
-  );
   if (browsers.length === 0) {
     return (
       <section role="tabpanel" id="panel-browser" aria-labelledby="tab-browser">
@@ -1063,8 +1037,6 @@ export function BrowserSessionsPanel({
         onSetTabVolume={onSetTabVolume}
         onSkipAd={onSkipAd}
         onPip={onPip}
-        onDownload={handleDownload}
-        downloadTasks={downloadTasks}
       />
 
       {narrowResults && displayBrowsers.length === 0 ? (
@@ -1108,9 +1080,7 @@ export function BrowserSessionsPanel({
                   onReload={onReload}
                   onClose={onClose}
                   onReactivate={onReactivate}
-                  onDownload={handleDownload}
                   onMixerVolume={onMixerVolume}
-                  downloadTasks={downloadTasks}
                   onSeekTab={onSeekTab}
                   onSetTabVolume={onSetTabVolume}
                   onSkipAd={onSkipAd}

@@ -1,46 +1,63 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { DetectedBrowser } from "../../../types/media";
+import type {
+  AudioSessionInfoDto,
+  BrowsersUpdatePayload,
+  DetectedBrowser,
+} from "../../../types/media";
 import { BROWSERS_UPDATE_EVENT } from "../constants";
 import { browsersEqual } from "../lib/browsersEqual";
 
+function browserAudioEqual(
+  a: Record<string, AudioSessionInfoDto>,
+  b: Record<string, AudioSessionInfoDto>,
+): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function applyPayload(
+  payload: BrowsersUpdatePayload,
+  setBrowsers: React.Dispatch<React.SetStateAction<DetectedBrowser[]>>,
+  setBrowserAudio: React.Dispatch<
+    React.SetStateAction<Record<string, AudioSessionInfoDto>>
+  >,
+) {
+  setBrowsers((prev) =>
+    browsersEqual(prev, payload.browsers) ? prev : payload.browsers,
+  );
+  const audio = payload.browserAudio ?? {};
+  setBrowserAudio((prev) => (browserAudioEqual(prev, audio) ? prev : audio));
+}
+
 /**
- * Subscribes to `"browsers://update"` and returns the current browser list.
- *
- * - Browsers are detected at the OS level (registry + process scan) and are
- *   always present even when no extension is installed.
- * - `browser.extensionInstalled` persists across app sessions.
- * - `browser.extensionConnected` is true only when the extension sent a POST
- *   in the last 3 seconds.
- * - `browser.tabs` is cached from the last POST and shown even when offline.
- *
- * On window focus, calls `request_browser_sync` so Rust re-emits from cache
- * immediately and signals the extension to push a fresh snapshot.
+ * Subscribes to `"browsers://update"` and returns browsers plus WASAPI profile audio.
  */
 export function useBrowsers() {
   const [browsers, setBrowsers] = useState<DetectedBrowser[]>([]);
+  const [browserAudio, setBrowserAudio] = useState<
+    Record<string, AudioSessionInfoDto>
+  >({});
 
   const refresh = useCallback(async () => {
     try {
-      const list = await invoke<DetectedBrowser[]>("get_browsers");
-      setBrowsers((prev) => (browsersEqual(prev, list) ? prev : list));
+      const payload = await invoke<BrowsersUpdatePayload>("get_browsers");
+      applyPayload(payload, setBrowsers, setBrowserAudio);
     } catch {
-      // Non-Windows dev environment — start with empty list.
       setBrowsers((prev) => (prev.length === 0 ? prev : []));
+      setBrowserAudio((prev) =>
+        Object.keys(prev).length === 0 ? prev : {},
+      );
     }
   }, []);
 
-  // Debounce focus events so rapid alt-tab doesn't flood the backend.
   const focusDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
 
-    void listen<DetectedBrowser[]>(BROWSERS_UPDATE_EVENT, (ev) => {
-      setBrowsers((prev) =>
-        browsersEqual(prev, ev.payload) ? prev : ev.payload,
-      );
+    void listen<BrowsersUpdatePayload>(BROWSERS_UPDATE_EVENT, (ev) => {
+      applyPayload(ev.payload, setBrowsers, setBrowserAudio);
     }).then((u) => {
       unlisten = u;
     });
@@ -51,9 +68,7 @@ export function useBrowsers() {
       if (focusDebounceRef.current !== null) return;
       focusDebounceRef.current = setTimeout(() => {
         focusDebounceRef.current = null;
-        void invoke("request_browser_sync").catch(() => {
-          // Non-Windows or command not yet registered — ignore.
-        });
+        void invoke("request_browser_sync").catch(() => {});
       }, 200);
     };
 
@@ -68,5 +83,5 @@ export function useBrowsers() {
     };
   }, [refresh]);
 
-  return { browsers, refresh };
+  return { browsers, browserAudio, refresh };
 }

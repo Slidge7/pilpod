@@ -2,17 +2,13 @@ import "./DevLabHeader.css";
 import { IconClose } from "../../../shared/ui/icons";
 
 type Props = {
-  loadingMedia: boolean;
   loadingBrowsers: boolean;
-  onScanMedia: () => void;
   onScanBrowsers: () => void;
   onClose: () => void;
 };
 
 export function DevLabHeader({
-  loadingMedia,
   loadingBrowsers,
-  onScanMedia,
   onScanBrowsers,
   onClose,
 }: Props) {
@@ -30,14 +26,6 @@ export function DevLabHeader({
         <span className="dev-lab-header__title">PilPod Dev Lab</span>
       </div>
       <div className="dev-lab-header__scan-actions">
-        <button
-          type="button"
-          className="dev-lab-header__scan-btn"
-          onClick={() => void onScanMedia()}
-          disabled={loadingMedia}
-        >
-          {loadingMedia ? "Scanning…" : "Scan played media"}
-        </button>
         <button
           type="button"
           className="dev-lab-header__scan-btn"

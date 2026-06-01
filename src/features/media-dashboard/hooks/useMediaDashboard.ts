@@ -20,21 +20,12 @@ import {
   WIDGET_TRANSITION_MS,
 } from "../constants";
 import { tabRowKey } from "../lib/browserMedia";
-import type { MediaMainTab } from "../model";
-import { useDownloader } from "../../downloader/hooks/useDownloader";
-import { useWindowsSessions } from "../../windows-media";
 import { useBrowsers } from "./useBrowsers";
 
 export function useMediaDashboard() {
-  const { browsers, refresh: refreshBrowsers } = useBrowsers();
-  const windowsSessions = useWindowsSessions();
-  const downloader = useDownloader();
+  const { browsers, browserAudio, refresh: refreshBrowsers } = useBrowsers();
 
   const [browserError, setBrowserError] = useState<string | null>(null);
-  const [mainTab, setMainTab] = useState<MediaMainTab>("browser");
-  const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(
-    null,
-  );
   const [browserPendingKeys, setBrowserPendingKeys] = useState<Set<string>>(
     () => new Set(),
   );
@@ -94,11 +85,20 @@ export function useMediaDashboard() {
     [clearBrowserPending],
   );
 
-  /** Trigger a full refresh: GSMTC snapshot + browser list. */
   const refresh = useCallback(async () => {
-    void windowsSessions.refresh();
     void refreshBrowsers();
-  }, [windowsSessions.refresh, refreshBrowsers]);
+  }, [refreshBrowsers]);
+
+  const setMixerVolume = useCallback(
+    async (instanceId: string, volume: number) => {
+      try {
+        await invoke("mixer_set_volume", { instanceId, volume });
+      } catch (e) {
+        setBrowserError(String(e));
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (isWidget) return;
@@ -535,21 +535,6 @@ export function useMediaDashboard() {
     }
   }, [alwaysOnTop, isWidget]);
 
-  const clearPendingDownloadUrl = useCallback(() => {
-    setPendingDownloadUrl(null);
-  }, []);
-
-  const downloadFromBrowserTab = useCallback(
-    async (url: string) => {
-      setPendingDownloadUrl(url);
-      setMainTab("download");
-      if (isWidget) {
-        await restoreFromWidget();
-      }
-    },
-    [isWidget, restoreFromWidget],
-  );
-
   const dismissWidgetAndDisable = useCallback(async () => {
     if (windowTransitionLock.current || !isWidget) return;
     windowTransitionLock.current = true;
@@ -677,16 +662,8 @@ export function useMediaDashboard() {
     }
   }, [browsers, refreshBrowsers]);
 
-  const error = windowsSessions.error ?? browserError;
-
   return {
-    error,
-    mainTab,
-    setMainTab,
-    pendingDownloadUrl,
-    clearPendingDownloadUrl,
-    downloadFromBrowserTab,
-    downloader,
+    error: browserError,
     alwaysOnTop,
     toggleAlwaysOnTop,
     refresh,
@@ -725,11 +702,7 @@ export function useMediaDashboard() {
     },
     refreshBrowserConnection,
     browsers,
-    // Windows media (delegated to useWindowsSessions)
-    sessions: windowsSessions.sessions,
-    winPendingKeys: windowsSessions.pendingKeys,
-    toggleWinSession: windowsSessions.toggleSession,
-    setMixerVolume: windowsSessions.setMixerVolume,
-    browserAudio: windowsSessions.browserAudio,
+    browserAudio,
+    setMixerVolume,
   };
 }

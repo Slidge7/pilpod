@@ -13,7 +13,7 @@ use crate::browser_bridge::connections::push_ws_command;
 use crate::browser_bridge::WsConnectionMap;
 use serde::Serialize;
 
-use crate::gsmtc::dto::{BrowserTab, TabMedia};
+use crate::browser_dto::{BrowserTab, TabMedia};
 
 /// Latest tab state pushed by one browser profile (keyed by `browserId` UUID).
 #[derive(Debug, Clone)]

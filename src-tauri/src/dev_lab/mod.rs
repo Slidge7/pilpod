@@ -15,7 +15,7 @@ use crate::browser_detector::{
     ExtensionInstalledState, ReconnectingBrowsersState,
 };
 use crate::browser_tabs::{BrowserSlot, BrowserSlotsMap};
-use crate::gsmtc::dto::BrowserTab;
+use crate::browser_dto::BrowserTab;
 
 const DEV_LAB_LABEL: &str = "dev-lab";
 const POLL_INTERVAL_MS: u64 = 500;

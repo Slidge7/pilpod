@@ -19,7 +19,6 @@ type Props = {
   widgetEnabled: boolean;
   hasWallpaper: boolean;
   browserTabCount: number;
-  sessionCount: number;
   glassStrength: number;
   onGlassStrengthChange: (value: number) => void;
   onClose: () => void;
@@ -39,7 +38,6 @@ export function SlideMenu({
   widgetEnabled,
   hasWallpaper,
   browserTabCount,
-  sessionCount,
   glassStrength,
   onGlassStrengthChange,
   onClose,
@@ -202,7 +200,7 @@ export function SlideMenu({
         <div className="pilpod-slide-menu__footer">
           <span className="pilpod-slide-menu__credit">Provided by s7.ma</span>
           <span className="pilpod-slide-menu__stats">
-            {browserTabCount} browser · {sessionCount} Windows
+            {browserTabCount} browser tabs
           </span>
         </div>
       </div>

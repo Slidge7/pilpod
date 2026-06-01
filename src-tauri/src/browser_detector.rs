@@ -17,7 +17,7 @@ use crate::browser_catalog::{self, CATALOG};
 use crate::browser_tabs::{BrowserSlot, BrowserSlotsMap};
 use crate::browser_bridge::connections::{ws_connected_ids, WsConnectionMap};
 use crate::browser_bridge::CONNECTED_WINDOW_SECS;
-use crate::gsmtc::dto::{DetectedBrowser, DetectedBrowserInfo};
+use crate::browser_dto::{BrowsersUpdatePayload, DetectedBrowser, DetectedBrowserInfo};
 
 /// Event name emitted to the frontend when the browser list changes.
 pub const BROWSERS_UPDATE_EVENT: &str = "browsers://update";
@@ -317,15 +317,14 @@ pub fn active_extension_browser_ids(slots: &HashMap<String, BrowserSlot>) -> Has
 
 // ── Emission ─────────────────────────────────────────────────────────────────
 
-/// Build and emit the merged browser list to the frontend on `"browsers://update"`.
-pub fn emit_browsers_to_ui(
-    app: &AppHandle,
+/// Build the merged browser list plus per-profile WASAPI audio map.
+pub fn build_browsers_payload(
     detected: &DetectedBrowsersState,
     slots: &BrowserSlotsMap,
     ext_store: &ExtensionInstalledState,
     reconnecting: &ReconnectingBrowsersState,
     ws_connections: &WsConnectionMap,
-) {
+) -> BrowsersUpdatePayload {
     let detected_list = detected
         .lock()
         .unwrap_or_else(|e| e.into_inner())
@@ -343,7 +342,35 @@ pub fn emit_browsers_to_ui(
         &ws_connected,
     );
 
-    if let Err(e) = app.emit(BROWSERS_UPDATE_EVENT, &browsers) {
+    #[cfg(windows)]
+    let browser_audio = crate::browser_audio::browser_audio_for_slots(&slots_map);
+    #[cfg(not(windows))]
+    let browser_audio = std::collections::HashMap::new();
+
+    BrowsersUpdatePayload {
+        browsers,
+        browser_audio,
+    }
+}
+
+/// Build and emit the merged browser list to the frontend on `"browsers://update"`.
+pub fn emit_browsers_to_ui(
+    app: &AppHandle,
+    detected: &DetectedBrowsersState,
+    slots: &BrowserSlotsMap,
+    ext_store: &ExtensionInstalledState,
+    reconnecting: &ReconnectingBrowsersState,
+    ws_connections: &WsConnectionMap,
+) {
+    let payload = build_browsers_payload(
+        detected,
+        slots,
+        ext_store,
+        reconnecting,
+        ws_connections,
+    );
+
+    if let Err(e) = app.emit(BROWSERS_UPDATE_EVENT, &payload) {
         eprintln!("[browser-detector] emit failed: {e}");
     }
 }

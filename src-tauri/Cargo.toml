@@ -1,7 +1,7 @@
 [package]
 name = "pilpod"
 version = "0.1.0"
-description = "PilPod — Windows GSMTC dashboard"
+description = "PilPod — browser media dashboard"
 authors = ["you"]
 edition = "2021"
 
@@ -28,8 +28,6 @@ tower-http = { version = "0.5", features = ["cors"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.61", features = [
-  "Media_Control",
-  "Storage_Streams",
   "Win32_Foundation",
   "Win32_Media_Audio",
   "Win32_System_Com",

@@ -1,7 +1,7 @@
 //! Shared ingest logic for HTTP POST and WebSocket frames.
 
 use std::{
-    sync::{atomic::Ordering, Arc, Mutex},
+    sync::atomic::Ordering,
     time::{Duration, Instant},
 };
 
@@ -16,8 +16,7 @@ use crate::browser_detector::{
 use crate::browser_tabs::{
     hash_tabs, BrowserCommandsQueue, BrowserMediaCommand, BrowserSlot, BrowserSlotsMap,
 };
-use crate::gsmtc::dto::{BrowserTab, TabMedia};
-use crate::gsmtc::state::{emit_fast_to_ui, GsmtcState};
+use crate::browser_dto::{BrowserTab, TabMedia};
 
 use super::protocol::COMMAND_TTL_SECS;
 use super::SyncRequestedFlag;
@@ -34,7 +33,6 @@ pub struct BridgeContext {
     pub browser_slots: BrowserSlotsMap,
     pub command_queue: BrowserCommandsQueue,
     pub app: AppHandle,
-    pub gsmtc_slot: Arc<Mutex<Option<Arc<GsmtcState>>>>,
     pub detected_browsers: DetectedBrowsersState,
     pub ext_store: ExtensionInstalledState,
     pub reconnecting: ReconnectingBrowsersState,
@@ -202,12 +200,6 @@ pub fn apply_ingest(ingest: BridgeIngest, ctx: &BridgeContext) -> BridgeResult {
     let was_reconnecting = clear_reconnecting(&ctx.reconnecting, &ingest.browser_id);
 
     if changed || was_reconnecting {
-        if let Ok(slot) = ctx.gsmtc_slot.lock() {
-            if let Some(gs) = slot.as_ref() {
-                emit_fast_to_ui(&ctx.app, gs);
-            }
-        }
-
         emit_browsers_to_ui(
             &ctx.app,
             &ctx.detected_browsers,
