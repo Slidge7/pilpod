@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import "./SlideMenu.css";
 import type { AppearanceMode } from "../../../theme/appearance";
+import { GlassStrengthSlider } from "../../../shared/ui/GlassStrengthSlider";
 import {
   IconBeaker,
   IconImage,
@@ -18,6 +20,8 @@ type Props = {
   hasWallpaper: boolean;
   browserTabCount: number;
   sessionCount: number;
+  glassStrength: number;
+  onGlassStrengthChange: (value: number) => void;
   onClose: () => void;
   onToggleAlwaysOnTop: () => void;
   onToggleAppearance: () => void;
@@ -36,6 +40,8 @@ export function SlideMenu({
   hasWallpaper,
   browserTabCount,
   sessionCount,
+  glassStrength,
+  onGlassStrengthChange,
   onClose,
   onToggleAlwaysOnTop,
   onToggleAppearance,
@@ -45,6 +51,12 @@ export function SlideMenu({
   onClearWallpaper,
   onOpenDevLab,
 }: Props) {
+  const [glassDragging, setGlassDragging] = useState(false);
+
+  useEffect(() => {
+    if (!open) setGlassDragging(false);
+  }, [open]);
+
   const appearanceTitle =
     appearance === "dark" ? "Use light appearance" : "Use dark appearance";
   const widgetToggleTitle = widgetEnabled
@@ -72,16 +84,37 @@ export function SlideMenu({
     .filter(Boolean)
     .join(" ");
 
+  const rootClass = [
+    "pilpod-slide-menu",
+    open ? "pilpod-slide-menu--open" : "",
+    glassDragging ? "pilpod-slide-menu--glass-dragging" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const sliderTabIndex = open ? 0 : -1;
+
+  const glassSlider = (
+    <GlassStrengthSlider
+      value={glassStrength}
+      onChange={onGlassStrengthChange}
+      onDragStart={() => setGlassDragging(true)}
+      onDragEnd={() => setGlassDragging(false)}
+      tabIndex={sliderTabIndex}
+    />
+  );
+
   return (
-    <div
-      className={[
-        "pilpod-slide-menu",
-        open ? "pilpod-slide-menu--open" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      aria-hidden={!open}
-    >
+    <div className={rootClass} aria-hidden={!open && !glassDragging}>
+      {open && glassDragging ? (
+        <div className="pilpod-slide-menu__glass-focus" aria-hidden={false}>
+          <div className="pilpod-slide-menu__glass-focus-inner">
+            <span className="pilpod-slide-menu__glass-label">Glass effect</span>
+            {glassSlider}
+          </div>
+        </div>
+      ) : null}
+
       <div className="pilpod-slide-menu__panel">
         <div className="pilpod-slide-menu__actions">
           <button
@@ -160,6 +193,12 @@ export function SlideMenu({
             </button>
           ) : null}
         </div>
+
+        <div className="pilpod-slide-menu__glass-row">
+          <span className="pilpod-slide-menu__glass-label">Glass effect</span>
+          {glassSlider}
+        </div>
+
         <div className="pilpod-slide-menu__footer">
           <span className="pilpod-slide-menu__credit">Provided by s7.ma</span>
           <span className="pilpod-slide-menu__stats">

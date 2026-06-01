@@ -412,6 +412,27 @@ export function IconVolumeMuted({ className }: { className?: string }) {
   );
 }
 
+export function IconGlass({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="3" width="18" height="18" rx="4" opacity="0.35" />
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+      <path d="M9 12h6" opacity="0.5" />
+    </svg>
+  );
+}
+
 export function IconChevronRight({ className }: { className?: string }) {
   return (
     <svg

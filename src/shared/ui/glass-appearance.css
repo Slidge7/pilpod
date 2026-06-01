@@ -1,0 +1,48 @@
+/**
+ * Glass strength: blur via --pilpod-glass-blur-* (set in JS).
+ * Opacity: opaque underlay fades in as strength → 0.
+ */
+
+.pilpod-media-item--float,
+.pilpod-control-card.pilpod-control-card--tab,
+.pilpod-source-tab-bar__tab,
+.pilpod-launcher__shell,
+.pilpod-browser-profile,
+.pilpod-media-item__body-menu,
+.pilpod-media-item__pinned-menu--float,
+.pilpod-browser-profile__vol-popup,
+.pilpod-search-tag {
+  position: relative;
+}
+
+.pilpod-media-item--float::after,
+.pilpod-control-card.pilpod-control-card--tab::after,
+.pilpod-source-tab-bar__tab::after,
+.pilpod-launcher__shell::after,
+.pilpod-browser-profile::after,
+.pilpod-media-item__body-menu::after,
+.pilpod-media-item__pinned-menu--float::after,
+.pilpod-browser-profile__vol-popup::after,
+.pilpod-search-tag::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--pilpod-bg-card);
+  opacity: calc(1 - var(--pilpod-glass-strength, 1));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.pilpod-media-item--float::before,
+.pilpod-launcher__shell::before,
+.pilpod-browser-profile::before {
+  opacity: var(--pilpod-glass-strength, 1);
+}
+
+.pilpod-media-item__body-menu > *,
+.pilpod-media-item__pinned-menu--float > *,
+.pilpod-media-item--float > * {
+  position: relative;
+  z-index: 1;
+}

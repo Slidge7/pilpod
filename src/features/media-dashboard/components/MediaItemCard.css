@@ -248,8 +248,8 @@
   border-top: none;
   border-bottom-left-radius: 14px;
   border-bottom-right-radius: 14px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--pilpod-glass-blur-card, 8px));
+  -webkit-backdrop-filter: blur(var(--pilpod-glass-blur-card, 8px));
 }
 
 .pilpod-media-item__pinned-menu--inset {
@@ -791,8 +791,8 @@
   font-weight: 600;
   white-space: nowrap;
   pointer-events: none;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--pilpod-glass-blur-card, 8px));
+  -webkit-backdrop-filter: blur(var(--pilpod-glass-blur-card, 8px));
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 

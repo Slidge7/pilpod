@@ -9,10 +9,14 @@
 .pilpod-launcher__shell,
 .pilpod-browser-profile {
   position: relative;
-  background: var(--pilpod-glass-float-surface);
+  background: color-mix(
+    in srgb,
+    var(--pilpod-bg-card) calc((1 - var(--pilpod-glass-strength, 1)) * 100%),
+    var(--pilpod-glass-float-surface) calc(var(--pilpod-glass-strength, 1) * 100%)
+  );
   border: 1px solid var(--pilpod-glass-float-border);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(var(--pilpod-glass-blur-float, 4px));
+  -webkit-backdrop-filter: blur(var(--pilpod-glass-blur-float, 4px));
   box-shadow:
     0 2px 0 0 rgba(255, 255, 255, 0.92) inset,
     0 -1px 0 0 rgba(15, 23, 42, 0.07) inset,

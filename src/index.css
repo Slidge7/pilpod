@@ -74,6 +74,12 @@
   --pilpod-screen-shine-soft: rgb(255 255 255 / 0.34);
   --pilpod-screen-shade: rgb(15 23 42 / 0.09);
 
+  /* User-adjustable glass strength (0 = readable, 1 = full glass) */
+  --pilpod-glass-strength: 1;
+  --pilpod-glass-blur-float: 4px;
+  --pilpod-glass-blur-card: 8px;
+  --pilpod-glass-blur-panel: 12px;
+
   /* Neutral floating glass — dock + tab row shells (light) */
   --pilpod-glass-float-surface: transparent;
   --pilpod-glass-float-border: rgba(15, 23, 42, 0.14);

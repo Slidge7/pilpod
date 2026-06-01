@@ -44,8 +44,57 @@
   transition: opacity 0.22s ease;
 }
 
-.pilpod-slide-menu--open .pilpod-slide-menu__backdrop {
+.pilpod-slide-menu--open:not(.pilpod-slide-menu--glass-dragging)
+  .pilpod-slide-menu__backdrop {
   opacity: 1;
+  background: transparent;
+}
+
+.pilpod-slide-menu--glass-dragging {
+  pointer-events: auto;
+}
+
+.pilpod-slide-menu--glass-dragging .pilpod-slide-menu__panel {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.pilpod-slide-menu--glass-dragging .pilpod-slide-menu__backdrop {
+  display: none;
+}
+
+.pilpod-slide-menu__glass-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0 0.15rem;
+}
+
+.pilpod-slide-menu__glass-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pilpod-text-subtle);
+}
+
+.pilpod-slide-menu__glass-focus {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  padding: 0.85rem 0.9rem 0.75rem;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.pilpod-slide-menu__glass-focus-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .pilpod-slide-menu__actions {

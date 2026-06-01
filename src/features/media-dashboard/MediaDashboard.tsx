@@ -9,6 +9,7 @@ import { SourceTabBar } from "./components/SourceTabBar";
 import { WidgetMediaPanel } from "./components/WidgetMediaPanel";
 import { WidgetView } from "./components/WidgetView";
 import { useAppearance } from "./hooks/useAppearance";
+import { useGlassAppearance } from "./hooks/useGlassAppearance";
 import { useMediaDashboard } from "./hooks/useMediaDashboard";
 import { useWallpaper } from "./hooks/useWallpaper";
 import {
@@ -22,6 +23,7 @@ import { DownloadPanel } from "../downloader";
 
 export function MediaDashboard() {
   const { appearance, toggle } = useAppearance();
+  const { glassStrength, setGlassStrength } = useGlassAppearance();
   const { wallpaper, hasWallpaper, pickWallpaper, clearWallpaper } =
     useWallpaper();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -178,6 +180,8 @@ export function MediaDashboard() {
           hasWallpaper={hasWallpaper}
           browserTabCount={browserTabCount}
           sessionCount={sessions.length}
+          glassStrength={glassStrength}
+          onGlassStrengthChange={setGlassStrength}
           onClose={() => setMenuOpen(false)}
           onToggleAlwaysOnTop={toggleAlwaysOnTop}
           onToggleAppearance={toggle}
