@@ -23,10 +23,22 @@ pub struct BrowserSlot {
     pub browser_id: String,
     /// Human-readable browser name sent by the extension (e.g. "Chrome", "Brave").
     pub browser_name: String,
+    /// Catalog id verified via the connection's owning process (peer-PID match).
+    /// `None` when the lookup failed — fall back to the self-reported name.
+    pub verified_os_id: Option<String>,
     /// All open tabs in this browser — each with an optional `media` field.
     pub tabs: Vec<BrowserTab>,
     /// Hash of tab content for diff-before-emit; excludes `last_seen`.
     pub content_hash: u64,
+}
+
+impl BrowserSlot {
+    /// Catalog id for this slot: PID-verified truth first, self-report fallback.
+    pub fn effective_os_id(&self) -> String {
+        self.verified_os_id
+            .clone()
+            .unwrap_or_else(|| crate::browser_catalog::browser_name_to_id(&self.browser_name))
+    }
 }
 
 /// Key: `browserId` UUID sent by the extension.
@@ -42,7 +54,7 @@ pub type BrowserCommandsQueue = Arc<Mutex<HashMap<String, HashMap<i32, BrowserMe
 pub struct BrowserMediaCommand {
     pub tab_id: i32,
     /// `playPause`, `next`, `previous`, `focusTab`, `reactivateTab`, `reloadTab`, `closeTab`,
-    /// `seek`, `setTabVolume`, `muteTab`, `skipAd`, `pip`
+    /// `seek`, `setTabVolume`, `muteTab`, `pip`
     pub action: String,
     /// Optional numeric parameter for commands that need it (e.g. seek position in seconds,
     /// volume as 0–600 percentage).
@@ -98,6 +110,11 @@ fn hash_media(h: &mut DefaultHasher, media: &TabMedia) {
     hash_str(h, &media.document_state);
     media.tab_volume.to_bits().hash(h);
     media.tab_muted.hash(h);
+    media.can_seek.hash(h);
+    media.can_pip.hash(h);
+    media.can_next.hash(h);
+    media.can_prev.hash(h);
+    media.in_pip.hash(h);
 }
 
 fn hash_tab(h: &mut DefaultHasher, tab: &BrowserTab) {

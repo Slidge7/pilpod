@@ -15,6 +15,41 @@ pub struct DetectedBrowserInfo {
     pub running: bool,
 }
 
+/// Per-window rollup derived from a slot's tabs (Phase 4).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserWindowInfo {
+    pub window_id: i64,
+    pub focused: bool,
+    pub tab_count: u32,
+    pub audible_count: u32,
+}
+
+/// Derive the window list from a tab set: focused window first, then by id.
+pub fn windows_for_tabs(tabs: &[BrowserTab]) -> Vec<BrowserWindowInfo> {
+    let mut by_window: HashMap<i64, BrowserWindowInfo> = HashMap::new();
+    for tab in tabs {
+        let w = by_window
+            .entry(tab.window_id)
+            .or_insert_with(|| BrowserWindowInfo {
+                window_id: tab.window_id,
+                focused: false,
+                tab_count: 0,
+                audible_count: 0,
+            });
+        w.tab_count += 1;
+        if tab.window_focused {
+            w.focused = true;
+        }
+        if tab.audible {
+            w.audible_count += 1;
+        }
+    }
+    let mut windows: Vec<BrowserWindowInfo> = by_window.into_values().collect();
+    windows.sort_by_key(|w| (!w.focused, w.window_id));
+    windows
+}
+
 /// One entry per extension profile or OS browser.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,6 +72,9 @@ pub struct DetectedBrowser {
     pub extension_connected: bool,
     pub tab_count: u32,
     pub tabs: Vec<BrowserTab>,
+    /// Per-window rollup (Phase 4): focused window first.
+    #[serde(default)]
+    pub windows: Vec<BrowserWindowInfo>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_sync_secs: Option<u64>,
     #[serde(default)]
@@ -55,7 +93,7 @@ pub struct BrowsersUpdatePayload {
     pub browser_audio: HashMap<String, AudioSessionInfoDto>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BrowserTab {
     pub tab_id: i64,
@@ -113,6 +151,19 @@ pub struct TabMedia {
     pub tab_volume: f64,
     #[serde(default)]
     pub tab_muted: bool,
+    /// Per-tab control capabilities advertised by the extension. Drive which
+    /// transport buttons the desktop UI renders/enables for this tab.
+    #[serde(default)]
+    pub can_seek: bool,
+    #[serde(default)]
+    pub can_pip: bool,
+    #[serde(default)]
+    pub can_next: bool,
+    #[serde(default)]
+    pub can_prev: bool,
+    /// True when this tab's video is currently in a Picture-in-Picture window.
+    #[serde(default)]
+    pub in_pip: bool,
 }
 
 fn default_tab_volume() -> f64 {
@@ -125,4 +176,52 @@ pub struct AudioSessionInfoDto {
     pub instance_id: String,
     pub volume: f32,
     pub muted: bool,
+}
+
+// ── Tests ────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tab(window_id: i64, focused: bool, audible: bool) -> BrowserTab {
+        BrowserTab {
+            tab_id: 0,
+            window_id,
+            window_focused: focused,
+            audible,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn windows_rollup_counts_tabs_and_audible() {
+        let tabs = vec![
+            tab(10, false, true),
+            tab(10, false, false),
+            tab(20, true, true),
+        ];
+        let windows = windows_for_tabs(&tabs);
+        assert_eq!(windows.len(), 2);
+        // Focused window first.
+        assert_eq!(windows[0].window_id, 20);
+        assert!(windows[0].focused);
+        assert_eq!(windows[0].tab_count, 1);
+        assert_eq!(windows[0].audible_count, 1);
+        assert_eq!(windows[1].window_id, 10);
+        assert_eq!(windows[1].tab_count, 2);
+        assert_eq!(windows[1].audible_count, 1);
+    }
+
+    #[test]
+    fn windows_sorted_by_id_when_none_focused() {
+        let tabs = vec![tab(30, false, false), tab(10, false, false), tab(20, false, false)];
+        let ids: Vec<i64> = windows_for_tabs(&tabs).iter().map(|w| w.window_id).collect();
+        assert_eq!(ids, vec![10, 20, 30]);
+    }
+
+    #[test]
+    fn empty_tabs_yield_no_windows() {
+        assert!(windows_for_tabs(&[]).is_empty());
+    }
 }

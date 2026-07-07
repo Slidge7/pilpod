@@ -25,6 +25,8 @@ use super::SyncRequestedFlag;
 pub struct BridgeIngest {
     pub browser_id: String,
     pub browser_name: String,
+    /// Catalog id verified from the connection's owning process (peer-PID).
+    pub verified_os_id: Option<String>,
     pub is_ping: bool,
     pub tabs: Vec<BrowserTab>,
 }
@@ -41,7 +43,6 @@ pub struct BridgeContext {
 }
 
 pub struct BridgeResult {
-    pub changed: bool,
     pub commands: Vec<BrowserMediaCommand>,
     pub sync_now: bool,
 }
@@ -105,6 +106,16 @@ pub struct TabMediaPost {
     /// True when the tab is muted via the content script or chrome.tabs API.
     #[serde(default)]
     pub tab_muted: bool,
+    #[serde(default)]
+    pub can_seek: bool,
+    #[serde(default)]
+    pub can_pip: bool,
+    #[serde(default)]
+    pub can_next: bool,
+    #[serde(default)]
+    pub can_prev: bool,
+    #[serde(default)]
+    pub in_pip: bool,
 }
 
 fn default_tab_volume() -> f64 { 100.0 }
@@ -136,6 +147,11 @@ pub fn convert_tab(post: BrowserTabPost, browser_id: &str) -> BrowserTab {
             document_state: m.document_state,
             tab_volume: m.tab_volume,
             tab_muted: m.tab_muted,
+            can_seek: m.can_seek,
+            can_pip: m.can_pip,
+            can_next: m.can_next,
+            can_prev: m.can_prev,
+            in_pip: m.in_pip,
         }),
         browser_id: browser_id.to_string(),
     }
@@ -145,15 +161,27 @@ pub fn apply_ingest(ingest: BridgeIngest, ctx: &BridgeContext) -> BridgeResult {
     let now = Instant::now();
     let incoming_hash = hash_tabs(&ingest.tabs);
 
+    // Effective binding: PID-verified truth first, self-reported name fallback.
+    let effective_os_id = ingest
+        .verified_os_id
+        .clone()
+        .unwrap_or_else(|| browser_name_to_id(&ingest.browser_name));
+
     let changed = if let Ok(mut map) = ctx.browser_slots.lock() {
         match map.get_mut(&ingest.browser_id) {
             Some(existing) if ingest.is_ping => {
                 existing.last_seen = now;
+                if ingest.verified_os_id.is_some() {
+                    existing.verified_os_id = ingest.verified_os_id.clone();
+                }
                 false
             }
             Some(existing) => {
                 let content_changed = existing.content_hash != incoming_hash;
                 existing.last_seen = now;
+                if ingest.verified_os_id.is_some() {
+                    existing.verified_os_id = ingest.verified_os_id.clone();
+                }
                 if content_changed {
                     existing.tabs = ingest.tabs;
                     existing.browser_name = ingest.browser_name.clone();
@@ -168,6 +196,7 @@ pub fn apply_ingest(ingest: BridgeIngest, ctx: &BridgeContext) -> BridgeResult {
                         last_seen: now,
                         browser_id: ingest.browser_id.clone(),
                         browser_name: ingest.browser_name.clone(),
+                        verified_os_id: ingest.verified_os_id.clone(),
                         tabs: Vec::new(),
                         content_hash: incoming_hash,
                     },
@@ -181,6 +210,7 @@ pub fn apply_ingest(ingest: BridgeIngest, ctx: &BridgeContext) -> BridgeResult {
                         last_seen: now,
                         browser_id: ingest.browser_id.clone(),
                         browser_name: ingest.browser_name.clone(),
+                        verified_os_id: ingest.verified_os_id.clone(),
                         tabs: ingest.tabs,
                         content_hash: incoming_hash,
                     },
@@ -192,9 +222,8 @@ pub fn apply_ingest(ingest: BridgeIngest, ctx: &BridgeContext) -> BridgeResult {
         false
     };
 
-    let os_id = browser_name_to_id(&ingest.browser_name);
     if let Ok(mut store) = ctx.ext_store.lock() {
-        store.mark_installed(&os_id);
+        store.mark_installed(&effective_os_id);
     }
 
     let was_reconnecting = clear_reconnecting(&ctx.reconnecting, &ingest.browser_id);
@@ -214,7 +243,6 @@ pub fn apply_ingest(ingest: BridgeIngest, ctx: &BridgeContext) -> BridgeResult {
     let sync_now = ctx.sync_flag.swap(false, Ordering::Relaxed);
 
     BridgeResult {
-        changed,
         commands: drained,
         sync_now,
     }

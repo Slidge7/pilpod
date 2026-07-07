@@ -14,6 +14,25 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(windows)]
     apply_main_window_icon(&handle);
 
+    // Bundled browser icons: resource dir in production, source dir in dev.
+    {
+        let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+        if let Ok(res) = handle.path().resource_dir() {
+            candidates.push(res.join("icons").join("browsers"));
+        }
+        candidates.push(
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("icons")
+                .join("browsers"),
+        );
+        crate::browser_icon::init(&candidates);
+    }
+
+    // Stable profile numbering (Phase 4).
+    if let Ok(data_dir) = handle.path().app_data_dir() {
+        crate::browser_profile_order::init(data_dir);
+    }
+
     let browser_slots: crate::browser_tabs::BrowserSlotsMap =
         std::sync::Arc::new(std::sync::Mutex::new(std::collections::HashMap::new()));
 

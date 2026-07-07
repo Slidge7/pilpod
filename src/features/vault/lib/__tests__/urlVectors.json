@@ -1,0 +1,18 @@
+[
+  { "input": "HTTPS://Example.COM/Path/To/Page/", "expected": "https://example.com/Path/To/Page" },
+  { "input": "https://example.com", "expected": "https://example.com" },
+  { "input": "https://example.com/", "expected": "https://example.com" },
+  { "input": "https://EXAMPLE.com./a", "expected": "https://example.com/a" },
+  { "input": "https://example.com:443/a", "expected": "https://example.com/a" },
+  { "input": "http://example.com:80/a", "expected": "http://example.com/a" },
+  { "input": "https://example.com:8443/a", "expected": "https://example.com:8443/a" },
+  { "input": "https://user:pass@example.com/p", "expected": "https://example.com/p" },
+  { "input": "https://example.com/page#section", "expected": "https://example.com/page" },
+  { "input": "https://example.com/p?b=2&a=1", "expected": "https://example.com/p?a=1&b=2" },
+  { "input": "https://example.com/p?fbclid=xyz", "expected": "https://example.com/p" },
+  { "input": "https://www.youtube.com/watch?v=abc123&utm_source=news&t=10", "expected": "https://www.youtube.com/watch?t=10&v=abc123" },
+  { "input": "https://example.com/p?utm_medium=x&utm_campaign=y", "expected": "https://example.com/p" },
+  { "input": "https://example.com/p?flag&z=1", "expected": "https://example.com/p?flag&z=1" },
+  { "input": "  https://example.com/trim  ", "expected": "https://example.com/trim" },
+  { "input": "", "expected": "" }
+]

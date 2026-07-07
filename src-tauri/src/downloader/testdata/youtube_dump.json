@@ -1,0 +1,101 @@
+{
+  "id": "fixture01",
+  "title": "Test Video — PilPod fixture",
+  "thumbnail": "https://i.ytimg.com/vi/x/hq720.jpg",
+  "duration": 213.4,
+  "webpage_url": "https://www.youtube.com/watch?v=fixture01",
+  "uploader": "Fixture Channel",
+  "extractor": "youtube",
+  "formats": [
+    {
+      "format_id": "251",
+      "ext": "webm",
+      "vcodec": "none",
+      "acodec": "opus",
+      "filesize": 3145728,
+      "tbr": 132.5,
+      "format_note": "medium"
+    },
+    {
+      "format_id": "140",
+      "ext": "m4a",
+      "vcodec": "none",
+      "acodec": "mp4a.40.2",
+      "filesize": 3456789,
+      "tbr": 129.5,
+      "format_note": "medium"
+    },
+    {
+      "format_id": "18",
+      "ext": "mp4",
+      "width": 640,
+      "height": 360,
+      "fps": 30,
+      "vcodec": "avc1.42001E",
+      "acodec": "mp4a.40.2",
+      "filesize": 15728640,
+      "tbr": 590.0,
+      "format_note": "360p"
+    },
+    {
+      "format_id": "244",
+      "ext": "webm",
+      "width": 854,
+      "height": 480,
+      "fps": 30,
+      "vcodec": "vp9",
+      "acodec": "none",
+      "filesize": 18874368,
+      "tbr": 707.9,
+      "format_note": "480p"
+    },
+    {
+      "format_id": "22",
+      "ext": "mp4",
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "vcodec": "avc1.64001F",
+      "acodec": "mp4a.40.2",
+      "filesize_approx": 47185920,
+      "tbr": 1769.0,
+      "format_note": "720p"
+    },
+    {
+      "format_id": "247",
+      "ext": "webm",
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "vcodec": "vp9",
+      "acodec": "none",
+      "filesize": 41943040,
+      "tbr": 1572.9,
+      "format_note": "720p"
+    },
+    {
+      "format_id": "137",
+      "ext": "mp4",
+      "width": 1920,
+      "height": 1080,
+      "fps": 30,
+      "vcodec": "avc1.640028",
+      "acodec": "none",
+      "filesize": 94371840,
+      "tbr": 3538.9,
+      "format_note": "1080p"
+    },
+    {
+      "format_id": "248",
+      "ext": "webm",
+      "width": 1920,
+      "height": 1080,
+      "fps": 30,
+      "vcodec": "vp9",
+      "acodec": "none",
+      "filesize": 83886080,
+      "tbr": 3145.7,
+      "format_note": "1080p"
+    }
+  ]
+}

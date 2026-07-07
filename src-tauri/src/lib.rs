@@ -1,4 +1,8 @@
 mod app;
+mod premium;
+mod vault;
+#[cfg(windows)]
+mod downloader;
 mod browser_dto;
 mod browser_tabs;
 #[cfg(windows)]
@@ -13,6 +17,8 @@ mod browser_commands;
 mod browser_catalog;
 #[cfg(windows)]
 mod browser_icon;
+#[cfg(windows)]
+mod browser_profile_order;
 #[cfg(windows)]
 mod browser_detector;
 #[cfg(windows)]

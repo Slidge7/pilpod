@@ -32,6 +32,7 @@ import {
   tabIsLinkIdentifiedMedia,
   type SearchTagOption,
 } from "../lib/browserMedia";
+import { browserProfileDomId } from "../lib/browserProfileScroll";
 import { UnifiedTabRow } from "./UnifiedTabRow";
 import { MediaItemCard } from "./MediaItemCard";
 import { ActiveMediaStrip } from "./ActiveMediaStrip";
@@ -131,6 +132,12 @@ function BrowserStatusIndicator({ browser }: { browser: DetectedBrowser }) {
   );
 }
 
+/** Return value from `renderTabAccessories`. */
+export type TabAccessories = {
+  save?: ReactNode;
+  download?: ReactNode;
+};
+
 type Props = {
   browsers: DetectedBrowser[];
   pendingKeys: ReadonlySet<string>;
@@ -144,12 +151,18 @@ type Props = {
   onRefreshBrowser: (browserId: string) => void | Promise<void>;
   onSeekTab?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
-  onSkipAd?: (tab: BrowserTab, browserId: string) => void;
   onPip?: (tab: BrowserTab, browserId: string) => void;
   onResetVolume?: (tab: BrowserTab, browserId: string) => void;
   onPauseAll?: () => void;
   onMuteAll?: () => void;
   onResetAllVolumes?: () => void;
+  /** Render save/download buttons for a tab. */
+  renderTabAccessories?: (
+    tab: BrowserTab,
+    browserId: string,
+    browserDisplayName: string,
+    isMediaTab: boolean,
+  ) => TabAccessories;
 };
 
 function BrowserHeader({
@@ -506,8 +519,8 @@ function BrowserBody({
   profileAudio,
   onSeekTab,
   onSetTabVolume,
-  onSkipAd,
   onPip,
+  renderTabAccessories,
 }: {
   browser: DetectedBrowser;
   pendingKeys: ReadonlySet<string>;
@@ -521,8 +534,8 @@ function BrowserBody({
   onMixerVolume: (instanceId: string, volume: number) => void;
   onSeekTab?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
-  onSkipAd?: (tab: BrowserTab, browserId: string) => void;
   onPip?: (tab: BrowserTab, browserId: string) => void;
+  renderTabAccessories?: Props["renderTabAccessories"];
 }) {
   const slotBrowserId = browser.id;
   const isStale = !browser.extensionConnected && browser.tabs.length > 0;
@@ -533,6 +546,12 @@ function BrowserBody({
   const renderTabRow = (t: BrowserTab, showMediaControls: boolean) => {
     const rk = tabRowKey(t);
     const isMediaTab = tabIsLinkIdentifiedMedia(t);
+    const accessories = renderTabAccessories?.(
+      t,
+      slotBrowserId,
+      browserDisplayLabel(browser),
+      isMediaTab,
+    );
 
     if (isMediaTab && showMediaControls) {
       return (
@@ -549,8 +568,9 @@ function BrowserBody({
           onClose={onClose}
           onSeek={onSeekTab}
           onSetTabVolume={onSetTabVolume}
-          onSkipAd={onSkipAd}
           onPip={onPip}
+          saveButton={accessories?.save}
+          downloadButton={accessories?.download}
         />
       );
     }
@@ -570,6 +590,7 @@ function BrowserBody({
         onReload={onReload}
         onClose={onClose}
         onReactivate={onReactivate}
+        saveButton={accessories?.save}
       />
     );
   };
@@ -880,11 +901,11 @@ export function BrowserSessionsPanel({
   onRefreshBrowser,
   onSeekTab,
   onSetTabVolume,
-  onSkipAd,
   onPip,
   onPauseAll,
   onMuteAll,
   onResetAllVolumes,
+  renderTabAccessories,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [excludedSites, setExcludedSites] = useState<Set<string>>(() => new Set());
@@ -1035,7 +1056,6 @@ export function BrowserSessionsPanel({
         onClose={onClose}
         onSeekTab={onSeekTab}
         onSetTabVolume={onSetTabVolume}
-        onSkipAd={onSkipAd}
         onPip={onPip}
       />
 
@@ -1059,7 +1079,11 @@ export function BrowserSessionsPanel({
             .join(" ");
 
           return (
-            <div key={browser.id} className={profileClass}>
+            <div
+              key={browser.id}
+              id={browserProfileDomId(browser.id)}
+              className={profileClass}
+            >
               <BrowserHeader
                 browser={browser}
                 profileAudio={profileAudio}
@@ -1069,24 +1093,23 @@ export function BrowserSessionsPanel({
                 onMuteAll={onMuteAll}
                 onResetAllVolumes={onResetAllVolumes}
               />
-              {browser.running ? (
-                <BrowserBody
-                  browser={browser}
-                  pendingKeys={pendingKeys}
-                  searching={narrowResults}
-                  profileAudio={profileAudio}
-                  onPlayPause={onPlayPause}
-                  onFocusTab={onFocusTab}
-                  onReload={onReload}
-                  onClose={onClose}
-                  onReactivate={onReactivate}
-                  onMixerVolume={onMixerVolume}
-                  onSeekTab={onSeekTab}
-                  onSetTabVolume={onSetTabVolume}
-                  onSkipAd={onSkipAd}
-                  onPip={onPip}
-                />
-              ) : null}
+            
+              <BrowserBody
+                browser={browser}
+                pendingKeys={pendingKeys}
+                searching={narrowResults}
+                profileAudio={profileAudio}
+                onPlayPause={onPlayPause}
+                onFocusTab={onFocusTab}
+                onReload={onReload}
+                onClose={onClose}
+                onReactivate={onReactivate}
+                onMixerVolume={onMixerVolume}
+                onSeekTab={onSeekTab}
+                onSetTabVolume={onSetTabVolume}
+                onPip={onPip}
+                renderTabAccessories={renderTabAccessories}
+              />
             </div>
           );
         })}

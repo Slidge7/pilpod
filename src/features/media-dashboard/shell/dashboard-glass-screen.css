@@ -4,8 +4,8 @@
  * No blur, no fill, no full-surface sheen.
  */
 
+/* position: relative lives on MediaDashboard .pilpod-dashboard-shell__inner */
 .pilpod-dashboard-shell__inner {
-  position: relative;
   overflow: hidden;
   border-radius: var(--pilpod-screen-radius, 10px);
 }

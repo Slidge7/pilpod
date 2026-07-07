@@ -4,7 +4,7 @@ import {
   useCallback,
   useRef,
   useEffect,
-  useLayoutEffect,
+  type ReactNode,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { BrowserTab } from "../../../types/media";
@@ -21,7 +21,6 @@ import {
   IconPip,
   IconPlay,
   IconReload,
-  IconSkipAd,
   IconSkipBack,
   IconSkipForward,
   IconVolume,
@@ -31,29 +30,28 @@ import {
 } from "../../../shared/ui/icons";
 import { useTabCloseConfirm } from "../hooks/useTabCloseConfirm";
 
-function IconPin({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="17" x2="12" y2="22" />
-      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
-    </svg>
-  );
-}
-
-function IconPinOff({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="2" y1="2" x2="22" y2="22" />
-      <line x1="12" y1="17" x2="12" y2="22" />
-      <path d="M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h12" />
-      <path d="M15 9.34V6h1a2 2 0 0 0 0-4H7.89" />
-    </svg>
-  );
-}
-
 const TAB_VOL_MAX = 600;
+/** Number of discrete steps the native range input is divided into. */
+const VOL_TRACK_STEPS = 1000;
+
+/**
+ * Non-linear volume mapping (matches the new companion UI):
+ * the first half of the slider width covers 0–100%,
+ * the second half covers 100–TAB_VOL_MAX%.
+ */
+function volumeToTrackFraction(v: number): number {
+  const vol = Math.min(TAB_VOL_MAX, Math.max(0, v));
+  if (vol <= 100) return (vol / 100) * 0.5;
+  return 0.5 + ((vol - 100) / (TAB_VOL_MAX - 100)) * 0.5;
+}
+function trackFractionToVolume(f: number): number {
+  const t = Math.min(1, Math.max(0, f));
+  const raw =
+    t <= 0.5
+      ? (t / 0.5) * 100
+      : 100 + ((t - 0.5) / 0.5) * (TAB_VOL_MAX - 100);
+  return Math.round(raw / 5) * 5;
+}
 
 type Props = {
   tab: BrowserTab;
@@ -69,8 +67,10 @@ type Props = {
   onClose: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onSeek?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
-  onSkipAd?: (tab: BrowserTab, browserId: string) => void;
   onPip?: (tab: BrowserTab, browserId: string) => void;
+  /** Optional accessory buttons rendered right of PiP in the transport row. */
+  saveButton?: ReactNode;
+  downloadButton?: ReactNode;
 };
 
 function getStateBadgeClass(tabState?: string): string {
@@ -112,31 +112,35 @@ export function MediaItemCard({
   onClose,
   onSeek,
   onSetTabVolume,
-  onSkipAd,
   onPip,
+  saveButton,
+  downloadButton,
 }: Props) {
   const playing = isTabPlaying(tab);
   const hasMediaControls = tabHasMediaControls(tab);
   const artist = tab.media ? mediaArtist(tab.media) : null;
 
   const tabVolume = tab.media?.tabVolume ?? 100;
-  const tabMuted  = tab.media?.tabMuted ?? false;
+  const tabMuted = tab.media?.tabMuted ?? false;
+
+  // Per-tab control capabilities advertised by the extension. next/prev/pip
+  // default OFF (only shown when the site actually supports them); seek defaults
+  // ON so tabs from any path that omits the flag keep their scrubber.
+  const canNext = tab.media?.canNext ?? false;
+  const canPrev = tab.media?.canPrev ?? false;
+  const canPip = tab.media?.canPip ?? false;
+  const canSeek = tab.media?.canSeek ?? true;
 
   const [reloadSpin, setReloadSpin] = useState(false);
   const [localTabVol, setLocalTabVol] = useState(tabVolume);
   const [localTabMuted, setLocalTabMuted] = useState(tabMuted);
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPreview, setSeekPreview] = useState<number | null>(null);
-  const [volLayout, setVolLayout] = useState({ fillPx: 0, thumbPx: 0 });
+  // Real PiP state reported by the extension — the button is a true toggle, not
+  // an optimistic guess.
+  const pipActive = tab.media?.inPip ?? false;
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [pinned, setPinned] = useState(false);
-
-  const volTrackRef  = useRef<HTMLDivElement>(null);
-  const seekZoneRef  = useRef<HTMLDivElement>(null);
-  const thumbHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  const pinnedRef = useRef(pinned);
+  const seekWrapRef = useRef<HTMLDivElement>(null);
 
   const duration = tab.media?.duration ?? 0;
   const currentTime = tab.media?.currentTime ?? 0;
@@ -159,91 +163,30 @@ export function MediaItemCard({
     }
   }, [tab.media?.tabVolume, tab.media?.tabMuted, isSeeking]);
 
-  useEffect(() => {
-    pinnedRef.current = pinned;
-  }, [pinned]);
-
-  useEffect(() => {
-    return () => {
-      if (thumbHoverTimer.current) clearTimeout(thumbHoverTimer.current);
-    };
-  }, []);
-
   const effectiveTabVol = localTabMuted ? 0 : localTabVol;
   const volTone = volFillTone(effectiveTabVol);
-
-  const updateVolLayout = useCallback(() => {
-    const track = volTrackRef.current;
-    if (!track) return;
-    const w = track.offsetWidth;
-    const pct = effectiveTabVol / TAB_VOL_MAX;
-    const px = pct * w;
-    setVolLayout({ fillPx: px, thumbPx: px });
-  }, [effectiveTabVol]);
-
-  useLayoutEffect(() => { updateVolLayout(); }, [updateVolLayout]);
-
-  useEffect(() => {
-    const track = volTrackRef.current;
-    if (!track) return;
-    const ro = new ResizeObserver(() => updateVolLayout());
-    ro.observe(track);
-    return () => ro.disconnect();
-  }, [updateVolLayout]);
+  const volFraction = volumeToTrackFraction(effectiveTabVol);
+  const volTrackValue = Math.round(volFraction * VOL_TRACK_STEPS);
 
   const { closeConfirm, handleClose, closeTitle, resetCloseConfirm } = useTabCloseConfirm({
     onClose: () => void onClose(tab, browserId),
     onBeforeInteract: () => {},
   });
 
+  useEffect(() => {
+    return () => resetCloseConfirm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Interaction Handlers ──────────────────────────────────────────────────
-
-  const handleThumbEnter = useCallback(() => {
-    if (pinnedRef.current) return;
-    if (thumbHoverTimer.current) clearTimeout(thumbHoverTimer.current);
-    setMenuOpen(true);
-  }, []);
-
-  const handleThumbLeave = useCallback(() => {
-    if (pinnedRef.current) return; 
-    thumbHoverTimer.current = setTimeout(() => {
-      if (!pinnedRef.current) {
-        setMenuOpen(false);
-        resetCloseConfirm();
-      }
-    }, 800);
-  }, [resetCloseConfirm]);
-
-  const handleBodyMenuEnter = useCallback(() => {
-    if (thumbHoverTimer.current) clearTimeout(thumbHoverTimer.current);
-  }, []);
-
-  const handleBodyMenuLeave = useCallback(() => {
-    if (pinnedRef.current) return;
-    thumbHoverTimer.current = setTimeout(() => {
-      if (!pinnedRef.current) {
-        setMenuOpen(false);
-        resetCloseConfirm();
-      }
-    }, 800);
-  }, [resetCloseConfirm]);
-
-  const handleTogglePin = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setPinned(prev => {
-      const next = !prev;
-      setMenuOpen(false);
-      resetCloseConfirm();
-      return next;
-    });
-  }, [resetCloseConfirm]);
 
   const handleTabVolumeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = parseInt(e.target.value, 10);
-      setLocalTabMuted(false);
-      setLocalTabVol(val);
-      onSetTabVolume?.(tab, browserId, val);
+      const raw = parseInt(e.target.value, 10);
+      const vol = trackFractionToVolume(raw / VOL_TRACK_STEPS);
+      setLocalTabMuted(vol === 0);
+      setLocalTabVol(vol);
+      onSetTabVolume?.(tab, browserId, vol);
     },
     [onSetTabVolume, tab, browserId],
   );
@@ -263,7 +206,7 @@ export function MediaItemCard({
   );
 
   const computeSeekTime = useCallback((clientX: number): number => {
-    const zone = seekZoneRef.current;
+    const zone = seekWrapRef.current;
     if (!zone || !duration) return 0;
     const rect = zone.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
@@ -309,81 +252,17 @@ export function MediaItemCard({
     window.setTimeout(() => setReloadSpin(false), 520);
   }, [onReload, tab, browserId]);
 
-  // ── Render Shared Menu Component Function ─────────────────────────────────
-
-  const renderMenuInner = (isPinnedMode: boolean) => {
-    return (
-      <div
-        className={
-          isPinnedMode
-            ? `pilpod-media-item__pinned-menu ${variant === "float" ? "pilpod-media-item__pinned-menu--float" : "pilpod-media-item__pinned-menu--inset"}`
-            : `pilpod-media-item__body-menu${menuOpen ? " pilpod-media-item__body-menu--open" : ""}`
-        }
-        onMouseEnter={isPinnedMode ? undefined : handleBodyMenuEnter}
-        onMouseLeave={isPinnedMode ? undefined : handleBodyMenuLeave}
-      >
-        {/* Absolute top center positioned pin controller switch */}
-        <button
-          type="button"
-          className={`pilpod-media-item__menu-pin-btn${pinned ? " pilpod-media-item__menu-pin-btn--active" : ""}`}
-          onClick={handleTogglePin}
-          title={pinned ? "Unpin" : "Pin open"}
-          aria-label={pinned ? "Unpin" : "Pin open"}
-        >
-          {pinned ? <IconPinOff className="pilpod-media-item__menu-pin-icon" /> : <IconPin className="pilpod-media-item__menu-pin-icon" />}
-        </button>
-
-        {/* Action Row */}
-        <div className="pilpod-media-item__menu-acts">
-          {onSkipAd ? (
-            <button type="button" className="pilpod-media-item__menu-act pilpod-media-item__menu-act--skip-ad"
-              onClick={(e) => { e.stopPropagation(); onSkipAd(tab, browserId); }}
-              title="Skip Ad" aria-label="Skip Ad">
-              <IconSkipAd />
-            </button>
-          ) : null}
-
-          {onPip ? (
-            <button type="button" className="pilpod-media-item__menu-act pilpod-media-item__menu-act--pip"
-              onClick={(e) => { e.stopPropagation(); onPip(tab, browserId); }}
-              title="Picture in Picture" aria-label="Picture in Picture">
-              <IconPip />
-            </button>
-          ) : null}
-
-          <button type="button"
-            className="pilpod-media-item__menu-act pilpod-media-item__menu-act--rl"
-            onClick={handleReload} title="Reload" aria-label="Reload">
-            <IconReload className={reloadSpin ? "pilpod-media-item__menu-act-icon--spin" : undefined} />
-          </button>
-
-          <button type="button"
-            className={`pilpod-media-item__menu-act pilpod-media-item__menu-act--cl${closeConfirm ? " pilpod-media-item__menu-act--cl-confirm" : ""}`}
-            onClick={handleClose} title={closeTitle} aria-label="Close tab">
-            <IconX />
-          </button>
-        </div>
-      </div>
-    );
-  };
+  const handlePip = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onPip?.(tab, browserId);
+  }, [onPip, tab, browserId]);
 
   // ── CSS Class Combinations ────────────────────────────────────────────────
-
-  const volFillClass = [
-    "pilpod-media-item__vol-fill",
-    volTone !== "normal" ? `pilpod-media-item__vol-fill--${volTone}` : "",
-  ].filter(Boolean).join(" ");
-
-  const volPctClass = [
-    "pilpod-media-item__vol-pct",
-    volTone !== "normal" ? `pilpod-media-item__vol-pct--${volTone}` : "",
-  ].filter(Boolean).join(" ");
 
   const cardClass = [
     "pilpod-media-item",
     variant === "float" ? "pilpod-media-item--float" : "pilpod-media-item--inset",
     playing ? "pilpod-media-item--playing" : "",
-    rootClassName,
   ].filter(Boolean).join(" ");
 
   const playBtnClass = [
@@ -392,29 +271,35 @@ export function MediaItemCard({
   ].filter(Boolean).join(" ");
 
   const progressClass = [
-    "pilpod-media-item__progress-fill",
-    playing ? "pilpod-media-item__progress-fill--playing" : "",
+    "pilpod-media-item__seek-fill",
+    playing ? "pilpod-media-item__seek-fill--playing" : "",
+  ].filter(Boolean).join(" ");
+
+  const volTrackClass = [
+    "pilpod-media-item__vol-track",
+    volTone !== "normal" ? `pilpod-media-item__vol-track--${volTone}` : "",
+  ].filter(Boolean).join(" ");
+
+  const volPctClass = [
+    "pilpod-media-item__vol-pct",
+    volTone !== "normal" ? `pilpod-media-item__vol-pct--${volTone}` : "",
   ].filter(Boolean).join(" ");
 
   const hasTabVol = tab.media != null && onSetTabVolume != null;
+  const seekActive = duration > 0 && onSeek != null && canSeek;
 
   return (
     <li
       className={[
         "pilpod-media-item-wrapper",
-        pinned ? "pilpod-media-item-wrapper--pinned" : "",
         rootClassName || "",
       ].filter(Boolean).join(" ")}
       {...(flipId ? { "data-flip-id": flipId } : {})}
     >
       <div className={cardClass}>
 
-        {/* ── THUMBNAIL ── */}
-        <div
-          className="pilpod-media-item__thumb-wrap"
-          onMouseEnter={handleThumbEnter}
-          onMouseLeave={handleThumbLeave}
-        >
+        {/* ── THUMBNAIL (square) ── */}
+        <div className="pilpod-media-item__thumb-wrap">
           {art ? (
             <img src={art} alt="" className="pilpod-media-item__thumb-img"
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -425,46 +310,73 @@ export function MediaItemCard({
             <div className="pilpod-media-item__thumb-letter">{letter}</div>
           )}
 
-          {/* Go To tab overlay button triggers only when not pinned */}
-          <div className={`pilpod-media-item__thumb-overlay${(!pinned && menuOpen) ? " pilpod-media-item__thumb-overlay--visible" : ""}`}>
-            <div
-              className="pilpod-media-item__goto-area"
+          {/* Go-to-tab overlay (reveals on thumbnail hover) */}
+          <div className="pilpod-media-item__thumb-overlay">
+            <button
+              type="button"
+              className="pilpod-media-item__goto-btn"
               onClick={(e) => { e.stopPropagation(); void onFocus(tab, browserId, browserDisplayName); }}
+              title="Go to tab"
+              aria-label="Go to tab"
             >
-              <div className="pilpod-media-item__thumb-goto">
-                <IconOpenInTab className="pilpod-media-item__thumb-goto-icon" />
-              </div>
-            </div>
+              <IconOpenInTab className="pilpod-media-item__goto-icon" />
+            </button>
           </div>
 
+          {/* Current time + duration, split across the thumbnail bottom */}
           {durationLabel ? (
-            <div className="pilpod-media-item__thumb-duration">{durationLabel}</div>
+            <div className="pilpod-media-item__thumb-time">
+              <span className="pilpod-media-item__thumb-time-current">
+                {currentTimeLabel ?? "0:00"}
+              </span>
+              <span className="pilpod-media-item__thumb-time-duration">
+                {durationLabel}
+              </span>
+            </div>
           ) : null}
         </div>
 
-        {/* ── BODY ZONE ── */}
-        <div className="pilpod-media-item__body">
+        {/* ── CONTENT ── */}
+        <div className="pilpod-media-item__content">
 
-          {/* Core metadata details section stays completely active during pin mode */}
-          <div className={`pilpod-media-item__content${(!pinned && menuOpen) ? " pilpod-media-item__content--hidden" : ""}`}>
-            <div className="pilpod-media-item__title-row">
-              <div className="pilpod-media-item__meta">
-                <p className="pilpod-media-item__title" title={tab.title?.trim() || undefined}>
-                  {tab.title?.trim() || "Untitled"}
-                </p>
-                {artist ? <p className="pilpod-media-item__channel">{artist}</p> : null}
-              </div>
+          {/* row 1: title + state badge + reload + close */}
+          <div className="pilpod-media-item__row1">
+            <p className="pilpod-media-item__title" title={tab.title?.trim() || undefined}>
+              {tab.title?.trim() || "Untitled"}
+            </p>
+            <div className="pilpod-media-item__row1-actions">
               <div
                 className={`pilpod-media-item__state-badge pilpod-media-item__state-badge--${playing ? "active" : badgeState}`}
-                title={`Tab state: ${badgeLabel}`}
+                title={`Tab state: ${badgeLabel}${artist ? ` · ${artist}` : ""}`}
               >
                 <div className="pilpod-media-item__state-dot" />
                 <span>{badgeLabel}</span>
               </div>
+              <button
+                type="button"
+                className="pilpod-media-item__icon-btn"
+                onClick={handleReload}
+                title="Reload"
+                aria-label="Reload"
+              >
+                <IconReload className={reloadSpin ? "pilpod-media-item__icon--spin" : undefined} />
+              </button>
+              <button
+                type="button"
+                className={`pilpod-media-item__icon-btn pilpod-media-item__icon-btn--danger${closeConfirm ? " pilpod-media-item__icon-btn--confirm" : ""}`}
+                onClick={handleClose}
+                title={closeTitle}
+                aria-label="Close tab"
+              >
+                <IconX />
+              </button>
             </div>
+          </div>
 
+          {/* row 2: volume block + transport (prev/next/pip) + play */}
+          <div className="pilpod-media-item__row2">
             {hasTabVol ? (
-              <div className="pilpod-media-item__vol-row">
+              <div className="pilpod-media-item__vol-block">
                 <button
                   type="button"
                   className="pilpod-media-item__vol-icon-btn"
@@ -476,79 +388,98 @@ export function MediaItemCard({
                     ? <IconVolumeMuted className="pilpod-media-item__vol-icon-svg" />
                     : <IconVolume className="pilpod-media-item__vol-icon-svg" />}
                 </button>
-                <div className="pilpod-media-item__vol-track" ref={volTrackRef}>
-                  <div className="pilpod-media-item__vol-rail" />
-                  <div className={volFillClass} style={{ width: `${volLayout.fillPx}px` }} />
-                  <div className="pilpod-media-item__vol-thumb" style={{ left: `${volLayout.thumbPx}px` }} />
+                <span className="pilpod-media-item__vol-slider-wrap">
                   <input
                     type="range"
-                    className="pilpod-media-item__vol-input"
-                    min="0" max={TAB_VOL_MAX} value={effectiveTabVol} step="5"
+                    className={volTrackClass}
+                    min={0}
+                    max={VOL_TRACK_STEPS}
+                    value={volTrackValue}
+                    step={1}
+                    style={{ "--vol-pct": `${volFraction * 100}%` } as React.CSSProperties}
                     onChange={handleTabVolumeChange}
                     aria-label={`Tab volume: ${effectiveTabVol}%`}
+                    aria-valuemin={0}
+                    aria-valuemax={TAB_VOL_MAX}
+                    aria-valuenow={effectiveTabVol}
                   />
-                </div>
-                <span className={volPctClass}>{effectiveTabVol}%</span>
+                </span>
+                <span className={volPctClass}>
+                  {localTabMuted ? "mute" : `${effectiveTabVol}%`}
+                </span>
               </div>
             ) : null}
-          </div>
 
-          {/* Mount as inline body overlay ONLY if unpinned */}
-          {!pinned && renderMenuInner(false)}
-        </div>
-
-        {/* ── PLAY CONTROL ── */}
-        {hasMediaControls ? (
-          <button type="button" className={playBtnClass} disabled={busy}
-            onClick={(e) => { e.stopPropagation(); onPlayPause(tab, browserId); }}
-            title={playing ? "Pause" : "Play"} aria-label={playing ? "Pause" : "Play"}>
-            {busy ? <Spinner /> : playing
-              ? <IconPause className="pilpod-icon--sm" />
-              : <IconPlay className="pilpod-icon--sm" />}
-          </button>
-        ) : null}
-
-        {/* ── SEEKBAR FLANKS ROW ── */}
-        <div className="pilpod-media-item__seek-row">
-          {tab.media ? (
-            <button type="button"
-              className="pilpod-media-item__seek-flank pilpod-media-item__seek-flank--prev"
-              onClick={handlePrevious} title="Previous" aria-label="Previous track">
-              <IconSkipBack />
-            </button>
-          ) : null}
-
-          <div
-            ref={seekZoneRef}
-            className={`pilpod-media-item__seek-zone${duration && onSeek ? " pilpod-media-item__seek-zone--active" : ""}`}
-            onPointerDown={duration && onSeek ? handleSeekPointerDown : undefined}
-            onPointerMove={duration && onSeek ? handleSeekPointerMove : undefined}
-            onPointerUp={duration && onSeek ? handleSeekPointerUp : undefined}
-            onPointerCancel={duration && onSeek ? handleSeekPointerUp : undefined}
-          >
-            <div className="pilpod-media-item__progress-bar">
-              <div className={progressClass} style={{ width: `${displayProgress}%` }} />
+            <div className="pilpod-media-item__transport">
+              {tab.media && canPrev ? (
+                <button
+                  type="button"
+                  className="pilpod-media-item__icon-btn pilpod-media-item__transport-btn"
+                  onClick={handlePrevious}
+                  title="Previous"
+                  aria-label="Previous track"
+                >
+                  <IconSkipBack />
+                </button>
+              ) : null}
+              {tab.media && canNext ? (
+                <button
+                  type="button"
+                  className="pilpod-media-item__icon-btn pilpod-media-item__transport-btn"
+                  onClick={handleNext}
+                  title="Next"
+                  aria-label="Next track"
+                >
+                  <IconSkipForward />
+                </button>
+              ) : null}
+              {onPip && canPip ? (
+                <button
+                  type="button"
+                  className={`pilpod-media-item__icon-btn pilpod-media-item__transport-btn pilpod-media-item__pip-btn${pipActive ? " pilpod-media-item__pip-btn--active" : ""}`}
+                  onClick={handlePip}
+                  title={pipActive ? "Exit Picture-in-Picture" : "Picture in Picture"}
+                  aria-label={pipActive ? "Exit Picture-in-Picture" : "Picture in Picture"}
+                  aria-pressed={pipActive}
+                >
+                  <IconPip />
+                </button>
+              ) : null}
+              {saveButton}
+              {downloadButton}
             </div>
-            {isSeeking && currentTimeLabel && durationLabel ? (
-              <div className="pilpod-media-item__seek-tooltip" style={{ left: `${displayProgress}%` }}>
-                {currentTimeLabel} / {durationLabel}
-              </div>
+
+            {hasMediaControls ? (
+              <button
+                type="button"
+                className={playBtnClass}
+                disabled={busy}
+                onClick={(e) => { e.stopPropagation(); onPlayPause(tab, browserId); }}
+                title={playing ? "Pause" : "Play"}
+                aria-label={playing ? "Pause" : "Play"}
+              >
+                {busy ? <Spinner /> : playing
+                  ? <IconPause className="pilpod-icon--sm" />
+                  : <IconPlay className="pilpod-icon--sm" />}
+              </button>
             ) : null}
           </div>
-
-          {tab.media ? (
-            <button type="button"
-              className="pilpod-media-item__seek-flank pilpod-media-item__seek-flank--next"
-              onClick={handleNext} title="Next" aria-label="Next track">
-              <IconSkipForward />
-            </button>
-          ) : null}
         </div>
 
-      </div>{/* end card */}
-
-      {/* Mount underneath as a styled layout container extension ONLY if pinned */}
-      {pinned && renderMenuInner(true)}
+        {/* ── FULL-WIDTH SEEKBAR (spans thumbnail + content) ── */}
+        <div
+          ref={seekWrapRef}
+          className={`pilpod-media-item__seek-wrap${seekActive ? " pilpod-media-item__seek-wrap--active" : ""}${isSeeking ? " pilpod-media-item__seek-wrap--dragging" : ""}`}
+          onPointerDown={seekActive ? handleSeekPointerDown : undefined}
+          onPointerMove={seekActive ? handleSeekPointerMove : undefined}
+          onPointerUp={seekActive ? handleSeekPointerUp : undefined}
+          onPointerCancel={seekActive ? handleSeekPointerUp : undefined}
+        >
+          <div className="pilpod-media-item__seek-track">
+            <div className={progressClass} style={{ width: `${displayProgress}%` }} />
+          </div>
+        </div>
+      </div>
     </li>
   );
 }

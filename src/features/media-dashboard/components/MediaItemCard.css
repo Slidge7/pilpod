@@ -1,19 +1,14 @@
-/* MediaItemCard — glass media item (v8 — bottom extended pin section) */
+/* MediaItemCard — glass media item (v9 — new companion layout)
+   Layout ported from pilpod-companion/newui/pilpod-media-item.html.
+   Colors / transparency come exclusively from the existing --pilpod-glass-* tokens. */
 
 /* ── WRAPPER ─────────────────────────────────────────────── */
 
 .pilpod-media-item-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   width: 100%;
   height: auto !important;
-  transition: gap 0.2s ease;
-}
-
-/* Collapse the gap completely when menu is pinned underneath */
-.pilpod-media-item-wrapper--pinned {
-  gap: 0px !important;
 }
 
 /* ── CARD ────────────────────────────────────────────────── */
@@ -23,25 +18,18 @@
   width: 100%;
   height: 72px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   overflow: hidden;
   transition:
     box-shadow 0.2s,
     border-color 0.2s,
-    background-color 0.2s,
-    border-radius 0.2s ease;
+    background-color 0.2s;
   cursor: default;
   user-select: none;
 }
 
 .pilpod-media-item--float {
   border-radius: 14px;
-}
-
-/* Flatten bottom corners when extended section is attached underneath */
-.pilpod-media-item-wrapper--pinned .pilpod-media-item--float {
-  border-bottom-left-radius: 0px;
-  border-bottom-right-radius: 0px;
 }
 
 .pilpod-media-item--float::before {
@@ -53,25 +41,16 @@
   pointer-events: none;
 }
 
-.pilpod-media-item-wrapper--pinned .pilpod-media-item--float::before {
-  border-bottom-left-radius: 0px;
-  border-bottom-right-radius: 0px;
-}
-
-/* ── THUMBNAIL ───────────────────────────────────────────── */
+/* ── THUMBNAIL (square = card height) ────────────────────── */
 
 .pilpod-media-item__thumb-wrap {
   position: relative;
-  width: 96px;
+  width: 72px;
   height: 72px;
   flex-shrink: 0;
   border-radius: 13px 0 0 13px;
   overflow: hidden;
   z-index: 2;
-}
-
-.pilpod-media-item-wrapper--pinned .pilpod-media-item--float .pilpod-media-item__thumb-wrap {
-  border-bottom-left-radius: 0px;
 }
 
 .pilpod-media-item__thumb-img {
@@ -90,7 +69,7 @@
 }
 
 .pilpod-media-item__thumb-wrap:hover .pilpod-media-item__thumb-img {
-  filter: brightness(0.38);
+  filter: brightness(0.4);
 }
 
 .pilpod-media-item__thumb-letter {
@@ -106,36 +85,26 @@
   color: var(--pilpod-glass-thumb-letter-color);
 }
 
-/* ── THUMB OVERLAY (go-to) ───────────────────────────────── */
-
+/* Go-to-tab overlay */
 .pilpod-media-item__thumb-overlay {
   position: absolute;
   inset: 0;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
-  transition: opacity 0.18s;
+  transition: opacity 0.16s;
   pointer-events: none;
 }
 
-.pilpod-media-item__thumb-overlay--visible {
+.pilpod-media-item__thumb-wrap:hover .pilpod-media-item__thumb-overlay {
   opacity: 1;
   pointer-events: all;
 }
 
-/* Go-to-tab — fills thumbnail portion */
-.pilpod-media-item__goto-area {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.pilpod-media-item__thumb-goto {
-  width: 32px;
-  height: 32px;
+.pilpod-media-item__goto-btn {
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--pilpod-glass-thumb-goto-bg);
   border: 1.5px solid var(--pilpod-glass-thumb-goto-border);
@@ -143,325 +112,150 @@
   align-items: center;
   justify-content: center;
   color: var(--pilpod-glass-thumb-goto-color);
+  cursor: pointer;
+  transform: scale(0.82);
   transition: background 0.15s, transform 0.15s;
 }
 
-.pilpod-media-item__thumb-goto-icon {
-  width: 15px;
-  height: 15px;
+.pilpod-media-item__thumb-wrap:hover .pilpod-media-item__goto-btn {
+  transform: scale(1);
 }
 
-.pilpod-media-item__goto-area:hover .pilpod-media-item__thumb-goto {
+.pilpod-media-item__goto-btn:hover {
   background: var(--pilpod-glass-thumb-goto-hover);
-  transform: scale(1.1);
+  transform: scale(1.08);
 }
 
-/* Duration badge */
-.pilpod-media-item__thumb-duration {
-  position: absolute;
-  bottom: 5px;
-  right: 6px;
-  background: var(--pilpod-glass-duration-bg);
-  color: var(--pilpod-glass-duration-text);
-  font-size: 10px;
-  font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 4px;
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* ── BODY ZONE ───────────────────────────────────────────── */
-
-.pilpod-media-item__body {
-  flex: 1;
-  min-width: 0;
-  height: 72px;
-  position: relative;
-  overflow: hidden;
-  z-index: 1;
-}
-
-/* ── CONTENT (title + volume) ────────────────────────────── */
-
-.pilpod-media-item__content {
-  position: absolute;
-  inset: 0;
-  padding: 10px 10px 10px 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition: opacity 0.2s ease, transform 0.22s ease;
-}
-
-.pilpod-media-item__content--hidden {
-  opacity: 0;
-  transform: translateX(-10px);
-  pointer-events: none;
-}
-
-/* ── HOVER BODY MENU OVERLAY ─────────────────────────────── */
-
-.pilpod-media-item__body-menu {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  background: var(--pilpod-glass-menu-bg);
-  border-left: 1px solid var(--pilpod-glass-menu-border);
-  transform: translateX(100%);
-  opacity: 0;
-  transition:
-    transform 0.26s cubic-bezier(0.34, 1.2, 0.64, 1),
-    opacity 0.2s ease;
-  pointer-events: none;
-  z-index: 3;
-}
-
-.pilpod-media-item__body-menu--open {
-  transform: translateX(0);
-  opacity: 1;
-  pointer-events: all;
-}
-
-/* ── PINNED BOTTOM MENU EXTENSION ────────────────────────── */
-
-.pilpod-media-item__pinned-menu {
-  position: relative;
-  width: 100%;
-  height: 52px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--pilpod-glass-menu-bg);
-  border: 1px solid var(--pilpod-glass-menu-border);
-  box-sizing: border-box;
-  z-index: 1;
-  animation: pilpod-pinned-slide 0.2s ease-out;
-}
-
-.pilpod-media-item__pinned-menu--float {
-  border-top: none;
-  border-bottom-left-radius: 14px;
-  border-bottom-right-radius: 14px;
-  backdrop-filter: blur(var(--pilpod-glass-blur-card, 8px));
-  -webkit-backdrop-filter: blur(var(--pilpod-glass-blur-card, 8px));
-}
-
-.pilpod-media-item__pinned-menu--inset {
-  border: none;
-  border-bottom: 1px solid var(--pilpod-glass-float-border);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-@keyframes pilpod-pinned-slide {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ── SHARED MENU INNER ELEMENTS ──────────────────────────── */
-
-.pilpod-media-item__menu-acts {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  flex: 1;
-  width: 100%;
-  padding: 0 8px;
-  margin-top: 8px; /* Room below absolute pin slider */
-}
-
-/* Pin Toggle Switch button shared absolute top center placement */
-.pilpod-media-item__menu-pin-btn {
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--pilpod-glass-menu-act-border);
-  border: none;
-  color: transparent;
-  cursor: pointer;
-  flex-shrink: 0;
-  z-index: 4;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    height 0.18s ease,
-    width 0.18s ease,
-    border-radius 0.18s ease;
-  overflow: hidden;
-}
-
-.pilpod-media-item__menu-pin-btn:hover {
-  background: color-mix(in srgb, var(--pilpod-glass-accent) 35%, var(--pilpod-glass-menu-act-border));
-  color: var(--pilpod-glass-accent);
-  height: 18px;
-  width: 42px;
-  border-radius: 9px;
-}
-
-.pilpod-media-item__menu-pin-btn--active {
-  background: color-mix(in srgb, var(--pilpod-glass-accent) 30%, var(--pilpod-glass-menu-act-border));
-}
-
-.pilpod-media-item__menu-pin-icon {
-  width: 11px;
-  height: 11px;
-  opacity: 0;
-  transition: opacity 0.14s;
-  flex-shrink: 0;
-}
-
-.pilpod-media-item__menu-pin-btn:hover .pilpod-media-item__menu-pin-icon {
-  opacity: 1;
-}
-
-/* Individual action buttons */
-.pilpod-media-item__menu-act {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border: 1px solid var(--pilpod-glass-menu-act-border);
-  background: var(--pilpod-glass-menu-act-bg);
-  color: var(--pilpod-glass-menu-act-color);
-  transition:
-    background 0.14s,
-    border-color 0.14s,
-    transform 0.14s,
-    box-shadow 0.14s,
-    color 0.14s;
-  flex-shrink: 0;
-}
-
-.pilpod-media-item__menu-act svg {
+.pilpod-media-item__goto-icon {
   width: 14px;
   height: 14px;
 }
 
-.pilpod-media-item__menu-act:active {
-  transform: scale(0.9);
-}
-
-.pilpod-media-item__menu-act--skip-ad:hover {
-  background: color-mix(in srgb, #f59e0b 18%, var(--pilpod-glass-menu-act-bg));
-  border-color: #f59e0b;
-  color: #f59e0b;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.28);
-}
-
-.pilpod-media-item__menu-act--pip:hover {
-  background: color-mix(in srgb, var(--pilpod-glass-accent) 20%, var(--pilpod-glass-menu-act-bg));
-  border-color: var(--pilpod-glass-accent);
-  color: var(--pilpod-glass-accent);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--pilpod-glass-accent) 32%, transparent);
-}
-
-.pilpod-media-item__menu-act--dl:hover {
-  background: var(--pilpod-act-dl-bg);
-  border-color: var(--pilpod-act-dl-border);
-  color: var(--pilpod-act-dl-text);
-  box-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
-}
-
-.pilpod-media-item__menu-act--rl:hover {
-  background: var(--pilpod-act-rl-bg);
-  border-color: var(--pilpod-act-rl-border);
-  color: var(--pilpod-act-rl-text);
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.25);
-}
-
-.pilpod-media-item__menu-act--cl:hover {
-  background: var(--pilpod-act-cl-bg);
-  border-color: var(--pilpod-act-cl-border);
-  color: var(--pilpod-act-cl-text);
-  box-shadow: 0 0 10px rgba(248, 113, 113, 0.25);
-}
-
-.pilpod-media-item__menu-act--cl-confirm {
-  background: var(--pilpod-glass-close-confirm-bg) !important;
-  border-color: var(--pilpod-glass-close-confirm-border) !important;
-  color: var(--pilpod-glass-close-confirm-text) !important;
-  box-shadow: var(--pilpod-glass-close-confirm-shadow) !important;
-  animation: pilpod-close-bounce 0.34s cubic-bezier(0.36, 0.07, 0.19, 0.97);
-}
-
-.pilpod-media-item__menu-act-icon--spin {
-  transition: transform 0.5s;
-  transform: rotate(360deg);
-}
-
-.pilpod-media-item__menu-act--dl-status {
-  width: auto;
-  min-width: 32px;
-  padding: 0 8px;
-  gap: 4px;
-  cursor: default;
-}
-
-.pilpod-media-item__dl-label {
-  font-size: 9px;
-  font-weight: 600;
-}
-
-@keyframes pilpod-close-bounce {
-  0%   { transform: scale(1); }
-  30%  { transform: scale(1.35); }
-  55%  { transform: scale(0.85); }
-  75%  { transform: scale(1.15); }
-  100% { transform: scale(1); }
-}
-
-/* ── TITLE ROW ───────────────────────────────────────────── */
-
-.pilpod-media-item__title-row {
+/* Current time + duration split across the thumbnail bottom */
+.pilpod-media-item__thumb-time {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 6px;
+  align-items: center;
+  padding: 10px 0 5px 0;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, var(--pilpod-glass-duration-bg));
+  z-index: 1;
 }
 
-.pilpod-media-item__meta {
-  min-width: 0;
+.pilpod-media-item__thumb-time-current,
+.pilpod-media-item__thumb-time-duration {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 50%;
+  line-height: 1;
+}
+
+.pilpod-media-item__thumb-time-current {
+  color: var(--pilpod-glass-duration-text);
+}
+
+.pilpod-media-item__thumb-time-duration {
+  color: var(--pilpod-glass-text-dim);
+}
+
+/* ── CONTENT (right column, two rows) ────────────────────── */
+
+.pilpod-media-item__content {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 9px 11px 11px;
+  z-index: 1;
+}
+
+/* row 1: title + badge + reload + close */
+.pilpod-media-item__row1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 18px;
 }
 
 .pilpod-media-item__title {
+  margin: 0;
   font-size: 12.5px;
   font-weight: 500;
   color: var(--pilpod-glass-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
   line-height: 1.3;
-  max-width: 155px;
-  margin: 0;
 }
 
-.pilpod-media-item__channel {
-  font-size: 10.5px;
-  color: var(--pilpod-glass-text-muted);
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 155px;
+.pilpod-media-item__row1-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
 }
 
+/* Generic icon button (reload / close / transport) */
+.pilpod-media-item__icon-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--pilpod-glass-menu-act-color);
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 6px;
+  flex: none;
+  transition: background 0.15s, color 0.15s, transform 0.14s;
+}
+
+.pilpod-media-item__icon-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.pilpod-media-item__icon-btn:hover {
+  background: var(--pilpod-glass-menu-act-bg);
+  color: var(--pilpod-glass-text);
+}
+
+.pilpod-media-item__icon-btn:active {
+  transform: scale(0.9);
+}
+
+.pilpod-media-item__icon-btn--danger:hover {
+  background: var(--pilpod-act-cl-bg);
+  color: var(--pilpod-act-cl-text);
+}
+
+.pilpod-media-item__icon-btn--confirm {
+  background: var(--pilpod-glass-close-confirm-bg) !important;
+  color: var(--pilpod-glass-close-confirm-text) !important;
+  box-shadow: var(--pilpod-glass-close-confirm-shadow);
+}
+
+.pilpod-media-item__icon--spin {
+  transition: transform 0.5s;
+  transform: rotate(360deg);
+}
+
+/* State badge */
 .pilpod-media-item__state-badge {
   display: flex;
   align-items: center;
@@ -511,28 +305,44 @@
   box-shadow: 0 0 4px var(--pilpod-badge-active-text);
 }
 
-/* ── VOLUME SLIDER ───────────────────────────────────────── */
-
-.pilpod-media-item__vol-row {
+/* row 2: volume + transport + play */
+.pilpod-media-item__row2 {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  min-height: 24px;
+}
+
+/* ── VOLUME (collapsed → expands on hover, takes over the row) ── */
+
+.pilpod-media-item__vol-block {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: none;
+  min-width: 0;
+  transition: flex 0.18s ease;
+}
+
+.pilpod-media-item__row2:has(.pilpod-media-item__vol-block:hover) .pilpod-media-item__vol-block,
+.pilpod-media-item__row2:has(.pilpod-media-item__vol-block:focus-within) .pilpod-media-item__vol-block {
+  flex: 1;
 }
 
 .pilpod-media-item__vol-icon-btn {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  cursor: pointer;
-  background: none;
-  border: none;
+  width: 22px;
+  height: 22px;
+  flex: none;
   padding: 0;
+  border: none;
+  background: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.7;
-  transition: opacity 0.15s, color 0.15s;
+  cursor: pointer;
+  opacity: 0.75;
   color: var(--pilpod-glass-vol-icon);
+  transition: opacity 0.15s, color 0.15s;
 }
 
 .pilpod-media-item__vol-icon-btn:hover {
@@ -541,90 +351,141 @@
 }
 
 .pilpod-media-item__vol-icon-svg {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
 }
 
-.pilpod-media-item__vol-track {
-  position: relative;
-  flex: 1;
-  height: 18px;
+.pilpod-media-item__vol-slider-wrap {
   display: flex;
   align-items: center;
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  transition: flex 0.18s ease, width 0.18s ease, margin 0.18s ease;
+}
+
+.pilpod-media-item__vol-block:hover .pilpod-media-item__vol-slider-wrap,
+.pilpod-media-item__vol-block:focus-within .pilpod-media-item__vol-slider-wrap {
+  flex: 1 1 auto;
+  width: auto;
+  margin: 0 6px;
+}
+
+/* Native range styled to match, driven by --vol-pct and --vol-fill */
+.pilpod-media-item__vol-track {
+  width: 100%;
+  min-width: 0;
+  height: 18px;
   cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  display: block;
+  --vol-fill: var(--pilpod-glass-accent);
 }
 
-.pilpod-media-item__vol-rail {
-  position: absolute;
-  left: 0;
-  right: 0;
+.pilpod-media-item__vol-track--boost { --vol-fill: var(--pilpod-vol-boost); }
+.pilpod-media-item__vol-track--high  { --vol-fill: var(--pilpod-vol-high); }
+.pilpod-media-item__vol-track--muted { --vol-fill: var(--pilpod-vol-muted); }
+
+.pilpod-media-item__vol-track::-webkit-slider-runnable-track {
   height: 3px;
-  background: var(--pilpod-glass-vol-rail);
   border-radius: 3px;
-  pointer-events: none;
+  background: linear-gradient(90deg,
+    var(--vol-fill) 0%,
+    var(--vol-fill) var(--vol-pct, 50%),
+    var(--pilpod-glass-vol-rail) var(--vol-pct, 50%),
+    var(--pilpod-glass-vol-rail) 100%);
 }
 
-.pilpod-media-item__vol-fill {
-  position: absolute;
-  left: 0;
-  height: 3px;
-  border-radius: 3px;
-  background: var(--pilpod-vol-normal);
-  pointer-events: none;
-  transition: width 0.04s;
-}
-
-.pilpod-media-item__vol-fill--boost { background: var(--pilpod-vol-boost); }
-.pilpod-media-item__vol-fill--high  { background: var(--pilpod-vol-high); }
-.pilpod-media-item__vol-fill--muted { background: var(--pilpod-vol-muted); }
-
-.pilpod-media-item__vol-thumb {
-  position: absolute;
+.pilpod-media-item__vol-track::-webkit-slider-thumb {
+  -webkit-appearance: none;
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--pilpod-glass-vol-thumb);
+  margin-top: -3.5px;
   box-shadow: var(--pilpod-glass-vol-thumb-shadow);
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  top: 50%;
-  opacity: 0;
-  transition: opacity 0.15s;
 }
 
-.pilpod-media-item__vol-track:hover .pilpod-media-item__vol-thumb { opacity: 1; }
+.pilpod-media-item__vol-track::-moz-range-track {
+  height: 3px;
+  border-radius: 3px;
+  background: var(--pilpod-glass-vol-rail);
+}
 
-.pilpod-media-item__vol-input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  margin: 0;
-  padding: 0;
-  -webkit-appearance: none;
-  appearance: none;
+.pilpod-media-item__vol-track::-moz-range-progress {
+  height: 3px;
+  border-radius: 3px;
+  background: var(--vol-fill);
+}
+
+.pilpod-media-item__vol-track::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: none;
+  border-radius: 50%;
+  background: var(--pilpod-glass-vol-thumb);
+  box-shadow: var(--pilpod-glass-vol-thumb-shadow);
 }
 
 .pilpod-media-item__vol-pct {
   font-size: 9.5px;
   font-weight: 600;
   color: var(--pilpod-glass-accent);
-  min-width: 30px;
-  text-align: right;
-  flex-shrink: 0;
+  min-width: 32px;
+  flex: none;
+  line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .pilpod-media-item__vol-pct--boost { color: var(--pilpod-vol-pct-boost); }
 .pilpod-media-item__vol-pct--high  { color: var(--pilpod-vol-pct-high); }
 .pilpod-media-item__vol-pct--muted { color: var(--pilpod-glass-vol-pct-muted); }
 
+/* ── TRANSPORT (prev / next / pip) — hidden while volume is open ── */
+
+.pilpod-media-item__transport {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow: hidden;
+  opacity: 1;
+  flex: none;
+  transition: width 0.18s ease, opacity 0.15s ease;
+}
+
+.pilpod-media-item__transport-btn {
+  width: 24px;
+  height: 24px;
+}
+
+.pilpod-media-item__transport-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pilpod-media-item__row2:has(.pilpod-media-item__vol-block:hover) .pilpod-media-item__transport,
+.pilpod-media-item__row2:has(.pilpod-media-item__vol-block:focus-within) .pilpod-media-item__transport {
+  width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pilpod-media-item__pip-btn--active {
+  color: var(--pilpod-glass-accent);
+  background: color-mix(in srgb, var(--pilpod-glass-accent) 18%, transparent);
+}
+
 /* ── PLAY BUTTON ─────────────────────────────────────────── */
 
 .pilpod-media-item__play-btn {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--pilpod-glass-play-bg);
   border: 1px solid var(--pilpod-glass-play-border);
@@ -633,16 +494,16 @@
   justify-content: center;
   cursor: pointer;
   color: var(--pilpod-glass-play-color);
-  flex-shrink: 0;
+  flex: none;
+  margin-left: auto;
   z-index: 2;
-  transition: all 0.18s;
+  transition: all 0.16s;
   box-shadow: var(--pilpod-glass-play-shadow);
-  margin-right: 10px;
 }
 
 .pilpod-media-item__play-btn svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .pilpod-media-item__play-btn:hover:not(:disabled) {
@@ -667,133 +528,77 @@
   box-shadow: var(--pilpod-glass-play-playing-hover-shadow);
 }
 
-/* ── SEEK ROW (prev | bar | next) ────────────────────────── */
+/* ── FULL-WIDTH SEEKBAR (spans thumbnail + content) ──────── */
 
-.pilpod-media-item__seek-row {
+.pilpod-media-item__seek-wrap {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
-  height: 14px;
-  z-index: 4;
+  bottom: 0;
+  height: 12px;
   display: flex;
   align-items: flex-end;
+  z-index: 4;
   pointer-events: none;
 }
 
-/* Flank buttons */
-.pilpod-media-item__seek-flank {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--pilpod-glass-progress-track);
-  border: 1px solid var(--pilpod-glass-menu-act-border);
-  color: var(--pilpod-glass-progress-fill);
-  cursor: pointer;
-  flex-shrink: 0;
-  pointer-events: all;
-  position: relative;
-  bottom: 0;
-  opacity: 0;
-  transform: scale(0.65);
-  transition:
-    opacity 0.2s ease,
-    transform 0.22s cubic-bezier(0.34, 1.3, 0.64, 1),
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-
-.pilpod-media-item__seek-flank svg {
-  width: 9px;
-  height: 9px;
-}
-
-/* Show on row hover OR when track is playing */
-.pilpod-media-item__seek-row:hover .pilpod-media-item__seek-flank,
-.pilpod-media-item--playing .pilpod-media-item__seek-flank {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.pilpod-media-item__seek-flank:hover {
-  background: var(--pilpod-glass-progress-fill-playing);
-  border-color: var(--pilpod-glass-progress-fill-playing);
-  color: #fff;
-  box-shadow: 0 0 8px color-mix(in srgb, var(--pilpod-glass-progress-fill-playing) 55%, transparent);
-  transform: scale(1.18) !important;
-}
-
-.pilpod-media-item__seek-flank:active { transform: scale(0.88) !important; }
-
-/* ── SEEKBAR ─────────────────────────────────────────────── */
-
-.pilpod-media-item__seek-zone {
-  flex: 1;
-  height: 14px;
-  position: relative;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.pilpod-media-item__seek-zone--active {
+.pilpod-media-item__seek-wrap--active {
   cursor: pointer;
   pointer-events: all;
 }
 
-.pilpod-media-item__progress-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+.pilpod-media-item__seek-track {
+  position: relative;
+  width: 100%;
   height: 3px;
   background: var(--pilpod-glass-progress-track);
   border-radius: 0 0 13px 13px;
-  overflow: hidden;
-  pointer-events: none;
-  transition: height 0.15s ease;
+  transition: height 0.12s ease;
 }
 
-.pilpod-media-item-wrapper--pinned .pilpod-media-item--float .pilpod-media-item__progress-bar {
-  border-radius: 0;
+.pilpod-media-item__seek-wrap--active:hover .pilpod-media-item__seek-track,
+.pilpod-media-item__seek-wrap--dragging .pilpod-media-item__seek-track {
+  height: 5px;
 }
 
-.pilpod-media-item__seek-zone--active:hover .pilpod-media-item__progress-bar,
-.pilpod-media-item__seek-zone--active:active .pilpod-media-item__progress-bar {
-  height: 6px;
-}
-
-.pilpod-media-item__progress-fill {
-  height: 100%;
+.pilpod-media-item__seek-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
   background: var(--pilpod-glass-progress-fill);
-  border-radius: 2px;
-  transition: width 0.3s ease;
+  border-radius: 0 0 0 13px;
+  pointer-events: none;
+  transition: width 0.25s ease;
 }
 
-.pilpod-media-item__progress-fill--playing {
+.pilpod-media-item__seek-fill--playing {
   background: var(--pilpod-glass-progress-fill-playing);
 }
 
-.pilpod-media-item__seek-tooltip {
+.pilpod-media-item__seek-thumb {
   position: absolute;
-  bottom: 100%;
-  transform: translateX(-50%);
-  margin-bottom: 6px;
-  background: var(--pilpod-glass-menu-bg);
-  border: 1px solid var(--pilpod-glass-menu-border);
-  border-radius: 6px;
-  padding: 2px 7px;
-  font-size: 10px;
-  font-weight: 600;
-  white-space: nowrap;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pilpod-glass-vol-thumb);
+  box-shadow: var(--pilpod-glass-vol-thumb-shadow);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  z-index: 5;
   pointer-events: none;
-  backdrop-filter: blur(var(--pilpod-glass-blur-card, 8px));
-  -webkit-backdrop-filter: blur(var(--pilpod-glass-blur-card, 8px));
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: opacity 0.12s ease;
+}
+
+.pilpod-media-item__seek-wrap--active:hover .pilpod-media-item__seek-thumb,
+.pilpod-media-item__seek-wrap--dragging .pilpod-media-item__seek-thumb {
+  opacity: 1;
+}
+
+/* Seek fill during drag should track instantly */
+.pilpod-media-item__seek-wrap--dragging .pilpod-media-item__seek-fill {
+  transition: none;
 }
 
 /* ── INSET VARIANT ───────────────────────────────────────── */
@@ -832,4 +637,20 @@ html.dark .pilpod-media-item--inset.pilpod-media-item--playing {
 }
 
 .pilpod-media-item--inset .pilpod-media-item__thumb-wrap { border-radius: 0; }
-.pilpod-media-item--inset .pilpod-media-item__progress-bar { border-radius: 0; }
+.pilpod-media-item--inset .pilpod-media-item__seek-track { border-radius: 0; }
+.pilpod-media-item--inset .pilpod-media-item__seek-fill { border-radius: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pilpod-media-item,
+  .pilpod-media-item__thumb-overlay,
+  .pilpod-media-item__goto-btn,
+  .pilpod-media-item__vol-block,
+  .pilpod-media-item__vol-slider-wrap,
+  .pilpod-media-item__transport,
+  .pilpod-media-item__play-btn,
+  .pilpod-media-item__seek-track,
+  .pilpod-media-item__seek-thumb,
+  .pilpod-media-item__seek-fill {
+    transition: none !important;
+  }
+}

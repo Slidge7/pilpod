@@ -64,3 +64,102 @@ pub async fn dev_wake_and_sync_browser(os_browser_id: String) -> Result<serde_js
         "dev_wake_and_sync_browser is Windows-only (requested: {os_browser_id})"
     ))
 }
+
+#[tauri::command]
+pub fn dev_get_full_state() -> Result<serde_json::Value, String> {
+    Err("dev_get_full_state is Windows-only".into())
+}
+
+#[tauri::command]
+pub fn dev_kill_ws(_browser_id: String) -> bool {
+    false
+}
+
+#[tauri::command]
+pub fn dev_clear_ext_installed(_os_browser_id: String) -> bool {
+    false
+}
+
+#[tauri::command]
+pub fn dev_clear_icon_cache() {}
+
+#[tauri::command]
+pub fn dev_inject_stale_slot(_os_browser_id: String) -> String {
+    String::new()
+}
+
+#[tauri::command]
+pub fn dev_gc_slots_now() -> Vec<String> {
+    Vec::new()
+}
+
+#[tauri::command]
+pub fn dev_simulate_resume() -> usize {
+    0
+}
+
+// ---- Downloader stubs (feature is Windows-only) ----
+
+const DL_WIN_ONLY: &str = "The downloader requires Windows";
+
+#[tauri::command]
+pub fn dl_fetch_info(_url: String) -> Result<serde_json::Value, String> {
+    Err(DL_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn dl_start(_args: serde_json::Value) -> Result<String, String> {
+    Err(DL_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn dl_cancel(_task_id: String) -> Result<(), String> {
+    Err(DL_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn dl_get_queue() -> Result<Vec<serde_json::Value>, String> {
+    Ok(Vec::new())
+}
+
+#[tauri::command]
+pub fn dl_clear_done() -> Result<(), String> {
+    Err(DL_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn dl_get_settings() -> Result<serde_json::Value, String> {
+    Err(DL_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn dl_set_settings(_new_settings: serde_json::Value) -> Result<(), String> {
+    Err(DL_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn dl_open_output_dir() -> Result<(), String> {
+    Err(DL_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn dl_check_binaries() -> Result<serde_json::Value, String> {
+    Err(DL_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn dl_update_ytdlp() -> Result<String, String> {
+    Err(DL_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn dl_retry(_task_id: String) -> Result<String, String> {
+    Err(DL_WIN_ONLY.into())
+}
+
+// ---- Vault smart-open stub (focus/launch is Windows-only) ----
+
+#[tauri::command]
+pub fn vault_open_entry(_url: String, _normalized_url: String) -> Result<String, String> {
+    Err("Opening saved entries requires Windows".into())
+}

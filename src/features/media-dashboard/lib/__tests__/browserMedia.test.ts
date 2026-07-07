@@ -114,10 +114,18 @@ describe("tabHasMediaControls", () => {
     ).toBe(true);
   });
 
-  it("returns false for non-allowlisted URL even when playing", () => {
+  it("returns true for non-allowlisted URL when actually playing detected media", () => {
     expect(
       tabHasMediaControls(
         tab({ playbackState: "playing" }, { url: "https://example.com" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("returns false for non-allowlisted URL with no active media", () => {
+    expect(
+      tabHasMediaControls(
+        tab({ playbackState: "none" }, { url: "https://example.com" }),
       ),
     ).toBe(false);
   });

@@ -29,7 +29,15 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "resources": [],
+    "externalBin": [
+      "binaries/yt-dlp",
+      "binaries/ffmpeg"
+    ],
+    "resources": [
+      "wallpapers/light/*",
+      "wallpapers/dark/*",
+      "icons/browsers/*"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

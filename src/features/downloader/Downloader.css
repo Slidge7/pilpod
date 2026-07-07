@@ -1,0 +1,184 @@
+/* Downloader panel — uses the existing --pilpod design tokens, fits 350px. */
+
+.pilpod-dl-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 35px 10px 8px;
+  border-radius: 10px;
+  background: var(--pilpod-bg-tab-track);
+}
+
+.pilpod-dl-tabs__btn {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+}
+
+.pilpod-dl-tabs__btn--active {
+  background: var(--pilpod-bg-tab-active);
+  color: var(--pilpod-text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.pilpod-dl-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 10px 10px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.pilpod-dl-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--pilpod-border-muted);
+  background: var(--pilpod-bg-card);
+}
+
+.pilpod-dl-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pilpod-dl-input,
+.pilpod-dl-select {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  font-size: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--pilpod-border);
+  background: var(--pilpod-bg-elevated);
+  color: var(--pilpod-text);
+}
+
+.pilpod-dl-btn {
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--pilpod-border-strong);
+  background: var(--pilpod-bg-elevated);
+  color: var(--pilpod-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pilpod-dl-btn--primary {
+  background: var(--pilpod-text);
+  border-color: var(--pilpod-text);
+  color: var(--pilpod-bg-elevated);
+}
+
+.pilpod-dl-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.pilpod-dl-btn--icon {
+  padding: 5px 8px;
+  font-size: 11px;
+}
+
+.pilpod-dl-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-dl-hint {
+  font-size: 11px;
+  color: var(--pilpod-text-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pilpod-dl-error {
+  font-size: 12px;
+  color: #dc2626;
+}
+
+.pilpod-dl-media {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.pilpod-dl-media__thumb {
+  width: 64px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--pilpod-bg-thumb);
+  flex: none;
+}
+
+.pilpod-dl-media__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pilpod-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pilpod-dl-task {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--pilpod-border-muted);
+  background: var(--pilpod-bg-card);
+}
+
+.pilpod-dl-task__bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pilpod-bg-tab-track);
+  overflow: hidden;
+}
+
+.pilpod-dl-task__fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--pilpod-text-secondary);
+  transition: width 200ms linear;
+}
+
+.pilpod-dl-task__fill--done {
+  background: #16a34a;
+}
+
+.pilpod-dl-task__fill--error {
+  background: #dc2626;
+}
+
+.pilpod-dl-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--pilpod-border);
+  background: var(--pilpod-bg-muted);
+  color: var(--pilpod-text-secondary);
+}

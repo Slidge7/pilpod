@@ -1,0 +1,38 @@
+{
+  "id": "clip-777",
+  "title": "Muxed-only clip from a generic site",
+  "duration": 95.0,
+  "webpage_url": "https://example-media.site/clip-777",
+  "extractor": "generic",
+  "formats": [
+    {
+      "format_id": "hls-540",
+      "ext": "mp4",
+      "width": 960,
+      "height": 540,
+      "vcodec": "avc1.4d401f",
+      "acodec": "mp4a.40.2",
+      "tbr": 1200.0
+    },
+    {
+      "format_id": "hls-720",
+      "ext": "mp4",
+      "width": 1280,
+      "height": 720,
+      "vcodec": "avc1.64001f",
+      "acodec": "mp4a.40.2",
+      "filesize_approx": 20971520,
+      "tbr": 2100.0
+    },
+    {
+      "format_id": "hls-360",
+      "ext": "mp4",
+      "width": 640,
+      "height": 360,
+      "vcodec": "avc1.42e01e",
+      "acodec": "mp4a.40.2",
+      "filesize": 7340032,
+      "tbr": 750.0
+    }
+  ]
+}

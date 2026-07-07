@@ -1,0 +1,589 @@
+/* Vault panel — uses the shared --pilpod design tokens, fits 350px width. */
+
+.pilpod-vault-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 10px 10px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── Sub-tabs (Bookmarks | Playlists) ─────────────────────────────────── */
+.pilpod-vault-subtabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--pilpod-bg-tab-track);
+}
+
+.pilpod-vault-subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+}
+
+.pilpod-vault-subtab--active {
+  background: var(--pilpod-bg-tab-active);
+  color: var(--pilpod-text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.pilpod-vault-subtabs__spacer {
+  flex: 1;
+}
+
+.pilpod-vault-icon-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  border: 1px solid var(--pilpod-border-muted);
+  border-radius: 8px;
+  background: var(--pilpod-bg-elevated);
+  color: var(--pilpod-text-secondary);
+  cursor: pointer;
+}
+
+.pilpod-vault-icon-btn:hover {
+  color: var(--pilpod-text);
+  border-color: var(--pilpod-border-strong);
+}
+
+/* ── Generic list scaffolding ─────────────────────────────────────────── */
+.pilpod-vault-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.pilpod-vault-list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pilpod-vault-list__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pilpod-text);
+}
+
+.pilpod-vault-savebar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pilpod-vault-saver,
+.pilpod-vault-adder {
+  border: 1px solid var(--pilpod-border-muted);
+  border-radius: 12px;
+  padding: 8px;
+  background: var(--pilpod-bg-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pilpod-vault-adder__head {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pilpod-text-muted);
+}
+
+/* ── Search bar ───────────────────────────────────────────────────────── */
+.pilpod-vault-searchbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--pilpod-border-muted);
+  background: var(--pilpod-bg-elevated);
+}
+
+.pilpod-vault-searchbar__icon {
+  color: var(--pilpod-text-subtle);
+  font-size: 14px;
+}
+
+.pilpod-vault-searchbar__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--pilpod-text);
+  font-size: 13px;
+}
+
+.pilpod-vault-searchbar__clear {
+  border: none;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* ── Tag chips ────────────────────────────────────────────────────────── */
+.pilpod-vault-tagbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.pilpod-vault-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid var(--pilpod-border-muted);
+  background: var(--pilpod-bg-muted);
+  color: var(--pilpod-text-secondary);
+}
+
+.pilpod-vault-chip--btn {
+  cursor: pointer;
+}
+
+.pilpod-vault-chip--active {
+  background: var(--pilpod-accent-blue-muted);
+  border-color: var(--pilpod-accent-blue-ring);
+  color: var(--pilpod-accent-blue);
+}
+
+.pilpod-vault-chip__count {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* ── Rows ─────────────────────────────────────────────────────────────── */
+.pilpod-vault-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pilpod-vault-rows--compact {
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.pilpod-vault-row {
+  border: 1px solid var(--pilpod-border-muted);
+  border-radius: 12px;
+  background: var(--pilpod-bg-card);
+  padding: 8px;
+}
+
+.pilpod-vault-row--pinned {
+  border-color: var(--pilpod-accent-blue-ring);
+}
+
+.pilpod-vault-row--dragging {
+  opacity: 0.5;
+}
+
+.pilpod-vault-row__main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pilpod-vault-row__thumb {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  background: var(--pilpod-bg-thumb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.pilpod-vault-row__thumb img {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.pilpod-vault-row__thumb--emoji {
+  font-size: 15px;
+  color: var(--pilpod-text-secondary);
+}
+
+.pilpod-vault-row__thumb-fallback {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--pilpod-bg-thumb-letter);
+}
+
+.pilpod-vault-row__thumb-letter {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-vault-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.pilpod-vault-row__body--static {
+  cursor: default;
+}
+
+.pilpod-vault-row__body:disabled {
+  cursor: default;
+}
+
+.pilpod-vault-row__title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pilpod-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-vault-row__pin-glyph {
+  flex: 0 0 auto;
+  color: var(--pilpod-accent-blue);
+}
+
+.pilpod-vault-row__url {
+  font-size: 11px;
+  color: var(--pilpod-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-vault-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.pilpod-vault-row__icon {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.pilpod-vault-row__icon:hover {
+  background: var(--pilpod-bg-row-hover);
+  color: var(--pilpod-text);
+}
+
+.pilpod-vault-row__icon:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pilpod-vault-row__icon--active {
+  color: var(--pilpod-accent-blue);
+}
+
+.pilpod-vault-row__icon--danger {
+  color: var(--pilpod-red-close-hover-text);
+  background: var(--pilpod-red-close-hover-bg);
+}
+
+.pilpod-vault-row__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.pilpod-vault-row__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pilpod-vault-row__edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* ── Inputs & buttons ─────────────────────────────────────────────────── */
+.pilpod-vault-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid var(--pilpod-border-muted);
+  background: var(--pilpod-bg-elevated);
+  color: var(--pilpod-text);
+  outline: none;
+}
+
+.pilpod-vault-input:focus {
+  border-color: var(--pilpod-accent-blue-ring);
+}
+
+.pilpod-vault-textarea {
+  resize: vertical;
+  min-height: 40px;
+  font-family: inherit;
+}
+
+.pilpod-vault-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--pilpod-border-muted);
+  background: var(--pilpod-bg-elevated);
+  color: var(--pilpod-text-secondary);
+  cursor: pointer;
+}
+
+.pilpod-vault-btn:hover {
+  color: var(--pilpod-text);
+  border-color: var(--pilpod-border-strong);
+}
+
+.pilpod-vault-btn--primary {
+  background: var(--pilpod-accent-blue);
+  border-color: var(--pilpod-accent-blue);
+  color: #fff;
+}
+
+.pilpod-vault-btn--primary:hover {
+  background: var(--pilpod-accent-blue-hover);
+  color: #fff;
+}
+
+.pilpod-vault-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Create playlist row ──────────────────────────────────────────────── */
+.pilpod-vault-create {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.pilpod-vault-create__emoji {
+  width: 46px;
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+/* ── Playlist detail header ───────────────────────────────────────────── */
+.pilpod-vault-detail__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pilpod-vault-detail__emoji {
+  font-size: 16px;
+}
+
+.pilpod-vault-detail__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--pilpod-text);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.pilpod-vault-detail__meta {
+  font-size: 11px;
+  color: var(--pilpod-text-muted);
+  margin-left: auto;
+}
+
+.pilpod-vault-flip {
+  transform: rotate(180deg);
+}
+
+/* ── Add-to-playlist popover menu ─────────────────────────────────────── */
+.pilpod-vault-menu {
+  width: 240px;
+  border-radius: 12px;
+  border: 1px solid var(--pilpod-border);
+  background: var(--pilpod-bg-elevated);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.18);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pilpod-vault-menu__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pilpod-text);
+  border-bottom: 1px solid var(--pilpod-border-muted);
+}
+
+.pilpod-vault-menu__close {
+  border: none;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.pilpod-vault-menu__list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.pilpod-vault-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--pilpod-text);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pilpod-vault-menu__item:hover {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.pilpod-vault-menu__label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-vault-menu__check {
+  color: var(--pilpod-accent-blue);
+  font-weight: 700;
+}
+
+.pilpod-vault-menu__empty {
+  padding: 10px;
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-vault-menu__create {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--pilpod-border-muted);
+}
+
+/* ── Save toggle button ───────────────────────────────────────────────── */
+.pilpod-vault-save-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+}
+
+.pilpod-vault-save-btn:hover {
+  background: var(--pilpod-bg-row-hover);
+  color: var(--pilpod-text);
+}
+
+.pilpod-vault-save-btn--saved {
+  color: var(--pilpod-accent-blue);
+}
+
+/* ── Empty states ─────────────────────────────────────────────────────── */
+.pilpod-vault-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 16px;
+  text-align: center;
+}
+
+.pilpod-vault-empty__icon {
+  color: var(--pilpod-text-subtle);
+}
+
+.pilpod-vault-empty__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pilpod-text-secondary);
+  margin: 0;
+}
+
+.pilpod-vault-empty__hint {
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+  margin: 0;
+  max-width: 240px;
+}

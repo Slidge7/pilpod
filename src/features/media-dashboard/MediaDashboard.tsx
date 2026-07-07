@@ -1,5 +1,16 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { BrowserDockBar } from "./components/BrowserDockBar";
 import { invoke } from "@tauri-apps/api/core";
+import { DownloadPanel, DOWNLOADER_UI_ENABLED, useDownloader } from "../downloader";
+import { downloadStatusForUrl } from "../downloader/lib";
+import { TabDownloadButton } from "../downloader/components/TabDownloadButton";
+import { VaultPanel, useVault, VAULT_UI_ENABLED } from "../vault";
+import { normalizeUrl } from "../vault/lib/normalizeUrl";
+import { SaveTabButton } from "../vault/components/SaveTabButton";
+import { DownloadDockCard } from "../downloader/components/DownloadDockCard";
+import { PremiumGate } from "../premium";
+import type { BrowserTab } from "../../types/media";
+import type { TabAccessories } from "./components/BrowserSessionsPanel";
 import "./MediaDashboard.css";
 import "./shell/dashboard-glass-screen.css";
 import { DashboardHeader } from "./components/DashboardHeader";
@@ -21,9 +32,13 @@ import "./idle/dashboard-idle-mode.css";
 export function MediaDashboard() {
   const { appearance, toggle } = useAppearance();
   const { glassStrength, setGlassStrength } = useGlassAppearance();
-  const { wallpaper, hasWallpaper, pickWallpaper, clearWallpaper } =
-    useWallpaper();
+  const wallpaper = useWallpaper(appearance);
+  const hasWallpaper = wallpaper.dataUrl != null;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"media" | "download" | "vault" | "playlist">("media");
+  const [activeDockBrowserId, setActiveDockBrowserId] = useState<string | null>(
+    null,
+  );
   const {
     error,
     browserPendingKeys,
@@ -44,7 +59,6 @@ export function MediaDashboard() {
     closeBrowserTab,
     seekBrowserTab,
     setTabVolumeBrowserTab,
-    skipAdBrowserTab,
     pipBrowserTab,
     resetTabVolumeBrowserTab,
     resetAllBrowserTabVolumes,
@@ -61,6 +75,54 @@ export function MediaDashboard() {
     browsers,
     browserAudio,
   } = useMediaDashboard();
+
+  // Vault state (source of truth in Rust); mounted once, shared across views.
+  const vault = useVault();
+
+  // Downloader state — lifted so the floating card + in-tab buttons share one
+  // snapshot with the full Download panel (single event listener).
+  const dl = useDownloader();
+
+  // Seed URL for prefilling the Download panel from an in-tab download button.
+  const [downloadSeed, setDownloadSeed] = useState<string | null>(null);
+
+  // Render accessory buttons (bookmark + download) for each tab row.
+  const renderTabAccessories = useCallback(
+    (
+      tab: BrowserTab,
+      browserId: string,
+      browserDisplayName: string,
+      isMediaTab: boolean,
+    ): TabAccessories => {
+      const url = tab.url ?? "";
+      const save = (
+        <SaveTabButton
+          saved={vault.savedUrlSet.has(normalizeUrl(url))}
+          onToggle={() =>
+            void vault.toggleBookmark({
+              url,
+              title: tab.title?.trim() || null,
+              faviconUrl: tab.favIconUrl ?? tab.faviconUrl ?? null,
+              sourceOsBrowserId: browserId,
+              sourceProfileLabel: browserDisplayName,
+            })
+          }
+        />
+      );
+      const download =
+        isMediaTab && DOWNLOADER_UI_ENABLED ? (
+          <TabDownloadButton
+            status={downloadStatusForUrl(dl.tasks, url)}
+            onClick={() => {
+              setDownloadSeed(url);
+              setActiveTab("download");
+            }}
+          />
+        ) : undefined;
+      return { save, download };
+    },
+    [vault, dl.tasks, setActiveTab],
+  );
 
   const browserTabCount = browsers.reduce(
     (sum, b) => sum + (b.extensionInstalled ? b.tabCount : 0),
@@ -93,6 +155,9 @@ export function MediaDashboard() {
           onReactivateBrowserTab={reactivateBrowserTab}
           onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
           onMixerVolume={(id, v) => void setMixerVolume(id, v)}
+          onSeekBrowserTab={seekBrowserTab}
+          onSetTabVolume={setTabVolumeBrowserTab}
+          onPip={pipBrowserTab}
           onOpenFullWindow={() => void restoreFromWidget()}
           onDismissWidget={() => void dismissWidgetAndDisable()}
         />
@@ -134,8 +199,8 @@ export function MediaDashboard() {
           .filter(Boolean)
           .join(" ")}
         style={{
-          ...(wallpaper
-            ? { backgroundImage: `url("${wallpaper}")` }
+          ...(wallpaper.dataUrl
+            ? { backgroundImage: `url("${wallpaper.dataUrl}")` }
             : undefined),
           ...(isUserIdle
             ? {
@@ -158,7 +223,7 @@ export function MediaDashboard() {
           appearance={appearance}
           alwaysOnTop={alwaysOnTop}
           widgetEnabled={widgetEnabled}
-          hasWallpaper={hasWallpaper}
+          wallpaper={wallpaper}
           browserTabCount={browserTabCount}
           glassStrength={glassStrength}
           onGlassStrengthChange={setGlassStrength}
@@ -167,8 +232,6 @@ export function MediaDashboard() {
           onToggleAppearance={toggle}
           onRefresh={refresh}
           onToggleWidgetEnabled={toggleWidgetEnabled}
-          onPickWallpaper={() => void pickWallpaper()}
-          onClearWallpaper={clearWallpaper}
           onOpenDevLab={openDevLab}
         />
 
@@ -177,27 +240,65 @@ export function MediaDashboard() {
             <div className="pilpod-alert-error">{error}</div>
           ) : null}
 
-          <BrowserSessionsPanel
-            browsers={browsers}
-            pendingKeys={browserPendingKeys}
-            browserAudio={browserAudio}
-            onPlayPause={toggleBrowserTab}
-            onFocusTab={focusBrowserTab}
-            onReload={reloadBrowserTab}
-            onClose={closeBrowserTab}
-            onReactivate={reactivateBrowserTab}
-            onMixerVolume={(id, v) => void setMixerVolume(id, v)}
-            onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
-            onSeekTab={seekBrowserTab}
-            onSetTabVolume={setTabVolumeBrowserTab}
-            onSkipAd={skipAdBrowserTab}
-            onPip={pipBrowserTab}
-            onResetVolume={resetTabVolumeBrowserTab}
-            onPauseAll={() => void pauseAllBrowserTabs()}
-            onMuteAll={() => void muteAllBrowserTabs()}
-            onResetAllVolumes={() => void resetAllBrowserTabVolumes()}
-          />
+          {activeTab === "download" && DOWNLOADER_UI_ENABLED ? (
+            <PremiumGate
+              feature="downloader"
+              featureTitle="Universal Downloader"
+              featureBlurb="Download video and audio from thousands of sites in the format and quality you choose — a PilPod Premium feature."
+            >
+              <DownloadPanel
+                dl={dl}
+                seedUrl={downloadSeed}
+                onSeedConsumed={() => setDownloadSeed(null)}
+              />
+            </PremiumGate>
+          ) : activeTab === "vault" && VAULT_UI_ENABLED ? (
+            <VaultPanel api={vault} browsers={browsers} forceSub="bookmarks" />
+          ) : activeTab === "playlist" && VAULT_UI_ENABLED ? (
+            <VaultPanel api={vault} browsers={browsers} forceSub="playlists" />
+          ) : (
+            <>
+              <DownloadDockCard
+                tasks={dl.tasks}
+                onCancel={dl.cancelDownload}
+                onRetry={(id) => void dl.retryDownload(id)}
+                onOpenFolder={dl.openOutputDir}
+                onClear={dl.clearDone}
+              />
+              <BrowserSessionsPanel
+                browsers={browsers}
+                pendingKeys={browserPendingKeys}
+                browserAudio={browserAudio}
+                onPlayPause={toggleBrowserTab}
+                onFocusTab={focusBrowserTab}
+                onReload={reloadBrowserTab}
+                onClose={closeBrowserTab}
+                onReactivate={reactivateBrowserTab}
+                onMixerVolume={(id, v) => void setMixerVolume(id, v)}
+                onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
+                onSeekTab={seekBrowserTab}
+                onSetTabVolume={setTabVolumeBrowserTab}
+                onPip={pipBrowserTab}
+                onResetVolume={resetTabVolumeBrowserTab}
+                onPauseAll={() => void pauseAllBrowserTabs()}
+                onMuteAll={() => void muteAllBrowserTabs()}
+                onResetAllVolumes={() => void resetAllBrowserTabVolumes()}
+                renderTabAccessories={renderTabAccessories}
+              />
+            </>
+          )}
         </main>
+
+        <BrowserDockBar
+          browsers={browsers}
+          activeBrowserId={activeDockBrowserId}
+          onActiveBrowserChange={setActiveDockBrowserId}
+          view={activeTab}
+          onSelectView={setActiveTab}
+          downloaderEnabled={DOWNLOADER_UI_ENABLED}
+          vaultEnabled={VAULT_UI_ENABLED}
+          playlistEnabled={VAULT_UI_ENABLED}
+        />
 
         <div className="pilpod-dashboard-glass-edge" aria-hidden="true" />
       </div>

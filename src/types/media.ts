@@ -11,6 +11,14 @@ export type BrowsersUpdatePayload = {
   browserAudio?: Record<string, AudioSessionInfoDto>;
 };
 
+/** Per-window rollup derived from a profile's tabs (focused window first). */
+export type BrowserWindowInfo = {
+  windowId: number;
+  focused: boolean;
+  tabCount: number;
+  audibleCount: number;
+};
+
 export type DetectedBrowser = {
   id: string;
   osBrowserId: string;
@@ -21,6 +29,7 @@ export type DetectedBrowser = {
   extensionConnected: boolean;
   tabCount: number;
   tabs: BrowserTab[];
+  windows?: BrowserWindowInfo[];
   lastSyncSecs: number | null;
   extensionReconnecting?: boolean;
   iconUrl?: string | null;
@@ -75,4 +84,9 @@ export type TabMedia = {
   documentState?: string;
   tabVolume?: number;
   tabMuted?: boolean;
+  canSeek?: boolean;
+  canPip?: boolean;
+  canNext?: boolean;
+  canPrev?: boolean;
+  inPip?: boolean;
 };

@@ -2,14 +2,21 @@ import { useEffect, useState } from "react";
 import "./SlideMenu.css";
 import type { AppearanceMode } from "../../../theme/appearance";
 import { GlassStrengthSlider } from "../../../shared/ui/GlassStrengthSlider";
+import { WALLPAPER_INTERVALS } from "../constants";
+import type { WallpaperController } from "../hooks/useWallpaper";
 import {
   IconBeaker,
   IconImage,
   IconMoon,
   IconRefresh,
+  IconShuffle,
+  IconSkipBack,
+  IconSkipForward,
   IconStayOnTop,
   IconSun,
+  IconTimer,
   IconWidgetMinimize,
+  IconX,
 } from "../../../shared/ui/icons";
 
 type Props = {
@@ -17,7 +24,7 @@ type Props = {
   appearance: AppearanceMode;
   alwaysOnTop: boolean;
   widgetEnabled: boolean;
-  hasWallpaper: boolean;
+  wallpaper: WallpaperController;
   browserTabCount: number;
   glassStrength: number;
   onGlassStrengthChange: (value: number) => void;
@@ -26,17 +33,24 @@ type Props = {
   onToggleAppearance: () => void;
   onRefresh: () => void;
   onToggleWidgetEnabled: () => void;
-  onPickWallpaper: () => void;
-  onClearWallpaper: () => void;
   onOpenDevLab?: () => void;
 };
+
+/** Turn a wallpaper file name into a friendlier label, e.g. "01-aurora.jpg" -> "Aurora". */
+function prettyName(name: string | null): string {
+  if (!name) return "Off";
+  const base = name.replace(/\.[^.]+$/, "").replace(/^\d+[-_ ]?/, "");
+  const words = base.replace(/[-_]+/g, " ").trim();
+  if (!words) return "Wallpaper";
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 
 export function SlideMenu({
   open,
   appearance,
   alwaysOnTop,
   widgetEnabled,
-  hasWallpaper,
+  wallpaper,
   browserTabCount,
   glassStrength,
   onGlassStrengthChange,
@@ -45,14 +59,16 @@ export function SlideMenu({
   onToggleAppearance,
   onRefresh,
   onToggleWidgetEnabled,
-  onPickWallpaper,
-  onClearWallpaper,
   onOpenDevLab,
 }: Props) {
   const [glassDragging, setGlassDragging] = useState(false);
+  const [wallpaperExpanded, setWallpaperExpanded] = useState(false);
 
   useEffect(() => {
-    if (!open) setGlassDragging(false);
+    if (!open) {
+      setGlassDragging(false);
+      setWallpaperExpanded(false);
+    }
   }, [open]);
 
   const appearanceTitle =
@@ -77,7 +93,7 @@ export function SlideMenu({
 
   const wallpaperBtnClass = [
     "pilpod-slide-menu__btn",
-    hasWallpaper ? "pilpod-slide-menu__btn--active" : "",
+    wallpaper.enabled ? "pilpod-slide-menu__btn--active" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -91,6 +107,9 @@ export function SlideMenu({
     .join(" ");
 
   const sliderTabIndex = open ? 0 : -1;
+  const btnTabIndex = open && !wallpaperExpanded ? 0 : -1;
+  const wpTabIndex = open && wallpaperExpanded ? 0 : -1;
+  const noWallpapers = wallpaper.names.length === 0;
 
   const glassSlider = (
     <GlassStrengthSlider
@@ -122,7 +141,7 @@ export function SlideMenu({
             title={alwaysOnTop ? "Unpin window" : "Pin window (always on top)"}
             aria-label={alwaysOnTop ? "Unpin window" : "Pin window"}
             aria-pressed={alwaysOnTop}
-            tabIndex={open ? 0 : -1}
+            tabIndex={btnTabIndex}
           >
             <IconStayOnTop />
           </button>
@@ -132,7 +151,7 @@ export function SlideMenu({
             className="pilpod-slide-menu__btn"
             title={appearanceTitle}
             aria-label={appearanceTitle}
-            tabIndex={open ? 0 : -1}
+            tabIndex={btnTabIndex}
           >
             {appearance === "dark" ? <IconSun /> : <IconMoon />}
           </button>
@@ -142,7 +161,7 @@ export function SlideMenu({
             className="pilpod-slide-menu__btn"
             title="Refresh"
             aria-label="Refresh"
-            tabIndex={open ? 0 : -1}
+            tabIndex={btnTabIndex}
           >
             <IconRefresh />
           </button>
@@ -153,28 +172,19 @@ export function SlideMenu({
             title={widgetToggleTitle}
             aria-label={widgetToggleTitle}
             aria-pressed={widgetEnabled}
-            tabIndex={open ? 0 : -1}
+            tabIndex={btnTabIndex}
           >
             <IconWidgetMinimize />
           </button>
           <button
             type="button"
-            onClick={hasWallpaper ? onClearWallpaper : onPickWallpaper}
-            onContextMenu={(e) => {
-              if (hasWallpaper) {
-                e.preventDefault();
-                onClearWallpaper();
-              }
-            }}
+            onClick={() => setWallpaperExpanded(true)}
             className={wallpaperBtnClass}
-            title={
-              hasWallpaper
-                ? "Wallpaper set (click to remove)"
-                : "Choose a wallpaper image"
-            }
-            aria-label={hasWallpaper ? "Remove wallpaper" : "Choose wallpaper"}
-            aria-pressed={hasWallpaper}
-            tabIndex={open ? 0 : -1}
+            title="Wallpaper options"
+            aria-label="Wallpaper options"
+            aria-expanded={wallpaperExpanded}
+            aria-pressed={wallpaper.enabled}
+            tabIndex={btnTabIndex}
           >
             <IconImage />
           </button>
@@ -185,10 +195,146 @@ export function SlideMenu({
               className="pilpod-slide-menu__btn"
               title="Open Dev Lab"
               aria-label="Open Dev Lab"
-              tabIndex={open ? 0 : -1}
+              tabIndex={btnTabIndex}
             >
               <IconBeaker />
             </button>
+          ) : null}
+
+          {wallpaperExpanded ? (
+            <div
+              className="pilpod-wallpaper-panel"
+              role="group"
+              aria-label="Wallpaper options"
+            >
+              <div className="pilpod-wallpaper-panel__top">
+                <button
+                  type="button"
+                  className="pilpod-wallpaper-panel__nav"
+                  onClick={wallpaper.prev}
+                  disabled={noWallpapers}
+                  title="Previous wallpaper"
+                  aria-label="Previous wallpaper"
+                  tabIndex={wpTabIndex}
+                >
+                  <IconSkipBack />
+                </button>
+                <span
+                  className="pilpod-wallpaper-panel__name"
+                  title={wallpaper.current ?? "Wallpaper off"}
+                >
+                  {noWallpapers ? "No wallpapers" : prettyName(wallpaper.current)}
+                </span>
+                <button
+                  type="button"
+                  className="pilpod-wallpaper-panel__nav"
+                  onClick={wallpaper.next}
+                  disabled={noWallpapers}
+                  title="Next wallpaper"
+                  aria-label="Next wallpaper"
+                  tabIndex={wpTabIndex}
+                >
+                  <IconSkipForward />
+                </button>
+                <button
+                  type="button"
+                  className="pilpod-wallpaper-panel__close"
+                  onClick={() => setWallpaperExpanded(false)}
+                  title="Done"
+                  aria-label="Close wallpaper options"
+                  tabIndex={wpTabIndex}
+                >
+                  <IconX />
+                </button>
+              </div>
+
+              <div className="pilpod-wallpaper-panel__toggles">
+                <button
+                  type="button"
+                  className={[
+                    "pilpod-wallpaper-panel__toggle",
+                    wallpaper.enabled
+                      ? "pilpod-wallpaper-panel__toggle--active"
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onClick={wallpaper.toggleEnabled}
+                  disabled={noWallpapers}
+                  aria-pressed={wallpaper.enabled}
+                  title={wallpaper.enabled ? "Turn wallpaper off" : "Turn wallpaper on"}
+                  tabIndex={wpTabIndex}
+                >
+                  <IconImage />
+                  <span>{wallpaper.enabled ? "On" : "Off"}</span>
+                </button>
+                <button
+                  type="button"
+                  className={[
+                    "pilpod-wallpaper-panel__toggle",
+                    wallpaper.random
+                      ? "pilpod-wallpaper-panel__toggle--active"
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onClick={wallpaper.toggleRandom}
+                  aria-pressed={wallpaper.random}
+                  title={wallpaper.random ? "Random order: on" : "Random order: off"}
+                  tabIndex={wpTabIndex}
+                >
+                  <IconShuffle />
+                  <span>Random</span>
+                </button>
+                <button
+                  type="button"
+                  className={[
+                    "pilpod-wallpaper-panel__toggle",
+                    wallpaper.autoSwitch
+                      ? "pilpod-wallpaper-panel__toggle--active"
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onClick={wallpaper.toggleAutoSwitch}
+                  aria-pressed={wallpaper.autoSwitch}
+                  title={wallpaper.autoSwitch ? "Auto-switch: on" : "Auto-switch: off"}
+                  tabIndex={wpTabIndex}
+                >
+                  <IconTimer />
+                  <span>Auto</span>
+                </button>
+              </div>
+
+              {wallpaper.autoSwitch ? (
+                <div
+                  className="pilpod-wallpaper-panel__intervals"
+                  role="group"
+                  aria-label="Auto-switch interval"
+                >
+                  {WALLPAPER_INTERVALS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className={[
+                        "pilpod-wallpaper-panel__chip",
+                        wallpaper.intervalId === opt.id
+                          ? "pilpod-wallpaper-panel__chip--active"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      onClick={() => wallpaper.setIntervalId(opt.id)}
+                      aria-pressed={wallpaper.intervalId === opt.id}
+                      title={`Switch every ${opt.label}`}
+                      tabIndex={wpTabIndex}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </div>
 

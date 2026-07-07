@@ -186,22 +186,6 @@ export function useMediaDashboard() {
     [],
   );
 
-  const skipAdBrowserTab = useCallback(
-    async (t: BrowserTab, browserId: string) => {
-      setBrowserError(null);
-      try {
-        await invoke("browser_media_control", {
-          browserId,
-          tabId: t.tabId,
-          action: "skipAd",
-        });
-      } catch (e) {
-        setBrowserError(String(e));
-      }
-    },
-    [],
-  );
-
   const pipBrowserTab = useCallback(
     async (t: BrowserTab, browserId: string) => {
       setBrowserError(null);
@@ -682,7 +666,6 @@ export function useMediaDashboard() {
     closeBrowserTab,
     seekBrowserTab,
     setTabVolumeBrowserTab,
-    skipAdBrowserTab,
     pipBrowserTab,
     resetTabVolumeBrowserTab,
     resetAllBrowserTabVolumes,

@@ -1,4 +1,11 @@
 //! Bridge protocol constants, capabilities DTO, and version validation.
+//!
+//! Protocol v2 lives in the `frames` and `version` submodules (mirrors of
+//! `/PROTOCOL.md`). The v1 capability DTO / validators below remain only for the
+//! legacy HTTP `/capabilities` route and are unused by the v2 WebSocket transport.
+
+pub mod frames;
+pub mod version;
 
 use axum::http::StatusCode;
 use serde::Serialize;

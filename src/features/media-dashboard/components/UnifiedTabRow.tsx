@@ -1,4 +1,5 @@
 import "./UnifiedTabRow.css";
+import type { ReactNode } from "react";
 import type { AudioSessionInfoDto, BrowserTab } from "../../../types/media";
 import {
   abbreviatedUrl,
@@ -37,6 +38,8 @@ type Props = {
   onReload: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onClose: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onReactivate: (tab: BrowserTab, browserId: string) => void | Promise<void>;
+  /** Optional save/bookmark button rendered in the actions area. */
+  saveButton?: ReactNode;
 };
 
 export function UnifiedTabRow({
@@ -52,6 +55,7 @@ export function UnifiedTabRow({
   onReload,
   onClose,
   onReactivate,
+  saveButton,
 }: Props) {
   const ts = (tab.tabState ?? "").toLowerCase();
   const badge = tabStateBadge(tab.tabState);
@@ -202,6 +206,8 @@ export function UnifiedTabRow({
             </button>
           ) : null}
 
+          {saveButton}
+
           {!isMediaTab ? (
             <>
               <button
@@ -251,7 +257,7 @@ export function UnifiedTabRow({
       {isMediaCard && profileAudio && onMixerVolume ? (
         <div className="pilpod-control-card__volume">
           <AppVolumeSlider
-            ariaLabel={`Volume for ${tab.title?.trim() || "media"}`}
+            ariaLabel={`Volume for ${tab.title?.trim() ?? "tab"}`}
             audio={profileAudio}
             onVolumeChange={onMixerVolume}
           />

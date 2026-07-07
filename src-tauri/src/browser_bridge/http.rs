@@ -13,8 +13,12 @@ use tower_http::cors::{Any, CorsLayer};
 use crate::browser_tabs::BrowserMediaCommand;
 
 use super::handler::{apply_ingest, convert_tab, BridgeContext, BridgeIngest, BrowserTabPost};
+use super::protocol::version;
 use super::protocol::{bridge_capabilities, validate_protocol_version, CAPABILITIES_PATH};
-use super::{BROWSER_BRIDGE_PORT, BROWSER_MEDIA_PATH};
+use super::{BROWSER_BRIDGE_PORT, BROWSER_MEDIA_PATH, BROWSER_WS_PORT};
+
+/// Path for the cheap "is the app running / which port" probe (v2 discovery).
+pub const HEALTH_PATH: &str = "/health";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -22,6 +26,29 @@ struct BrowserTabsPostResponse {
     ok: bool,
     commands: Vec<BrowserMediaCommand>,
     sync_now: bool,
+}
+
+/// v2 discovery payload. Never carries data — only liveness + port + min version.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HealthResponse {
+    app: &'static str,
+    bridge: u8,
+    ws_port: u16,
+    min_ext_version: &'static str,
+}
+
+async fn handle_health(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> impl IntoResponse {
+    if !is_loopback(peer) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    Json(HealthResponse {
+        app: "pilpod",
+        bridge: version::PROTOCOL_VERSION,
+        ws_port: BROWSER_WS_PORT,
+        min_ext_version: version::MIN_EXT_VERSION,
+    })
+    .into_response()
 }
 
 #[derive(Deserialize)]
@@ -35,7 +62,9 @@ struct BrowserTabsPost {
     tabs: Vec<BrowserTabPost>,
     #[serde(default)]
     ping: bool,
+    /// Sent by the extension per PROTOCOL.md; accepted but not yet consumed.
     #[serde(default)]
+    #[allow(dead_code)]
     seq: u64,
     #[serde(default)]
     protocol_version: String,
@@ -93,10 +122,16 @@ async fn handle_post(
             .collect()
     };
 
+    // Phase 3: identify the posting browser by the owning process of the
+    // loopback connection (cached per peer port — heartbeats are chatty).
+    let verified_os_id =
+        super::peer_pid::cached_verified_os_id_for_peer(peer, BROWSER_BRIDGE_PORT);
+
     let result = apply_ingest(
         BridgeIngest {
             browser_id,
             browser_name: payload.browser_name,
+            verified_os_id,
             is_ping: payload.ping,
             tabs,
         },
@@ -120,6 +155,7 @@ async fn handle_options(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> impl Into
 
 pub fn router(ctx: Arc<BridgeContext>) -> Router {
     Router::new()
+        .route(HEALTH_PATH, get(handle_health))
         .route(CAPABILITIES_PATH, get(handle_capabilities))
         .route(CAPABILITIES_PATH, options(handle_options))
         .route(BROWSER_MEDIA_PATH, post(handle_post))

@@ -1,6 +1,7 @@
 ﻿//! Dev-only commands: separate window and on-demand OS browser scan.
 
 mod wake;
+pub mod state;
 
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
@@ -8,10 +9,12 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
-use crate::browser_bridge::connections::{push_ws_sync_all, ws_connected_ids, WsConnectionMap};
+use crate::browser_bridge::connections::{
+    kill_ws_connection, push_ws_sync_all, ws_connected_ids, WsConnectionMap,
+};
 use crate::browser_bridge::{SyncRequestedFlag, CONNECTED_WINDOW_SECS};
 use crate::browser_detector::{
-    browser_name_to_id, build_detected_browsers, emit_browsers_to_ui, DetectedBrowsersState,
+    build_detected_browsers, emit_browsers_to_ui, DetectedBrowsersState,
     ExtensionInstalledState, ReconnectingBrowsersState,
 };
 use crate::browser_tabs::{BrowserSlot, BrowserSlotsMap};
@@ -71,7 +74,8 @@ fn create_or_focus_dev_lab_window(app: &AppHandle) -> Result<(), String> {
     let url = dev_lab_url(app);
     let window = WebviewWindowBuilder::new(app, DEV_LAB_LABEL, url)
         .title("PilPod Dev Lab")
-        .inner_size(420.0, 520.0)
+        .inner_size(1280.0, 860.0)
+        .min_inner_size(900.0, 600.0)
         .resizable(true)
         .decorations(false)
         .transparent(true)
@@ -159,7 +163,7 @@ fn is_browser_running(os_browser_id: &str, detected: &DetectedBrowsersState) -> 
 }
 
 fn slot_os_id(slot: &BrowserSlot) -> String {
-    browser_name_to_id(&slot.browser_name)
+    slot.effective_os_id()
 }
 
 fn slot_is_recently_seen(slot: &BrowserSlot, now: Instant, cutoff: Duration) -> bool {
@@ -323,6 +327,189 @@ fn wake_and_sync_impl(
         profiles,
         error: None,
     })
+}
+
+// ── Dev Lab v2 commands ──────────────────────────────────────────────────────
+
+/// Assemble everything the Dev Lab shows in one call: OS truth, raw slots,
+/// and the merged dashboard payload, side by side.
+#[tauri::command]
+pub fn dev_get_full_state(
+    detected: State<'_, DetectedBrowsersState>,
+    slots: State<'_, BrowserSlotsMap>,
+    ext_store: State<'_, ExtensionInstalledState>,
+    reconnecting: State<'_, ReconnectingBrowsersState>,
+    ws_connections: State<'_, WsConnectionMap>,
+) -> state::DevFullState {
+    let os_rows = crate::browser_os_scan::build_dev_os_browser_rows();
+
+    let slot_rows = {
+        let slots_map = slots.lock().unwrap_or_else(|e| e.into_inner());
+        let store = ext_store.lock().unwrap_or_else(|e| e.into_inner());
+        let reconnecting_set = reconnecting.lock().unwrap_or_else(|e| e.into_inner());
+        let ws_connected = ws_connected_ids(&ws_connections);
+        state::build_dev_slot_rows(
+            &slots_map,
+            &ws_connected,
+            &reconnecting_set,
+            &|os_id| store.is_installed(os_id),
+            Instant::now(),
+            Duration::from_secs(CONNECTED_WINDOW_SECS),
+        )
+    };
+
+    let merged = crate::browser_detector::build_browsers_payload(
+        &detected,
+        &slots,
+        &ext_store,
+        &reconnecting,
+        &ws_connections,
+    );
+
+    state::DevFullState {
+        generated_at_ms: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0),
+        os_rows,
+        slots: slot_rows,
+        merged,
+    }
+}
+
+/// Forcibly drop a live WS session (simulate a disconnect). Returns `true`
+/// when a session existed; normal teardown then marks the slot reconnecting.
+#[tauri::command]
+pub fn dev_kill_ws(
+    browser_id: String,
+    ws_connections: State<'_, WsConnectionMap>,
+) -> bool {
+    kill_ws_connection(&ws_connections, &browser_id)
+}
+
+/// Forget the persisted "extension installed" flag for an OS browser id.
+#[tauri::command]
+pub fn dev_clear_ext_installed(
+    os_browser_id: String,
+    app: AppHandle,
+    detected: State<'_, DetectedBrowsersState>,
+    slots: State<'_, BrowserSlotsMap>,
+    ext_store: State<'_, ExtensionInstalledState>,
+    reconnecting: State<'_, ReconnectingBrowsersState>,
+    ws_connections: State<'_, WsConnectionMap>,
+) -> bool {
+    let cleared = ext_store
+        .lock()
+        .ok()
+        .map(|mut store| store.clear(&os_browser_id))
+        .unwrap_or(false);
+
+    if cleared {
+        emit_browsers_to_ui(
+            &app,
+            &detected,
+            &slots,
+            &ext_store,
+            &reconnecting,
+            &ws_connections,
+        );
+    }
+    cleared
+}
+
+/// Drop the bundled-icon data-URL cache (pick up replaced PNGs without restart).
+#[tauri::command]
+pub fn dev_clear_icon_cache() {
+    crate::browser_icon::clear_cache();
+}
+
+// ── Phase 5 scenario actions ─────────────────────────────────────────────────
+
+/// Inject a fully-stale fake slot for `os_browser_id` (simulates an extension
+/// reinstall leaving a dead UUID behind). Returns the injected slot id.
+#[tauri::command]
+pub fn dev_inject_stale_slot(
+    os_browser_id: String,
+    app: AppHandle,
+    detected: State<'_, DetectedBrowsersState>,
+    slots: State<'_, BrowserSlotsMap>,
+    ext_store: State<'_, ExtensionInstalledState>,
+    reconnecting: State<'_, ReconnectingBrowsersState>,
+    ws_connections: State<'_, WsConnectionMap>,
+) -> String {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let slot_id = format!("stale-sim-{os_browser_id}-{stamp}");
+
+    let stale_age = Duration::from_secs(crate::browser_detector::SLOT_GC_SECS + 60);
+    let slot = BrowserSlot {
+        last_seen: Instant::now() - stale_age,
+        browser_id: slot_id.clone(),
+        browser_name: os_browser_id.clone(),
+        verified_os_id: Some(os_browser_id),
+        tabs: vec![BrowserTab {
+            tab_id: 1,
+            window_id: 1,
+            title: "SIM stale tab (should be GC'd)".into(),
+            url: "https://example.com/stale".into(),
+            ..Default::default()
+        }],
+        content_hash: 0,
+    };
+
+    if let Ok(mut map) = slots.lock() {
+        map.insert(slot_id.clone(), slot);
+    }
+    emit_browsers_to_ui(&app, &detected, &slots, &ext_store, &reconnecting, &ws_connections);
+    slot_id
+}
+
+/// Run slot GC immediately (normal TTL). Returns removed slot ids.
+#[tauri::command]
+pub fn dev_gc_slots_now(
+    app: AppHandle,
+    detected: State<'_, DetectedBrowsersState>,
+    slots: State<'_, BrowserSlotsMap>,
+    ext_store: State<'_, ExtensionInstalledState>,
+    reconnecting: State<'_, ReconnectingBrowsersState>,
+    ws_connections: State<'_, WsConnectionMap>,
+) -> Vec<String> {
+    let removed = {
+        let mut map = slots.lock().unwrap_or_else(|e| e.into_inner());
+        crate::browser_detector::gc_stale_slots(
+            &mut map,
+            Instant::now(),
+            Duration::from_secs(crate::browser_detector::SLOT_GC_SECS),
+        )
+    };
+    if !removed.is_empty() {
+        if let Ok(mut set) = reconnecting.lock() {
+            for id in &removed {
+                set.remove(id);
+            }
+        }
+        emit_browsers_to_ui(&app, &detected, &slots, &ext_store, &reconnecting, &ws_connections);
+    }
+    removed
+}
+
+/// Simulate a system resume: all slots marked stale + reconnecting, exactly
+/// like the power listener does. Returns the number of affected slots.
+#[tauri::command]
+pub fn dev_simulate_resume(
+    app: AppHandle,
+    detected: State<'_, DetectedBrowsersState>,
+    slots: State<'_, BrowserSlotsMap>,
+    ext_store: State<'_, ExtensionInstalledState>,
+    reconnecting: State<'_, ReconnectingBrowsersState>,
+    ws_connections: State<'_, WsConnectionMap>,
+) -> usize {
+    let count = slots.lock().map(|m| m.len()).unwrap_or(0);
+    crate::browser_bridge::invalidate_slots_on_resume(&slots, &reconnecting);
+    emit_browsers_to_ui(&app, &detected, &slots, &ext_store, &reconnecting, &ws_connections);
+    count
 }
 
 

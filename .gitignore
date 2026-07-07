@@ -26,3 +26,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Dev Lab profile simulator state
+scripts/.dev-sim-profiles.json
+
+# License signing — private key material must never be committed
+scripts/dev-license-key.json
+*.license-seed

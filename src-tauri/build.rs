@@ -5,5 +5,7 @@ fn main() {
     println!("cargo:rerun-if-changed=icons/32x32.png");
     println!("cargo:rerun-if-changed=icons/128x128.png");
     println!("cargo:rerun-if-changed=icons/128x128@2x.png");
+    // Re-copy bundled browser icons (resources) when PNGs are added/replaced.
+    println!("cargo:rerun-if-changed=icons/browsers");
     tauri_build::build()
 }

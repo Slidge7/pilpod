@@ -43,5 +43,13 @@ $ffmpegVersion = & $FfmpegDst -version 2>&1 | Select-String "ffmpeg version"
 Write-Host "FFmpeg installed at $FfmpegDst" -ForegroundColor Green
 Write-Host $ffmpegVersion -ForegroundColor DarkGray
 
-Write-Host "`nDone! Both binaries are in src-tauri/binaries/" -ForegroundColor Green
+# ── Tauri externalBin (sidecar) names ────────────────────────────────────────
+# `tauri build` expects target-triple-suffixed filenames for bundle.externalBin
+# and ships them next to PilPod.exe as plain yt-dlp.exe / ffmpeg.exe.
+$Triple = "x86_64-pc-windows-msvc"
+Copy-Item $YtdlpDst  -Destination (Join-Path $BinDir "yt-dlp-$Triple.exe")  -Force
+Copy-Item $FfmpegDst -Destination (Join-Path $BinDir "ffmpeg-$Triple.exe") -Force
+Write-Host "Sidecar copies created: yt-dlp-$Triple.exe, ffmpeg-$Triple.exe" -ForegroundColor Green
+
+Write-Host "`nDone! Binaries are in src-tauri/binaries/ (plain names for dev, triple-suffixed for tauri build)" -ForegroundColor Green
 Write-Host "They are gitignored - run this script again after cloning." -ForegroundColor DarkGray

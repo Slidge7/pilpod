@@ -3,7 +3,14 @@ import "./ActiveMediaStrip.css";
 import type { BrowserTab, DetectedBrowser } from "../../../types/media";
 import { collectActiveMediaTabs, tabRowKey } from "../lib/browserMedia";
 import { useFlipList } from "../hooks/useFlipList";
+import { useSettledOrder } from "../hooks/useSettledOrder";
+import { useStickyMedia } from "../hooks/useStickyMedia";
 import { MediaItemCard } from "./MediaItemCard";
+
+/** Reorder the strip only after this long with no play/pause/interaction. */
+const SORT_SETTLE_MS = 10_000;
+/** Keep a media row in place this long while it reloads/navigates. */
+const MEDIA_STICKY_MS = 7_000;
 
 type Props = {
   browsers: DetectedBrowser[];
@@ -16,7 +23,6 @@ type Props = {
   onClose: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onSeekTab?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
-  onSkipAd?: (tab: BrowserTab, browserId: string) => void;
   onPip?: (tab: BrowserTab, browserId: string) => void;
 };
 
@@ -30,10 +36,20 @@ export function ActiveMediaStrip({
   onClose,
   onSeekTab,
   onSetTabVolume,
-  onSkipAd,
   onPip,
 }: Props) {
-  const activeMedia = useMemo(() => collectActiveMediaTabs(browsers), [browsers]);
+  // Keep rows in place across a reload/navigation gap before classifying media.
+  const stickyBrowsers = useStickyMedia(browsers, MEDIA_STICKY_MS);
+  const sortedMedia = useMemo(
+    () => collectActiveMediaTabs(stickyBrowsers),
+    [stickyBrowsers],
+  );
+  // Hold the order steady while the user is toggling; re-sort once they settle.
+  const activeMedia = useSettledOrder(
+    sortedMedia,
+    (match) => tabRowKey(match.tab),
+    SORT_SETTLE_MS,
+  );
   const getFlipKey = useCallback(
     (match: (typeof activeMedia)[number]) => tabRowKey(match.tab),
     [],
@@ -70,7 +86,6 @@ export function ActiveMediaStrip({
               onClose={onClose}
               onSeek={onSeekTab}
               onSetTabVolume={onSetTabVolume}
-              onSkipAd={onSkipAd}
               onPip={onPip}
             />
           );

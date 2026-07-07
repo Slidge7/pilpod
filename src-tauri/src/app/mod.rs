@@ -11,8 +11,21 @@ pub fn run() {
     #[cfg(windows)]
     {
         builder = builder.manage(crate::window_widget::RestoreBounds::default());
-        builder = builder.setup(setup::init);
     }
+
+    // Single setup closure: premium entitlement init runs on ALL platforms,
+    // then the Windows-only subsystem init.
+    builder = builder.setup(|app| {
+        crate::premium::init(app)?;
+        // Vault is platform-neutral (pure file I/O) — init on all platforms.
+        crate::vault::init(app)?;
+        #[cfg(windows)]
+        {
+            crate::downloader::init(app)?;
+            setup::init(app)?;
+        }
+        Ok(())
+    });
 
     builder = handlers::with_invoke_handler(builder);
 
@@ -23,10 +36,15 @@ pub fn run() {
         let app = builder
             .build(context)
             .expect("error while building tauri application");
-        app.run(|app_handle, event| {
-            if matches!(event, tauri::RunEvent::Ready) {
+        app.run(|app_handle, event| match event {
+            tauri::RunEvent::Ready => {
                 setup::apply_main_window_icon(app_handle);
             }
+            // Flush any unsaved vault edits before the process goes away.
+            tauri::RunEvent::Exit => {
+                crate::vault::flush(app_handle);
+            }
+            _ => {}
         });
         return;
     }

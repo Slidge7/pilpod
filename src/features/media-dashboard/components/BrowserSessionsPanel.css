@@ -275,6 +275,7 @@ html.dark .pilpod-search-tag__exclude:hover {
 }
 
 .pilpod-browser-profile {
+  scroll-margin-top: 6px;
   overflow: hidden;
   border-radius: 14px;
 }
@@ -300,6 +301,17 @@ html.dark .pilpod-search-tag__exclude:hover {
 
 .pilpod-browser-profile__head--solo {
   border-bottom: none;
+}
+
+/* Media-active header: icon-only identity, tighter gap */
+.pilpod-browser-profile__head--media .pilpod-browser-profile__identity {
+  flex: 0 0 auto;
+}
+
+/* Spacer pushes action buttons to far right */
+.pilpod-browser-profile__head-spacer {
+  flex: 1;
+  min-width: 0;
 }
 
 .pilpod-browser-profile__identity {
@@ -608,6 +620,80 @@ html.dark .pilpod-browser-profile__status {
   backdrop-filter: blur(var(--pilpod-glass-blur-panel, 12px));
   -webkit-backdrop-filter: blur(var(--pilpod-glass-blur-panel, 12px));
   min-width: 130px;
+}
+
+/* ── Unified volume icon + expanding slider (media header) ── */
+
+.pilpod-browser-profile__vol-unified {
+  position: relative;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  height: 1.65rem;
+  flex-shrink: 0;
+  border: 1px solid var(--pilpod-glass-float-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.pilpod-browser-profile__vol-unified:hover {
+  border-color: var(--pilpod-accent-blue-ring);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--pilpod-accent-blue);
+}
+
+.pilpod-browser-profile__vol-unified-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.pilpod-browser-profile__vol-unified-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pilpod-browser-profile__vol-unified-track {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding-right: 0;
+  transition:
+    max-width 0.25s cubic-bezier(0.34, 1.1, 0.64, 1),
+    opacity 0.2s ease,
+    padding-right 0.25s ease;
+}
+
+.pilpod-browser-profile__vol-unified--open .pilpod-browser-profile__vol-unified-track {
+  max-width: 140px;
+  opacity: 1;
+  padding-right: 8px;
+}
+
+.pilpod-browser-profile__vol-unified-track .pilpod-browser-profile__vol-slider {
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.pilpod-browser-profile__vol-unified-pct {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--pilpod-accent-blue);
+  min-width: 28px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .pilpod-browser-profile__vol-slider {

@@ -6,14 +6,19 @@ pub mod command;
 pub mod connections;
 mod handler;
 mod http;
+mod peer_pid;
 pub mod protocol;
+mod security;
 mod system_events;
 mod ws;
 
 pub use protocol::CONNECTED_WINDOW_SECS;
+// Pairing hook — not wired into a command yet, kept for the pairing feature.
+#[allow(unused_imports)]
+pub use security::set_pairing_token;
 
 pub use connections::{new_ws_connection_map, WsConnectionMap};
-pub use handler::BridgeContext;
+pub use handler::{invalidate_slots_on_resume, BridgeContext};
 pub use system_events::spawn_power_listener;
 
 pub const BROWSER_BRIDGE_PORT: u16 = 17_399;
@@ -21,8 +26,8 @@ pub const BROWSER_WS_PORT: u16 = 17_400;
 pub const BROWSER_MEDIA_PATH: &str = "/browser-tabs";
 pub const BROWSER_WS_PATH: &str = "/ws";
 
-/// Shared atomic flag: set by `request_browser_sync` to tell the bridge to
-/// include `syncNow: true` in the next POST/WS response.
+/// Shared atomic flag: set by `request_browser_sync` to trigger a v2 `resync`
+/// broadcast (via `push_ws_sync_all`) asking clients to re-send a full snapshot.
 pub type SyncRequestedFlag = std::sync::Arc<std::sync::atomic::AtomicBool>;
 
 /// Spawn HTTP (fallback) and WebSocket (primary) bridge servers on one Tokio runtime.

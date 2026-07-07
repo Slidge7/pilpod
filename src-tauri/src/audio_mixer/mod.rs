@@ -17,6 +17,8 @@ use windows::Win32::{
 #[derive(Debug, Clone)]
 pub(crate) struct MixerSessionRow {
     pub instance_id: String,
+    /// Kept for diagnostics/session matching even though nothing reads it yet.
+    #[allow(dead_code)]
     pub process_id: u32,
     pub display_name: String,
     pub volume: f32,

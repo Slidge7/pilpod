@@ -24,11 +24,20 @@ export function tabHasMedia(t: BrowserTab): boolean {
   return (t.media.playbackState ?? "").toLowerCase() === "playing";
 }
 
+/** True when the tab currently has a detected media session (playing or paused). */
+export function tabHasActiveMedia(t: BrowserTab): boolean {
+  const state = (t.media?.playbackState ?? "").toLowerCase();
+  return state === "playing" || state === "paused";
+}
+
 /**
- * True when the tab is a known media page (allowlisted URL or prior rule match).
- * Used to list tabs in the media section regardless of active/playing state.
+ * True when the tab should be treated as a media tab. A live media session
+ * (the extension actually detected playing/paused media) qualifies on ANY site
+ * — not just the URL allowlist — so generic sites show up too. The allowlist /
+ * prior rule still qualifies link-identified pages even before playback starts.
  */
 export function tabIsLinkIdentifiedMedia(t: BrowserTab): boolean {
+  if (tabHasActiveMedia(t)) return true;
   if ((t.media?.mediaMatchRule ?? "").trim().length > 0) return true;
   const url = t.url?.trim();
   return url ? isMediaUrl(url) : false;
@@ -36,9 +45,9 @@ export function tabIsLinkIdentifiedMedia(t: BrowserTab): boolean {
 
 /** True when play/pause controls are meaningful for this tab. */
 export function tabHasMediaControls(t: BrowserTab): boolean {
-  if (!tabIsLinkIdentifiedMedia(t) || t.media == null) return false;
-  const state = (t.media.playbackState ?? "").toLowerCase();
-  return state === "playing" || state === "paused";
+  // Controls are meaningful whenever there is a live media session, regardless
+  // of the tab's URL (matches what the extension detects and shows).
+  return tabHasActiveMedia(t);
 }
 
 /** True when the tab has an active media session (playing or paused). */

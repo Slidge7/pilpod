@@ -13,15 +13,38 @@
   min-height: 0;
   flex: 1;
   flex-direction: column;
+  position: relative;
+  --pilpod-scroll-fade-top: 2.75rem;
+  --pilpod-scroll-fade-bottom: 3.5rem;
 }
 
+/* Full-height scroll; content passes under floating header + dock. */
 .pilpod-dashboard-shell__main {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 10px;
-  padding-bottom: 4.25rem;
+  padding: 40px 10px 55px 10px;
+  scroll-padding-top: var(--pilpod-scroll-fade-top);
+  scroll-padding-bottom: var(--pilpod-scroll-fade-bottom);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    rgba(0, 0, 0, 0.45) calc(var(--pilpod-scroll-fade-top) * 0.35),
+    #000 var(--pilpod-scroll-fade-top),
+    #000 calc(100% - var(--pilpod-scroll-fade-bottom)),
+    rgba(0, 0, 0, 0.45) calc(100% - var(--pilpod-scroll-fade-bottom) * 0.65),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    rgba(0, 0, 0, 0.45) calc(var(--pilpod-scroll-fade-top) * 0.35),
+    #000 var(--pilpod-scroll-fade-top),
+    #000 calc(100% - var(--pilpod-scroll-fade-bottom)),
+    rgba(0, 0, 0, 0.45) calc(100% - var(--pilpod-scroll-fade-bottom) * 0.65),
+    transparent 100%
+  );
 }
 
 /* User-selected wallpaper covers the entire inner shell (header + body).
@@ -32,12 +55,6 @@
   background-size: cover;
   background-repeat: no-repeat;
   background-attachment: fixed;
-}
-
-/* Header and scrollable body become transparent so the wallpaper shows through. */
-.pilpod-dashboard-shell__inner--wallpaper .pilpod-dash-header {
-  background: transparent;
-  border-bottom-color: transparent;
 }
 
 .pilpod-dashboard-shell__inner--wallpaper .pilpod-dashboard-shell__main {

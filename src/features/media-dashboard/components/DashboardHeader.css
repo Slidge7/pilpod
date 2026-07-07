@@ -1,9 +1,13 @@
 .pilpod-dash-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 26;
   display: flex;
-  flex-shrink: 0;
   align-items: stretch;
-  border-bottom: 1px solid var(--pilpod-border-muted);
-  background: var(--pilpod-bg-elevated);
+  border: none;
+  background: transparent;
 }
 
 .pilpod-dash-header__left {
