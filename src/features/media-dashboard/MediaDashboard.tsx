@@ -213,7 +213,11 @@ export function MediaDashboard() {
         <DashboardHeader
           menuOpen={menuOpen}
           widgetEnabled={widgetEnabled}
+          alwaysOnTop={alwaysOnTop}
           onToggleMenu={() => setMenuOpen((o) => !o)}
+          onToggleAlwaysOnTop={toggleAlwaysOnTop}
+          onPrevWallpaper={wallpaper.prev}
+          onNextWallpaper={wallpaper.next}
           onMinimize={minimizeApp}
           onClose={closeApp}
         />

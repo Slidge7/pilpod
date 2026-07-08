@@ -16,7 +16,6 @@ import {
   IconSun,
   IconTimer,
   IconWidgetMinimize,
-  IconX,
 } from "../../../shared/ui/icons";
 
 type Props = {
@@ -107,7 +106,7 @@ export function SlideMenu({
     .join(" ");
 
   const sliderTabIndex = open ? 0 : -1;
-  const btnTabIndex = open && !wallpaperExpanded ? 0 : -1;
+  const btnTabIndex = open ? 0 : -1;
   const wpTabIndex = open && wallpaperExpanded ? 0 : -1;
   const noWallpapers = wallpaper.names.length === 0;
 
@@ -123,15 +122,6 @@ export function SlideMenu({
 
   return (
     <div className={rootClass} aria-hidden={!open && !glassDragging}>
-      {open && glassDragging ? (
-        <div className="pilpod-slide-menu__glass-focus" aria-hidden={false}>
-          <div className="pilpod-slide-menu__glass-focus-inner">
-            <span className="pilpod-slide-menu__glass-label">Glass effect</span>
-            {glassSlider}
-          </div>
-        </div>
-      ) : null}
-
       <div className="pilpod-slide-menu__panel">
         <div className="pilpod-slide-menu__actions">
           <button
@@ -178,7 +168,7 @@ export function SlideMenu({
           </button>
           <button
             type="button"
-            onClick={() => setWallpaperExpanded(true)}
+            onClick={() => setWallpaperExpanded((v) => !v)}
             className={wallpaperBtnClass}
             title="Wallpaper options"
             aria-label="Wallpaper options"
@@ -200,142 +190,6 @@ export function SlideMenu({
               <IconBeaker />
             </button>
           ) : null}
-
-          {wallpaperExpanded ? (
-            <div
-              className="pilpod-wallpaper-panel"
-              role="group"
-              aria-label="Wallpaper options"
-            >
-              <div className="pilpod-wallpaper-panel__top">
-                <button
-                  type="button"
-                  className="pilpod-wallpaper-panel__nav"
-                  onClick={wallpaper.prev}
-                  disabled={noWallpapers}
-                  title="Previous wallpaper"
-                  aria-label="Previous wallpaper"
-                  tabIndex={wpTabIndex}
-                >
-                  <IconSkipBack />
-                </button>
-                <span
-                  className="pilpod-wallpaper-panel__name"
-                  title={wallpaper.current ?? "Wallpaper off"}
-                >
-                  {noWallpapers ? "No wallpapers" : prettyName(wallpaper.current)}
-                </span>
-                <button
-                  type="button"
-                  className="pilpod-wallpaper-panel__nav"
-                  onClick={wallpaper.next}
-                  disabled={noWallpapers}
-                  title="Next wallpaper"
-                  aria-label="Next wallpaper"
-                  tabIndex={wpTabIndex}
-                >
-                  <IconSkipForward />
-                </button>
-                <button
-                  type="button"
-                  className="pilpod-wallpaper-panel__close"
-                  onClick={() => setWallpaperExpanded(false)}
-                  title="Done"
-                  aria-label="Close wallpaper options"
-                  tabIndex={wpTabIndex}
-                >
-                  <IconX />
-                </button>
-              </div>
-
-              <div className="pilpod-wallpaper-panel__toggles">
-                <button
-                  type="button"
-                  className={[
-                    "pilpod-wallpaper-panel__toggle",
-                    wallpaper.enabled
-                      ? "pilpod-wallpaper-panel__toggle--active"
-                      : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={wallpaper.toggleEnabled}
-                  disabled={noWallpapers}
-                  aria-pressed={wallpaper.enabled}
-                  title={wallpaper.enabled ? "Turn wallpaper off" : "Turn wallpaper on"}
-                  tabIndex={wpTabIndex}
-                >
-                  <IconImage />
-                  <span>{wallpaper.enabled ? "On" : "Off"}</span>
-                </button>
-                <button
-                  type="button"
-                  className={[
-                    "pilpod-wallpaper-panel__toggle",
-                    wallpaper.random
-                      ? "pilpod-wallpaper-panel__toggle--active"
-                      : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={wallpaper.toggleRandom}
-                  aria-pressed={wallpaper.random}
-                  title={wallpaper.random ? "Random order: on" : "Random order: off"}
-                  tabIndex={wpTabIndex}
-                >
-                  <IconShuffle />
-                  <span>Random</span>
-                </button>
-                <button
-                  type="button"
-                  className={[
-                    "pilpod-wallpaper-panel__toggle",
-                    wallpaper.autoSwitch
-                      ? "pilpod-wallpaper-panel__toggle--active"
-                      : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={wallpaper.toggleAutoSwitch}
-                  aria-pressed={wallpaper.autoSwitch}
-                  title={wallpaper.autoSwitch ? "Auto-switch: on" : "Auto-switch: off"}
-                  tabIndex={wpTabIndex}
-                >
-                  <IconTimer />
-                  <span>Auto</span>
-                </button>
-              </div>
-
-              {wallpaper.autoSwitch ? (
-                <div
-                  className="pilpod-wallpaper-panel__intervals"
-                  role="group"
-                  aria-label="Auto-switch interval"
-                >
-                  {WALLPAPER_INTERVALS.map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      className={[
-                        "pilpod-wallpaper-panel__chip",
-                        wallpaper.intervalId === opt.id
-                          ? "pilpod-wallpaper-panel__chip--active"
-                          : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      onClick={() => wallpaper.setIntervalId(opt.id)}
-                      aria-pressed={wallpaper.intervalId === opt.id}
-                      title={`Switch every ${opt.label}`}
-                      tabIndex={wpTabIndex}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
         </div>
 
         <div className="pilpod-slide-menu__glass-row">
@@ -343,8 +197,145 @@ export function SlideMenu({
           {glassSlider}
         </div>
 
+        {wallpaperExpanded ? (
+          <div
+            className="pilpod-wallpaper-panel"
+            role="group"
+            aria-label="Wallpaper options"
+          >
+            <div className="pilpod-wallpaper-panel__top">
+              <button
+                type="button"
+                className="pilpod-wallpaper-panel__nav"
+                onClick={wallpaper.prev}
+                disabled={noWallpapers}
+                title="Previous wallpaper"
+                aria-label="Previous wallpaper"
+                tabIndex={wpTabIndex}
+              >
+                <IconSkipBack />
+              </button>
+              <span
+                className="pilpod-wallpaper-panel__name"
+                title={wallpaper.current ?? "Wallpaper off"}
+              >
+                {noWallpapers ? "No wallpapers" : prettyName(wallpaper.current)}
+              </span>
+              <button
+                type="button"
+                className="pilpod-wallpaper-panel__nav"
+                onClick={wallpaper.next}
+                disabled={noWallpapers}
+                title="Next wallpaper"
+                aria-label="Next wallpaper"
+                tabIndex={wpTabIndex}
+              >
+                <IconSkipForward />
+              </button>
+            </div>
+
+            <div className="pilpod-wallpaper-panel__toggles">
+              <button
+                type="button"
+                className={[
+                  "pilpod-wallpaper-panel__toggle",
+                  wallpaper.enabled
+                    ? "pilpod-wallpaper-panel__toggle--active"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={wallpaper.toggleEnabled}
+                disabled={noWallpapers}
+                aria-pressed={wallpaper.enabled}
+                title={wallpaper.enabled ? "Turn wallpaper off" : "Turn wallpaper on"}
+                tabIndex={wpTabIndex}
+              >
+                <IconImage />
+                <span>{wallpaper.enabled ? "On" : "Off"}</span>
+              </button>
+              <button
+                type="button"
+                className={[
+                  "pilpod-wallpaper-panel__toggle",
+                  wallpaper.random
+                    ? "pilpod-wallpaper-panel__toggle--active"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={wallpaper.toggleRandom}
+                aria-pressed={wallpaper.random}
+                title={wallpaper.random ? "Random order: on" : "Random order: off"}
+                tabIndex={wpTabIndex}
+              >
+                <IconShuffle />
+                <span>Random</span>
+              </button>
+              <button
+                type="button"
+                className={[
+                  "pilpod-wallpaper-panel__toggle",
+                  wallpaper.autoSwitch
+                    ? "pilpod-wallpaper-panel__toggle--active"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={wallpaper.toggleAutoSwitch}
+                aria-pressed={wallpaper.autoSwitch}
+                title={wallpaper.autoSwitch ? "Auto-switch: on" : "Auto-switch: off"}
+                tabIndex={wpTabIndex}
+              >
+                <IconTimer />
+                <span>Auto</span>
+              </button>
+            </div>
+
+            {wallpaper.autoSwitch ? (
+              <div
+                className="pilpod-wallpaper-panel__intervals"
+                role="group"
+                aria-label="Auto-switch interval"
+              >
+                {WALLPAPER_INTERVALS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={[
+                      "pilpod-wallpaper-panel__chip",
+                      wallpaper.intervalId === opt.id
+                        ? "pilpod-wallpaper-panel__chip--active"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    onClick={() => wallpaper.setIntervalId(opt.id)}
+                    aria-pressed={wallpaper.intervalId === opt.id}
+                    title={`Switch every ${opt.label}`}
+                    tabIndex={wpTabIndex}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="pilpod-slide-menu__footer">
-          <span className="pilpod-slide-menu__credit">Provided by s7.ma</span>
+          <div className="pilpod-slide-menu__footer-left">
+            <img
+              src="/pilpod-icon.png"
+              alt=""
+              width={14}
+              height={14}
+              className="pilpod-slide-menu__footer-logo"
+              aria-hidden
+            />
+            <span className="pilpod-slide-menu__footer-title">PilPod</span>
+            <span className="pilpod-slide-menu__credit">Provided by s7.ma</span>
+          </div>
           <span className="pilpod-slide-menu__stats">
             {browserTabCount} browser tabs
           </span>

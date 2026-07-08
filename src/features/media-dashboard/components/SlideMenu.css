@@ -55,8 +55,30 @@
 }
 
 .pilpod-slide-menu--glass-dragging .pilpod-slide-menu__panel {
-  visibility: hidden;
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
   pointer-events: none;
+}
+
+.pilpod-slide-menu--glass-dragging .pilpod-slide-menu__actions,
+.pilpod-slide-menu--glass-dragging .pilpod-slide-menu__footer {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pilpod-slide-menu--glass-dragging .pilpod-slide-menu__glass-row {
+  pointer-events: auto;
+}
+
+.pilpod-slide-menu--glass-dragging .pilpod-slide-menu__glass-label {
+  opacity: 0;
+}
+
+.pilpod-slide-menu--glass-dragging .pilpod-glass-strength__icon,
+.pilpod-slide-menu--glass-dragging .pilpod-glass-strength__pct,
+.pilpod-slide-menu--glass-dragging .pilpod-glass-strength__rail {
+  opacity: 0;
 }
 
 .pilpod-slide-menu--glass-dragging .pilpod-slide-menu__backdrop {
@@ -78,24 +100,7 @@
   color: var(--pilpod-text-subtle);
 }
 
-.pilpod-slide-menu__glass-focus {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 45;
-  display: flex;
-  flex-direction: column;
-  padding: 0.85rem 0.9rem 0.75rem;
-  background: transparent;
-  pointer-events: auto;
-}
 
-.pilpod-slide-menu__glass-focus-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
 
 .pilpod-slide-menu__actions {
   position: relative;
@@ -106,31 +111,24 @@
   gap: 0.5rem;
 }
 
-/* Expandable wallpaper options — overlays (covers) the action buttons. */
+/* Wallpaper section — slides open below glass slider */
 .pilpod-wallpaper-panel {
-  position: absolute;
-  inset: -0.4rem -0.2rem;
-  z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 0.5rem;
-  border-radius: 14px;
-  background: var(--pilpod-bg-elevated);
-  box-shadow:
-    0 8px 22px rgb(0 0 0 / 0.3),
-    inset 0 0 0 1px var(--pilpod-border-muted);
-  animation: pilpod-wallpaper-pop 0.16s ease;
+  padding: 0.1rem 0.15rem 0;
+  overflow: hidden;
+  animation: pilpod-wallpaper-slide 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-@keyframes pilpod-wallpaper-pop {
+@keyframes pilpod-wallpaper-slide {
   from {
     opacity: 0;
-    transform: scale(0.97);
+    max-height: 0;
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    max-height: 12rem;
   }
 }
 
@@ -152,8 +150,7 @@
   color: var(--pilpod-text);
 }
 
-.pilpod-wallpaper-panel__nav,
-.pilpod-wallpaper-panel__close {
+.pilpod-wallpaper-panel__nav {
   display: flex;
   height: 2rem;
   min-width: 2rem;
@@ -169,8 +166,7 @@
     color 0.15s ease;
 }
 
-.pilpod-wallpaper-panel__nav:hover:not(:disabled),
-.pilpod-wallpaper-panel__close:hover {
+.pilpod-wallpaper-panel__nav:hover:not(:disabled) {
   background: var(--pilpod-bg-row-hover);
   color: var(--pilpod-text);
 }
@@ -315,6 +311,29 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+}
+
+.pilpod-slide-menu__footer-left {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.pilpod-slide-menu__footer-logo {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.pilpod-slide-menu__footer-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--pilpod-text-subtle);
+  white-space: nowrap;
 }
 
 .pilpod-slide-menu__credit,

@@ -3,12 +3,19 @@ import {
   IconClose,
   IconMenu,
   IconMinimize,
+  IconSkipBack,
+  IconSkipForward,
+  IconStayOnTop,
 } from "../../../shared/ui/icons";
 
 type Props = {
   menuOpen: boolean;
   widgetEnabled: boolean;
+  alwaysOnTop: boolean;
   onToggleMenu: () => void;
+  onToggleAlwaysOnTop: () => void;
+  onPrevWallpaper: () => void;
+  onNextWallpaper: () => void;
   onMinimize: () => void;
   onClose: () => void;
 };
@@ -16,7 +23,11 @@ type Props = {
 export function DashboardHeader({
   menuOpen,
   widgetEnabled,
+  alwaysOnTop,
   onToggleMenu,
+  onToggleAlwaysOnTop,
+  onPrevWallpaper,
+  onNextWallpaper,
   onMinimize,
   onClose,
 }: Props) {
@@ -31,20 +42,37 @@ export function DashboardHeader({
     .filter(Boolean)
     .join(" ");
 
+  const pinClass = [
+    "pilpod-dash-header__pin",
+    alwaysOnTop ? "pilpod-dash-header__pin--active" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <header className="pilpod-dash-header" data-tauri-drag-region="deep">
       <div className="pilpod-dash-header__left">
-        <img
-          src="/pilpod-icon.png"
-          alt=""
-          width={24}
-          height={24}
-          className="pilpod-dash-header__logo"
-          aria-hidden
-        />
-        <span className="pilpod-dash-header__title">PilPod</span>
+        <button
+          type="button"
+          onClick={onToggleAlwaysOnTop}
+          className={pinClass}
+          title={alwaysOnTop ? "Unpin window" : "Pin window (always on top)"}
+          aria-label={alwaysOnTop ? "Unpin window" : "Pin window"}
+          aria-pressed={alwaysOnTop}
+        >
+          <IconStayOnTop />
+        </button>
       </div>
       <div className="pilpod-dash-header__center">
+        <button
+          type="button"
+          onClick={onPrevWallpaper}
+          className="pilpod-dash-header__wp-nav pilpod-dash-header__wp-nav--prev"
+          title="Previous wallpaper"
+          aria-label="Previous wallpaper"
+        >
+          <IconSkipBack />
+        </button>
         <button
           type="button"
           onClick={onToggleMenu}
@@ -54,6 +82,15 @@ export function DashboardHeader({
           aria-expanded={menuOpen}
         >
           <IconMenu />
+        </button>
+        <button
+          type="button"
+          onClick={onNextWallpaper}
+          className="pilpod-dash-header__wp-nav pilpod-dash-header__wp-nav--next"
+          title="Next wallpaper"
+          aria-label="Next wallpaper"
+        >
+          <IconSkipForward />
         </button>
       </div>
       <div className="pilpod-dash-header__actions">
