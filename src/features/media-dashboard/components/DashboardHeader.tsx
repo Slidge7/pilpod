@@ -3,8 +3,6 @@ import {
   IconClose,
   IconMenu,
   IconMinimize,
-  IconSkipBack,
-  IconSkipForward,
   IconStayOnTop,
 } from "../../../shared/ui/icons";
 
@@ -71,7 +69,6 @@ export function DashboardHeader({
           title="Previous wallpaper"
           aria-label="Previous wallpaper"
         >
-          <IconSkipBack />
         </button>
         <button
           type="button"
@@ -90,7 +87,6 @@ export function DashboardHeader({
           title="Next wallpaper"
           aria-label="Next wallpaper"
         >
-          <IconSkipForward />
         </button>
       </div>
       <div className="pilpod-dash-header__actions">
