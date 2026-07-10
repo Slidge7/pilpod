@@ -65,9 +65,9 @@
 .pilpod-dash-header__wp-nav {
   position: absolute;
   z-index: 0;
-  top: 0;
-  height: 100%;
-  width: 65%;
+  top: 3;
+  height: 80%;
+  width: 70%;
   border: none;
   background: color-mix(in srgb, var(--pilpod-bg-muted) 50%, transparent);
   cursor: pointer;
@@ -78,12 +78,15 @@
 
 .pilpod-dash-header__wp-nav--prev {
   right: 50%;
-  border-radius: 999px 0 0 999px;
+  border-radius: 13px 0 0 13px;
+  border-left: inset 1px #ffffff94;
+
 }
 
 .pilpod-dash-header__wp-nav--next {
   left: 50%;
-  border-radius: 0 999px 999px 0;
+  border-radius: 0 13px 13px 0;
+    border-right: inset 1px #ffffff94;
 }
 
 .pilpod-dash-header__wp-nav:hover {

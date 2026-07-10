@@ -52,9 +52,7 @@
   gap: 6px;
   min-width: 0;
 }
-
-.pilpod-dl-input,
-.pilpod-dl-select {
+.pilpod-dl-input {
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
@@ -64,6 +62,41 @@
   border: 1px solid var(--pilpod-border);
   background: var(--pilpod-bg-elevated);
   color: var(--pilpod-text);
+}
+.pilpod-dl-select {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 7px 28px 7px 9px;
+  font-size: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--pilpod-border);
+  background: var(--pilpod-bg-elevated);
+  color: var(--pilpod-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-dl-radio-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex: 1;
+}
+
+.pilpod-dl-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--pilpod-text);
+  cursor: pointer;
+}
+
+.pilpod-dl-radio input {
+  margin: 0;
+  cursor: pointer;
 }
 
 .pilpod-dl-btn {
@@ -129,6 +162,39 @@
   flex: none;
 }
 
+.pilpod-dl-media__thumb--skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--pilpod-bg-thumb) 25%,
+    color-mix(in srgb, var(--pilpod-bg-thumb) 60%, var(--pilpod-text-subtle)) 50%,
+    var(--pilpod-bg-thumb) 75%
+  );
+  background-size: 200% 100%;
+  animation: pilpod-dl-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes pilpod-dl-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.pilpod-dl-select:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.pilpod-dl-btn__loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pilpod-dl-btn__loading .pilpod-spinner {
+  width: 12px;
+  height: 12px;
+}
+
 .pilpod-dl-media__title {
   font-size: 12px;
   font-weight: 600;
@@ -181,4 +247,80 @@
   border: 1px solid var(--pilpod-border);
   background: var(--pilpod-bg-muted);
   color: var(--pilpod-text-secondary);
+}
+
+/* ── Tab Download Button (inline in media browser rows) ───────────── */
+.pilpod-tab-dl-btn {
+  appearance: none;
+  border: none;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+  flex: none;
+  transition: background 0.15s, color 0.15s, transform 0.14s, box-shadow 0.2s;
+}
+
+.pilpod-tab-dl-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pilpod-tab-dl-btn .pilpod-spinner {
+  width: 12px;
+  height: 12px;
+}
+
+.pilpod-tab-dl-btn:hover {
+  background: var(--pilpod-bg-row-hover);
+  color: var(--pilpod-text);
+}
+
+.pilpod-tab-dl-btn:active {
+  transform: scale(0.88);
+}
+
+/* ── Active (downloading) ── */
+.pilpod-tab-dl-btn--active {
+  color: var(--pilpod-accent-blue, #3b82f6);
+  background: color-mix(in srgb, var(--pilpod-accent-blue, #3b82f6) 12%, transparent);
+  animation: pilpod-dl-pulse 1.8s ease-in-out infinite;
+  cursor: default;
+}
+
+.pilpod-tab-dl-btn--active:hover {
+  background: color-mix(in srgb, var(--pilpod-accent-blue, #3b82f6) 18%, transparent);
+  color: var(--pilpod-accent-blue, #3b82f6);
+}
+
+@keyframes pilpod-dl-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pilpod-accent-blue, #3b82f6) 30%, transparent); }
+  50%      { box-shadow: 0 0 0 4px color-mix(in srgb, var(--pilpod-accent-blue, #3b82f6) 0%, transparent); }
+}
+
+/* ── Done ── */
+.pilpod-tab-dl-btn--done {
+  color: #16a34a;
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+}
+
+.pilpod-tab-dl-btn--done:hover {
+  background: color-mix(in srgb, #16a34a 18%, transparent);
+  color: #16a34a;
+}
+
+/* ── Error ── */
+.pilpod-tab-dl-btn--error {
+  color: #dc2626;
+  background: color-mix(in srgb, #dc2626 10%, transparent);
+}
+
+.pilpod-tab-dl-btn--error:hover {
+  background: color-mix(in srgb, #dc2626 18%, transparent);
+  color: #dc2626;
 }

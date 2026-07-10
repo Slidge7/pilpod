@@ -5,6 +5,7 @@ import { DownloadCard } from "./components/DownloadCard";
 import { FormatPicker } from "./components/FormatPicker";
 import { SaveOptions } from "./components/SaveOptions";
 import { UrlInput } from "./components/UrlInput";
+import { Spinner } from "../../shared/ui/icons";
 import type { DownloaderApi } from "./hooks/useDownloader";
 import { formatDuration, isTerminal, sortTasks } from "./lib";
 
@@ -65,6 +66,9 @@ export function DownloadPanel({ dl, seedUrl, onSeedConsumed }: Props) {
   const presets = lastInfo?.presets ?? [];
   const selectedPreset = presets.find((p) => p.id === presetId) ?? presets[0] ?? null;
 
+  // Show the card section when we have info OR when we're actively fetching.
+  const showCard = !!info || fetching;
+
   const start = async () => {
     if (!info || !selectedPreset || !outputDir) return;
     const id = await startDownload({
@@ -93,37 +97,56 @@ export function DownloadPanel({ dl, seedUrl, onSeedConsumed }: Props) {
         <UrlInput fetching={fetching} onFetch={(url) => void fetchInfo(url)} />
         {fetchError && <div className="pilpod-dl-error">{fetchError}</div>}
 
-        {info && (
+        {showCard && (
           <>
+            {/* Media preview — show real info when available, skeleton while fetching */}
             <div className="pilpod-dl-media">
-              {info.thumbnail ? (
+              {info?.thumbnail ? (
                 <img className="pilpod-dl-media__thumb" src={info.thumbnail} alt="" aria-hidden />
+              ) : fetching ? (
+                <div className="pilpod-dl-media__thumb pilpod-dl-media__thumb--skeleton" aria-hidden />
               ) : null}
               <div style={{ minWidth: 0 }}>
-                <div className="pilpod-dl-media__title">{info.title}</div>
-                {formatDuration(info.duration) && (
+                <div className="pilpod-dl-media__title">
+                  {info?.title ?? (fetching ? "Fetching media info…" : "")}
+                </div>
+                {info && formatDuration(info.duration) && (
                   <div className="pilpod-dl-hint">{formatDuration(info.duration)}</div>
                 )}
               </div>
             </div>
+
+            {/* Format picker — disabled while fetching */}
             <FormatPicker
               presets={presets}
               selectedId={selectedPreset?.id ?? "best"}
               onSelect={setPresetId}
+              disabled={fetching}
             />
+
+            {/* Save location + filename — always interactive */}
             <SaveOptions
               outputDir={outputDir}
               filename={filename}
               onOutputDirChange={setOutputDir}
               onFilenameChange={setFilename}
             />
+
+            {/* Download button — spinner while fetching */}
             <button
               type="button"
               className="pilpod-dl-btn pilpod-dl-btn--primary"
-              disabled={!selectedPreset || !outputDir || binaryStatus?.ok === false}
+              disabled={fetching || !selectedPreset || !outputDir || binaryStatus?.ok === false}
               onClick={() => void start()}
             >
-              Download
+              {fetching ? (
+                <span className="pilpod-dl-btn__loading">
+                  <Spinner />
+                  <span>Fetching…</span>
+                </span>
+              ) : (
+                "Download"
+              )}
             </button>
           </>
         )}

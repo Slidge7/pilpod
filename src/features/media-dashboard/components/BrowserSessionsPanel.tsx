@@ -209,6 +209,7 @@ function BrowserHeader({
   const headClass = [
     "pilpod-browser-profile__head",
     !isOpen ? "pilpod-browser-profile__head--solo" : "",
+    hasMediaTabs ? "pilpod-browser-profile__head--media" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -230,27 +231,70 @@ function BrowserHeader({
             aria-hidden
           />
         )}
-        <span className="pilpod-browser-profile__label-text">
-          {displayName}
-        </span>
+        {!hasMediaTabs && (
+          <span className="pilpod-browser-profile__label-text">
+            {displayName}
+          </span>
+        )}
         <BrowserStatusIndicator browser={browser} />
       </span>
 
+      {hasMediaTabs && wasapiVolPct !== null && profileAudio && onMixerVolume ? (
+        <div
+          className={[
+            "pilpod-browser-profile__vol-unified",
+            volSliderOpen ? "pilpod-browser-profile__vol-unified--open" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <div
+            className="pilpod-browser-profile__vol-unified-icon"
+            title={`Browser volume: ${wasapiVolPct}% (click to adjust)`}
+            onClick={() => setVolSliderOpen((v) => !v)}
+          >
+            <IconVolumeIndicator />
+          </div>
+          <div className="pilpod-browser-profile__vol-unified-track">
+            <input
+              type="range"
+              className="pilpod-browser-profile__vol-slider"
+              min="0"
+              max="100"
+              step="5"
+              value={Math.min(wasapiVolPct, 100)}
+              aria-label={`Browser volume: ${wasapiVolPct}%`}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10) / 100;
+                onMixerVolume(profileAudio.instanceId, v);
+              }}
+            />
+            <span className="pilpod-browser-profile__vol-unified-pct">
+              {wasapiVolPct}%
+            </span>
+          </div>
+        </div>
+      ) : null}
+
+      {hasMediaTabs && <span className="pilpod-browser-profile__head-spacer" />}
+
       {isOpen ? (
         <>
-          <span className="pilpod-browser-profile__tab-count">
-            {browser.tabCount > 0 ? (
-              <>
-                {browser.tabCount} tabs
-                {windowCount > 1 ? <> · {windowCount} windows</> : null}
-              </>
-            ) : null}
-          </span>
+          {!hasMediaTabs && (
+            <span className="pilpod-browser-profile__tab-count">
+              {browser.tabCount > 0 ? (
+                <>
+                  {browser.tabCount} tabs
+                  {windowCount > 1 ? <> · {windowCount} windows</> : null}
+                </>
+              ) : null}
+            </span>
+          )}
 
           {hasMediaTabs && onResetAllVolumes ? (
             <button
               type="button"
-              className="pilpod-browser-profile__header-btn"
+              className="pilpod-browser-profile__header-btn pilpod-browser-profile__header-btn--reset-vol"
               onClick={onResetAllVolumes}
               title="Reset all tab volumes to 100%"
               aria-label="Reset all tab volumes"
@@ -262,7 +306,7 @@ function BrowserHeader({
           {hasMediaTabs && onPauseAll ? (
             <button
               type="button"
-              className="pilpod-browser-profile__header-btn"
+              className="pilpod-browser-profile__header-btn pilpod-browser-profile__header-btn--pause-all"
               onClick={onPauseAll}
               title="Pause all media tabs"
               aria-label="Pause all media tabs"
@@ -274,48 +318,13 @@ function BrowserHeader({
           {hasMediaTabs && onMuteAll ? (
             <button
               type="button"
-              className="pilpod-browser-profile__header-btn"
+              className="pilpod-browser-profile__header-btn pilpod-browser-profile__header-btn--mute-all"
               onClick={onMuteAll}
               title="Mute all media tabs"
               aria-label="Mute all media tabs"
             >
               <IconMuteAll />
             </button>
-          ) : null}
-
-          {wasapiVolPct !== null && profileAudio && onMixerVolume ? (
-            <div className="pilpod-browser-profile__vol-wrap">
-              <button
-                type="button"
-                className="pilpod-browser-profile__vol-badge"
-                title={`Browser volume: ${wasapiVolPct}% (click to adjust)`}
-                aria-label={`Browser system volume ${wasapiVolPct}%`}
-                onClick={() => setVolSliderOpen((v) => !v)}
-              >
-                <IconVolumeIndicator />
-                <span>{wasapiVolPct}%</span>
-              </button>
-              {volSliderOpen ? (
-                <div className="pilpod-browser-profile__vol-popup">
-                  <input
-                    type="range"
-                    className="pilpod-browser-profile__vol-slider"
-                    min="0"
-                    max="600"
-                    step="5"
-                    value={wasapiVolPct}
-                    aria-label={`Browser volume: ${wasapiVolPct}%`}
-                    onChange={(e) => {
-                      const v = parseInt(e.target.value, 10) / 100;
-                      onMixerVolume(profileAudio.instanceId, v);
-                    }}
-                  />
-                  <span className="pilpod-browser-profile__vol-popup-pct">
-                    {wasapiVolPct}%
-                  </span>
-                </div>
-              ) : null}
-            </div>
           ) : null}
 
           <button
@@ -1057,6 +1066,7 @@ export function BrowserSessionsPanel({
         onSeekTab={onSeekTab}
         onSetTabVolume={onSetTabVolume}
         onPip={onPip}
+        renderTabAccessories={renderTabAccessories}
       />
 
       {narrowResults && displayBrowsers.length === 0 ? (

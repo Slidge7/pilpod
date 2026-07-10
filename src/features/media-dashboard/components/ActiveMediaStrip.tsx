@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { type ReactNode, useCallback, useMemo } from "react";
 import "./ActiveMediaStrip.css";
 import type { BrowserTab, DetectedBrowser } from "../../../types/media";
 import { collectActiveMediaTabs, tabRowKey } from "../lib/browserMedia";
@@ -24,6 +24,13 @@ type Props = {
   onSeekTab?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
   onPip?: (tab: BrowserTab, browserId: string) => void;
+  /** Render save/download buttons for a tab (mirrors browser card accessories). */
+  renderTabAccessories?: (
+    tab: BrowserTab,
+    browserId: string,
+    browserDisplayName: string,
+    isMediaTab: boolean,
+  ) => { save?: ReactNode; download?: ReactNode };
 };
 
 export function ActiveMediaStrip({
@@ -37,6 +44,7 @@ export function ActiveMediaStrip({
   onSeekTab,
   onSetTabVolume,
   onPip,
+  renderTabAccessories,
 }: Props) {
   // Keep rows in place across a reload/navigation gap before classifying media.
   const stickyBrowsers = useStickyMedia(browsers, MEDIA_STICKY_MS);
@@ -70,6 +78,7 @@ export function ActiveMediaStrip({
       <ul ref={listRef} className="pilpod-active-media-strip__grid">
         {activeMedia.map(({ browserId, browserDisplayName, tab }) => {
           const rk = tabRowKey(tab);
+          const accessories = renderTabAccessories?.(tab, browserId, browserDisplayName, true);
           return (
             <MediaItemCard
               key={rk}
@@ -87,6 +96,8 @@ export function ActiveMediaStrip({
               onSeek={onSeekTab}
               onSetTabVolume={onSetTabVolume}
               onPip={onPip}
+              saveButton={accessories?.save}
+              downloadButton={accessories?.download}
             />
           );
         })}
