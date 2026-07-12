@@ -3,11 +3,12 @@
 .pilpod-dl-dock-card {
   margin: 0 0 8px;
   border-radius: 14px;
-  background: color-mix(
+  --pilpod-dl-tint: color-mix(
     in srgb,
     var(--pilpod-glass-float-surface, rgba(255, 255, 255, 0.72)) 90%,
     transparent
   );
+  background: var(--pilpod-dl-tint);
   box-shadow:
     0 2px 0 0 rgba(255, 255, 255, 0.5) inset,
     0 6px 18px rgba(15, 23, 42, 0.12),
@@ -18,7 +19,7 @@
 }
 
 html.dark .pilpod-dl-dock-card {
-  background: color-mix(
+  --pilpod-dl-tint: color-mix(
     in srgb,
     var(--pilpod-glass-float-surface, rgba(30, 41, 59, 0.75)) 90%,
     transparent
@@ -27,6 +28,29 @@ html.dark .pilpod-dl-dock-card {
     0 2px 0 0 rgba(255, 255, 255, 0.08) inset,
     0 8px 22px rgba(0, 0, 0, 0.3),
     0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+/* Static glass (GPU memory fix) — the card sits in flow over the
+   viewport-fixed wallpaper, so its blur(12px) backdrop is reproduced exactly
+   by the shared pre-blurred wallpaper texture (--pilpod-wpb-panel).
+   See glass-float-shell.css / useStaticGlassWallpaper.ts. */
+.pilpod-dashboard-shell__inner--glass-static .pilpod-dl-dock-card {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background-color: transparent;
+  background-image:
+    linear-gradient(var(--pilpod-dl-tint), var(--pilpod-dl-tint)),
+    var(--pilpod-wpb-panel);
+  background-attachment: scroll, fixed;
+  background-position: 0 0, center;
+  background-size: auto, cover;
+  background-repeat: no-repeat, no-repeat;
+}
+
+/* No wallpaper → uniform backdrop, blur is a visual no-op. */
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-dl-dock-card {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* ── Header (toggle) ──────────────────────────────────────────────── */

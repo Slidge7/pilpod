@@ -22,6 +22,7 @@ import { useAppearance } from "./hooks/useAppearance";
 import { useGlassAppearance } from "./hooks/useGlassAppearance";
 import { useMediaDashboard } from "./hooks/useMediaDashboard";
 import { useWallpaper } from "./hooks/useWallpaper";
+import { useStaticGlassWallpaper } from "./hooks/useStaticGlassWallpaper";
 import {
   DASHBOARD_IDLE_BROWSER_OPACITY,
   DASHBOARD_IDLE_SHELL_CLASS,
@@ -34,6 +35,9 @@ export function MediaDashboard() {
   const { glassStrength, setGlassStrength } = useGlassAppearance();
   const wallpaper = useWallpaper(appearance);
   const hasWallpaper = wallpaper.dataUrl != null;
+  // Pre-blurred wallpaper textures — replace live backdrop-filter blurs with
+  // identical static slices (see useStaticGlassWallpaper.ts for the why).
+  const staticGlass = useStaticGlassWallpaper(wallpaper.dataUrl, glassStrength);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"media" | "download" | "vault" | "playlist">("media");
   const [activeDockBrowserId, setActiveDockBrowserId] = useState<string | null>(
@@ -194,6 +198,9 @@ export function MediaDashboard() {
         className={[
           "pilpod-dashboard-shell__inner",
           hasWallpaper ? "pilpod-dashboard-shell__inner--wallpaper" : "",
+          hasWallpaper && staticGlass.ready
+            ? "pilpod-dashboard-shell__inner--glass-static"
+            : "",
           isUserIdle ? DASHBOARD_IDLE_SHELL_CLASS : "",
         ]
           .filter(Boolean)
@@ -202,6 +209,7 @@ export function MediaDashboard() {
           ...(wallpaper.dataUrl
             ? { backgroundImage: `url("${wallpaper.dataUrl}")` }
             : undefined),
+          ...staticGlass.styleVars,
           ...(isUserIdle
             ? {
                 ["--pilpod-idle-browser-opacity" as string]:

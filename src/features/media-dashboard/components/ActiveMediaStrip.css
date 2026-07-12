@@ -4,7 +4,10 @@
   margin-top: 1.35rem;
   margin-bottom: 1.75rem;
   opacity: 1;
-  transform: translateY(0) scale(1);
+  /* No identity transform here: `transform: translateY(0) scale(1)` renders
+     the same as none, but a transformed ancestor re-anchors descendants'
+     `background-attachment: fixed` layers (static glass) away from the
+     viewport. Transitions from `none` interpolate identically. */
   transform-origin: top center;
   transition:
     grid-template-rows 0.4s cubic-bezier(0.22, 1, 0.36, 1),
@@ -60,7 +63,11 @@
 
 .pilpod-active-media-strip__item {
   width: 100%;
-  will-change: transform;
+  /* No persistent `will-change: transform` here: it creates a containing
+     block (like a real transform), which re-anchors the glass card's
+     viewport-fixed static background and squeezes the whole wallpaper into
+     the card. useFlipList sets will-change on the node only while a FLIP
+     move is actually animating. */
 }
 
 .pilpod-active-media-strip__item .pilpod-media-item {
@@ -247,7 +254,10 @@
 
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    /* End on `none` (renders identically to an identity transform): with
+       fill-mode `both`, a persisted transform would re-anchor descendants'
+       viewport-fixed static-glass backgrounds. */
+    transform: none;
   }
 }
 

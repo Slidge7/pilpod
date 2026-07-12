@@ -329,8 +329,12 @@
   transition: flex 0.18s ease;
 }
 
+/* `:focus-visible` (not `:focus-within`): after a mouse drag the range input
+   keeps plain focus, which used to pin the slider open until a click
+   elsewhere. Mouse focus is not :focus-visible, so the slider now follows
+   hover for pointer users while keyboard (Tab) focus still holds it open. */
 .pilpod-media-item__row2:has(.pilpod-media-item__vol-block:hover) .pilpod-media-item__vol-block,
-.pilpod-media-item__row2:has(.pilpod-media-item__vol-block:focus-within) .pilpod-media-item__vol-block {
+.pilpod-media-item__row2:has(.pilpod-media-item__vol-block :focus-visible) .pilpod-media-item__vol-block {
   flex: 1;
 }
 
@@ -371,7 +375,7 @@
 }
 
 .pilpod-media-item__vol-block:hover .pilpod-media-item__vol-slider-wrap,
-.pilpod-media-item__vol-block:focus-within .pilpod-media-item__vol-slider-wrap {
+.pilpod-media-item__vol-block:has(:focus-visible) .pilpod-media-item__vol-slider-wrap {
   flex: 1 1 auto;
   width: auto;
   margin: 0 6px;
@@ -390,20 +394,33 @@
   padding: 0;
   display: block;
   --vol-fill: var(--pilpod-glass-accent);
+  /* Image form of the fill. --pilpod-vol-boost/-high are *gradients*, which
+     are images, not colors — injecting them as a color stop inside another
+     linear-gradient() is invalid CSS and turned the whole track transparent
+     above 100%. The fill is therefore painted as its own background layer. */
+  --vol-fill-img: linear-gradient(var(--vol-fill), var(--vol-fill));
 }
 
-.pilpod-media-item__vol-track--boost { --vol-fill: var(--pilpod-vol-boost); }
-.pilpod-media-item__vol-track--high  { --vol-fill: var(--pilpod-vol-high); }
+.pilpod-media-item__vol-track--boost {
+  --vol-fill: var(--pilpod-vol-pct-boost);
+  --vol-fill-img: var(--pilpod-vol-boost);
+}
+.pilpod-media-item__vol-track--high {
+  --vol-fill: var(--pilpod-vol-pct-high);
+  --vol-fill-img: var(--pilpod-vol-high);
+}
 .pilpod-media-item__vol-track--muted { --vol-fill: var(--pilpod-vol-muted); }
 
 .pilpod-media-item__vol-track::-webkit-slider-runnable-track {
   height: 3px;
   border-radius: 3px;
-  background: linear-gradient(90deg,
-    var(--vol-fill) 0%,
-    var(--vol-fill) var(--vol-pct, 50%),
-    var(--pilpod-glass-vol-rail) var(--vol-pct, 50%),
-    var(--pilpod-glass-vol-rail) 100%);
+  /* Fill layer sized to --vol-pct on top of the full-width rail layer. */
+  background-image:
+    var(--vol-fill-img),
+    linear-gradient(var(--pilpod-glass-vol-rail), var(--pilpod-glass-vol-rail));
+  background-size: var(--vol-pct, 50%) 100%, 100% 100%;
+  background-position: 0 0;
+  background-repeat: no-repeat;
 }
 
 .pilpod-media-item__vol-track::-webkit-slider-thumb {
@@ -425,7 +442,7 @@
 .pilpod-media-item__vol-track::-moz-range-progress {
   height: 3px;
   border-radius: 3px;
-  background: var(--vol-fill);
+  background: var(--vol-fill-img);
 }
 
 .pilpod-media-item__vol-track::-moz-range-thumb {
@@ -475,7 +492,7 @@
 }
 
 .pilpod-media-item__row2:has(.pilpod-media-item__vol-block:hover) .pilpod-media-item__transport,
-.pilpod-media-item__row2:has(.pilpod-media-item__vol-block:focus-within) .pilpod-media-item__transport {
+.pilpod-media-item__row2:has(.pilpod-media-item__vol-block :focus-visible) .pilpod-media-item__transport {
   width: 0;
   opacity: 0;
   pointer-events: none;

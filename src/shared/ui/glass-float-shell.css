@@ -9,11 +9,14 @@
 .pilpod-launcher__shell,
 .pilpod-browser-profile {
   position: relative;
-  background: color-mix(
+  /* Surface tint lives in a variable so the static-glass mode below can
+     re-layer it above the pre-blurred wallpaper. Same computed color. */
+  --pilpod-glass-tint: color-mix(
     in srgb,
     var(--pilpod-bg-card) calc((1 - var(--pilpod-glass-strength, 1)) * 100%),
     var(--pilpod-glass-float-surface) calc(var(--pilpod-glass-strength, 1) * 100%)
   );
+  background: var(--pilpod-glass-tint);
   border: 1px solid var(--pilpod-glass-float-border);
   backdrop-filter: blur(var(--pilpod-glass-blur-float, 4px));
   -webkit-backdrop-filter: blur(var(--pilpod-glass-blur-float, 4px));
@@ -57,7 +60,11 @@ html.dark .pilpod-browser-profile {
 .pilpod-source-tab-bar__tab:hover:not(.pilpod-source-tab-bar__tab--active),
 .pilpod-launcher--expanded .pilpod-launcher__shell,
 .pilpod-launcher__shell:focus-within {
-  background: var(--pilpod-glass-float-surface);
+  /* Only the tint variable changes on hover — the base rule (and the
+     static-glass override) both paint through var(--pilpod-glass-tint).
+     Re-declaring the `background` shorthand here would wipe the static
+     blurred-wallpaper background-image layer at higher specificity. */
+  --pilpod-glass-tint: var(--pilpod-glass-float-surface);
   box-shadow:
     0 2px 0 0 rgba(255, 255, 255, 0.95) inset,
     0 -1px 0 0 rgba(15, 23, 42, 0.09) inset,
@@ -113,4 +120,42 @@ html.dark .pilpod-source-tab-bar__tab--active {
     0 -1px 0 0 rgba(0, 0, 0, 0.35) inset,
     0 0 0 1px rgba(59, 130, 246, 0.28),
     0 6px 22px rgba(59, 130, 246, 0.18);
+}
+
+/* ── Static glass (GPU memory fix) ─────────────────────────────────────
+   The wallpaper is a static image pinned to the viewport, so blurring the
+   backdrop live is equivalent to showing a pre-blurred copy of the wallpaper
+   through the same viewport-fixed window. `--glass-static` is set once the
+   pre-blurred textures exist (useStaticGlassWallpaper.ts). Output pixels are
+   identical; Chromium stops allocating a backdrop snapshot + intermediate
+   blur surface in VRAM for every one of these elements.
+   Layer order matches backdrop-filter compositing: blurred backdrop at the
+   bottom, surface tint above it (tint painted as a gradient because plain
+   background-color always sits *below* background images). */
+.pilpod-dashboard-shell__inner--glass-static .pilpod-media-item--float:not(.pilpod-media-item--inset),
+.pilpod-dashboard-shell__inner--glass-static .pilpod-control-card.pilpod-control-card--tab,
+.pilpod-dashboard-shell__inner--glass-static .pilpod-source-tab-bar__tab,
+.pilpod-dashboard-shell__inner--glass-static .pilpod-launcher__shell,
+.pilpod-dashboard-shell__inner--glass-static .pilpod-browser-profile {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background-color: transparent;
+  background-image:
+    linear-gradient(var(--pilpod-glass-tint), var(--pilpod-glass-tint)),
+    var(--pilpod-wpb-float);
+  background-attachment: scroll, fixed;
+  background-position: 0 0, center;
+  background-size: auto, cover;
+  background-repeat: no-repeat, no-repeat;
+}
+
+/* No wallpaper → the backdrop is a uniform fill and blurring it is a no-op.
+   Skipping the filter renders identical pixels for free. */
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-media-item--float,
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-control-card.pilpod-control-card--tab,
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-source-tab-bar__tab,
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-launcher__shell,
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-browser-profile {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }

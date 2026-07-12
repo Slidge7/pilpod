@@ -61,6 +61,10 @@ export function useFlipList<T>(
         const dy = prev.top - rect.top;
 
         if (Math.abs(dx) >= 0.5 || Math.abs(dy) >= 0.5) {
+          // Promote only while the move animates — a persistent will-change
+          // acts as a containing block and breaks the glass cards'
+          // viewport-fixed static backgrounds (see ActiveMediaStrip.css).
+          node.style.willChange = "transform";
           node.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
           node.style.transition = "transform 0s, box-shadow 0s, border-color 0s";
 
@@ -68,6 +72,9 @@ export function useFlipList<T>(
             node.style.transition = FLIP_TRANSITION;
             node.style.transform = "";
           });
+          window.setTimeout(() => {
+            node.style.willChange = "";
+          }, FLIP_DURATION_MS + 50);
         }
       }
 
