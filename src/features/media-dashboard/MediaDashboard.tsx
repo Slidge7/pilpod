@@ -27,6 +27,7 @@ import {
   DASHBOARD_IDLE_BROWSER_OPACITY,
   DASHBOARD_IDLE_SHELL_CLASS,
   useDashboardIdleMode,
+  useIdleConfig,
 } from "./idle";
 import "./idle/dashboard-idle-mode.css";
 
@@ -133,7 +134,11 @@ export function MediaDashboard() {
     0,
   );
 
-  const isUserIdle = useDashboardIdleMode({ enabled: !isWidget });
+  const idleConfig = useIdleConfig();
+  const isUserIdle = useDashboardIdleMode({
+    enabled: idleConfig.enabled && !isWidget,
+    idleMs: idleConfig.ms,
+  });
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -236,6 +241,7 @@ export function MediaDashboard() {
           alwaysOnTop={alwaysOnTop}
           widgetEnabled={widgetEnabled}
           wallpaper={wallpaper}
+          idleConfig={idleConfig}
           browserTabCount={browserTabCount}
           glassStrength={glassStrength}
           onGlassStrengthChange={setGlassStrength}

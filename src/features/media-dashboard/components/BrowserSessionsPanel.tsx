@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import "./BrowserSessionsPanel.css";
 import type { AudioSessionInfoDto, BrowserTab, DetectedBrowser } from "../../../types/media";
 import {
@@ -184,6 +184,45 @@ function BrowserHeader({
 }) {
   const [refreshing, setRefreshing] = useState(false);
   const [volSliderOpen, setVolSliderOpen] = useState(false);
+  const volContainerRef = useRef<HTMLDivElement>(null);
+  const volHoverTimerRef = useRef<number | null>(null);
+
+  const clearVolTimer = () => {
+    if (volHoverTimerRef.current !== null) {
+      window.clearTimeout(volHoverTimerRef.current);
+      volHoverTimerRef.current = null;
+    }
+  };
+
+  const closeVolSlider = useCallback(() => {
+    setVolSliderOpen(false);
+    clearVolTimer();
+  }, []);
+
+  useEffect(() => {
+    if (!volSliderOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (volContainerRef.current && !volContainerRef.current.contains(e.target as Node)) {
+        closeVolSlider();
+      }
+    };
+    window.addEventListener("pointerdown", onClick);
+    return () => {
+      window.removeEventListener("pointerdown", onClick);
+      clearVolTimer();
+    };
+  }, [volSliderOpen, closeVolSlider]);
+
+  const handleVolPointerEnter = () => {
+    if (volSliderOpen) clearVolTimer();
+  };
+
+  const handleVolPointerLeave = () => {
+    if (volSliderOpen) {
+      clearVolTimer();
+      volHoverTimerRef.current = window.setTimeout(closeVolSlider, 1500);
+    }
+  };
 
   const handleRefresh = useCallback(async () => {
     if (refreshing) return;
@@ -241,6 +280,9 @@ function BrowserHeader({
 
       {hasMediaTabs && wasapiVolPct !== null && profileAudio && onMixerVolume ? (
         <div
+          ref={volContainerRef}
+          onPointerEnter={handleVolPointerEnter}
+          onPointerLeave={handleVolPointerLeave}
           className={[
             "pilpod-browser-profile__vol-unified",
             volSliderOpen ? "pilpod-browser-profile__vol-unified--open" : "",
@@ -251,7 +293,10 @@ function BrowserHeader({
           <div
             className="pilpod-browser-profile__vol-unified-icon"
             title={`Browser volume: ${wasapiVolPct}% (click to adjust)`}
-            onClick={() => setVolSliderOpen((v) => !v)}
+            onClick={() => {
+              if (volSliderOpen) closeVolSlider();
+              else setVolSliderOpen(true);
+            }}
           >
             <IconVolumeIndicator />
           </div>
@@ -296,7 +341,7 @@ function BrowserHeader({
               type="button"
               className="pilpod-browser-profile__header-btn pilpod-browser-profile__header-btn--reset-vol"
               onClick={onResetAllVolumes}
-              title="Reset all tab volumes to 100%"
+              data-action-tooltip="Reset Volume"
               aria-label="Reset all tab volumes"
             >
               <IconResetVolume />
@@ -308,7 +353,7 @@ function BrowserHeader({
               type="button"
               className="pilpod-browser-profile__header-btn pilpod-browser-profile__header-btn--pause-all"
               onClick={onPauseAll}
-              title="Pause all media tabs"
+              data-action-tooltip="Pause All"
               aria-label="Pause all media tabs"
             >
               <IconPauseAll />
@@ -320,7 +365,7 @@ function BrowserHeader({
               type="button"
               className="pilpod-browser-profile__header-btn pilpod-browser-profile__header-btn--mute-all"
               onClick={onMuteAll}
-              title="Mute all media tabs"
+              data-action-tooltip="Mute All"
               aria-label="Mute all media tabs"
             >
               <IconMuteAll />

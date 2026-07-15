@@ -119,3 +119,57 @@ pub fn read_wallpaper(
     }
     Ok(Some(read_image_as_data_url(&path)?))
 }
+
+// ── Custom (user-supplied) wallpapers ───────────────────────────────────────
+//
+// Unlike the bundled set, a custom wallpaper is a single image the user picks
+// from their own machine. There is no light/dark pairing: the same file is used
+// for both appearance modes. The frontend obtains absolute paths through the
+// OS file/folder picker (`tauri-plugin-dialog`) and stores them locally; these
+// commands turn those paths into displayable data URLs.
+
+/// Reject absurdly large files so a mistaken pick can't exhaust memory when we
+/// base64-encode the image into a data URL (~33% overhead on top of the bytes).
+const MAX_CUSTOM_IMAGE_BYTES: u64 = 64 * 1024 * 1024;
+
+/// List image files directly inside `dir` (non-recursive), returned as absolute
+/// paths sorted alphabetically. Used when the user points at a folder of images.
+#[tauri::command]
+pub fn list_folder_images(dir: String) -> Result<Vec<String>, String> {
+    let root = PathBuf::from(&dir);
+    if !root.is_dir() {
+        return Err("not a directory".to_string());
+    }
+    let entries = std::fs::read_dir(&root).map_err(|e| e.to_string())?;
+    let mut out: Vec<String> = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file() && is_image(&path) {
+            if let Some(s) = path.to_str() {
+                out.push(s.to_string());
+            }
+        }
+    }
+    out.sort();
+    Ok(out)
+}
+
+/// Read a single user-chosen image (any absolute path) as a data URL. Returns
+/// `None` if the file no longer exists (e.g. it was moved or deleted after being
+/// added). Non-image extensions and oversized files are rejected.
+#[tauri::command]
+pub fn read_image_file(path: String) -> Result<Option<String>, String> {
+    let p = PathBuf::from(&path);
+    if !p.is_file() {
+        return Ok(None);
+    }
+    if !is_image(&p) {
+        return Err("unsupported image type".to_string());
+    }
+    if let Ok(meta) = std::fs::metadata(&p) {
+        if meta.len() > MAX_CUSTOM_IMAGE_BYTES {
+            return Err("image too large".to_string());
+        }
+    }
+    Ok(Some(read_image_as_data_url(&p)?))
+}

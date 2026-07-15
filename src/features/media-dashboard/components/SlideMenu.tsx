@@ -4,8 +4,10 @@ import type { AppearanceMode } from "../../../theme/appearance";
 import { GlassStrengthSlider } from "../../../shared/ui/GlassStrengthSlider";
 import { WALLPAPER_INTERVALS } from "../constants";
 import type { WallpaperController } from "../hooks/useWallpaper";
+import { IDLE_INTERVALS, type IdleController } from "../idle";
 import {
   IconBeaker,
+  IconFolderOpen,
   IconImage,
   IconMoon,
   IconRefresh,
@@ -15,6 +17,7 @@ import {
   IconStayOnTop,
   IconSun,
   IconTimer,
+  IconTrash,
   IconWidgetMinimize,
 } from "../../../shared/ui/icons";
 
@@ -24,6 +27,7 @@ type Props = {
   alwaysOnTop: boolean;
   widgetEnabled: boolean;
   wallpaper: WallpaperController;
+  idleConfig: IdleController;
   browserTabCount: number;
   glassStrength: number;
   onGlassStrengthChange: (value: number) => void;
@@ -50,6 +54,7 @@ export function SlideMenu({
   alwaysOnTop,
   widgetEnabled,
   wallpaper,
+  idleConfig,
   browserTabCount,
   glassStrength,
   onGlassStrengthChange,
@@ -62,11 +67,13 @@ export function SlideMenu({
 }: Props) {
   const [glassDragging, setGlassDragging] = useState(false);
   const [wallpaperExpanded, setWallpaperExpanded] = useState(false);
+  const [idleExpanded, setIdleExpanded] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setGlassDragging(false);
       setWallpaperExpanded(false);
+      setIdleExpanded(false);
     }
   }, [open]);
 
@@ -168,7 +175,10 @@ export function SlideMenu({
           </button>
           <button
             type="button"
-            onClick={() => setWallpaperExpanded((v) => !v)}
+            onClick={() => {
+              setWallpaperExpanded((v) => !v);
+              if (!wallpaperExpanded) setIdleExpanded(false);
+            }}
             className={wallpaperBtnClass}
             title="Wallpaper options"
             aria-label="Wallpaper options"
@@ -177,6 +187,24 @@ export function SlideMenu({
             tabIndex={btnTabIndex}
           >
             <IconImage />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIdleExpanded((v) => !v);
+              if (!idleExpanded) setWallpaperExpanded(false);
+            }}
+            className={[
+              "pilpod-slide-menu__btn",
+              idleConfig.enabled ? "pilpod-slide-menu__btn--active" : "",
+            ].filter(Boolean).join(" ")}
+            title="Idle/Cinema mode options"
+            aria-label="Idle/Cinema mode options"
+            aria-expanded={idleExpanded}
+            aria-pressed={idleConfig.enabled}
+            tabIndex={btnTabIndex}
+          >
+            <IconTimer />
           </button>
           {import.meta.env.DEV && onOpenDevLab ? (
             <button
@@ -203,6 +231,84 @@ export function SlideMenu({
             role="group"
             aria-label="Wallpaper options"
           >
+            <div
+              className="pilpod-wallpaper-panel__source"
+              role="group"
+              aria-label="Wallpaper source"
+            >
+              <button
+                type="button"
+                className={[
+                  "pilpod-wallpaper-panel__source-btn",
+                  wallpaper.source === "default"
+                    ? "pilpod-wallpaper-panel__source-btn--active"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={() => wallpaper.setSource("default")}
+                aria-pressed={wallpaper.source === "default"}
+                title="Use the built-in wallpapers (separate light & dark sets)"
+                tabIndex={wpTabIndex}
+              >
+                Default
+              </button>
+              <button
+                type="button"
+                className={[
+                  "pilpod-wallpaper-panel__source-btn",
+                  wallpaper.source === "custom"
+                    ? "pilpod-wallpaper-panel__source-btn--active"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={() => wallpaper.setSource("custom")}
+                aria-pressed={wallpaper.source === "custom"}
+                title="Use your own images (one set for both light & dark)"
+                tabIndex={wpTabIndex}
+              >
+                Custom
+              </button>
+            </div>
+
+            {wallpaper.source === "custom" ? (
+              <div className="pilpod-wallpaper-panel__custom">
+                <button
+                  type="button"
+                  className="pilpod-wallpaper-panel__custom-btn"
+                  onClick={() => void wallpaper.addCustomFiles()}
+                  title="Choose one or more images from your machine"
+                  tabIndex={wpTabIndex}
+                >
+                  <IconImage />
+                  <span>Add images</span>
+                </button>
+                <button
+                  type="button"
+                  className="pilpod-wallpaper-panel__custom-btn"
+                  onClick={() => void wallpaper.addCustomFolder()}
+                  title="Choose a folder of images from your machine"
+                  tabIndex={wpTabIndex}
+                >
+                  <IconFolderOpen />
+                  <span>Folder</span>
+                </button>
+                {wallpaper.hasCustom ? (
+                  <button
+                    type="button"
+                    className="pilpod-wallpaper-panel__custom-btn pilpod-wallpaper-panel__custom-btn--danger"
+                    onClick={wallpaper.clearCustom}
+                    title="Remove your custom images and go back to the defaults"
+                    tabIndex={wpTabIndex}
+                    aria-label="Clear custom wallpapers"
+                  >
+                    <IconTrash />
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="pilpod-wallpaper-panel__top">
               <button
                 type="button"
@@ -219,7 +325,11 @@ export function SlideMenu({
                 className="pilpod-wallpaper-panel__name"
                 title={wallpaper.current ?? "Wallpaper off"}
               >
-                {noWallpapers ? "No wallpapers" : prettyName(wallpaper.current)}
+                {noWallpapers
+                  ? wallpaper.source === "custom"
+                    ? "Add images to start"
+                    : "No wallpapers"
+                  : prettyName(wallpaper.currentLabel)}
               </span>
               <button
                 type="button"
@@ -314,6 +424,63 @@ export function SlideMenu({
                     aria-pressed={wallpaper.intervalId === opt.id}
                     title={`Switch every ${opt.label}`}
                     tabIndex={wpTabIndex}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {idleExpanded ? (
+          <div
+            className="pilpod-wallpaper-panel"
+            role="group"
+            aria-label="Idle mode options"
+          >
+            <div className="pilpod-wallpaper-panel__toggles">
+              <button
+                type="button"
+                className={[
+                  "pilpod-wallpaper-panel__toggle",
+                  idleConfig.enabled
+                    ? "pilpod-wallpaper-panel__toggle--active"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={idleConfig.toggleEnabled}
+                aria-pressed={idleConfig.enabled}
+                title={idleConfig.enabled ? "Turn idle mode off" : "Turn idle mode on"}
+                tabIndex={open && idleExpanded ? 0 : -1}
+              >
+                <IconTimer />
+                <span>{idleConfig.enabled ? "On" : "Off"}</span>
+              </button>
+            </div>
+            {idleConfig.enabled ? (
+              <div
+                className="pilpod-wallpaper-panel__intervals"
+                role="group"
+                aria-label="Idle timeout interval"
+              >
+                {IDLE_INTERVALS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={[
+                      "pilpod-wallpaper-panel__chip",
+                      idleConfig.intervalId === opt.id
+                        ? "pilpod-wallpaper-panel__chip--active"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    onClick={() => idleConfig.setIntervalId(opt.id)}
+                    aria-pressed={idleConfig.intervalId === opt.id}
+                    title={`Fade out after ${opt.label}`}
+                    tabIndex={open && idleExpanded ? 0 : -1}
                   >
                     {opt.label}
                   </button>

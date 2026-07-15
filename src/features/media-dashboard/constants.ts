@@ -7,6 +7,31 @@ export const WALLPAPER_RANDOM_STORAGE_KEY = "pilpod-wallpaper-random";
 export const WALLPAPER_AUTOSWITCH_STORAGE_KEY = "pilpod-wallpaper-autoswitch";
 export const WALLPAPER_INTERVAL_STORAGE_KEY = "pilpod-wallpaper-interval";
 
+/**
+ * Wallpaper source. "default" uses the bundled light/dark pairs; "custom" uses
+ * the user's own images (a single list shared by both appearance modes).
+ */
+export type WallpaperSource = "default" | "custom";
+export const WALLPAPER_SOURCE_STORAGE_KEY = "pilpod-wallpaper-source";
+export const WALLPAPER_DEFAULT_SOURCE: WallpaperSource = "default";
+/** JSON array of absolute image paths chosen by the user. */
+export const WALLPAPER_CUSTOM_PATHS_STORAGE_KEY = "pilpod-wallpaper-custom-paths";
+/** Currently selected custom image path, or "" / missing when off. */
+export const WALLPAPER_CUSTOM_SELECTION_STORAGE_KEY =
+  "pilpod-wallpaper-custom-selection";
+/** Last folder the custom list was populated from (informational). */
+export const WALLPAPER_CUSTOM_FOLDER_STORAGE_KEY =
+  "pilpod-wallpaper-custom-folder";
+/** Image extensions offered in the custom-image file picker. */
+export const WALLPAPER_IMAGE_EXTENSIONS = [
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "bmp",
+  "gif",
+] as const;
+
 /** User-selectable auto-switch intervals (id + label + milliseconds). */
 export const WALLPAPER_INTERVALS = [
   { id: "5m", label: "5m", ms: 5 * 60_000 },
