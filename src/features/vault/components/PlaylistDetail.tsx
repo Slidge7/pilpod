@@ -1,13 +1,17 @@
 import { useState } from "react";
 import type { MediaItem, Playlist } from "../types";
+import type { DetectedBrowser } from "../../../types/media";
 import { formatDuration } from "../../media-dashboard/lib/browserMedia";
 import { EmptyState } from "./EmptyState";
 import {
   IconChevronRight,
   IconMusicNote,
   IconOpenInTab,
+  IconPlay,
   IconTrash,
 } from "../../../shared/ui/icons";
+import { PlaylistPlayerControls } from "../../playlist-player/components/PlaylistPlayerControls";
+import type { PlaylistPlayerApi } from "../../playlist-player/hooks/usePlaylistPlayer";
 
 function letterTile(text: string): string {
   const c = text.trim().charAt(0).toUpperCase();
@@ -24,6 +28,8 @@ export function PlaylistDetail({
   playlist,
   items,
   canOpen,
+  browsers,
+  player,
   onBack,
   onOpenItem,
   onRemoveItem,
@@ -33,6 +39,8 @@ export function PlaylistDetail({
   playlist: Playlist;
   items: MediaItem[];
   canOpen: boolean;
+  browsers?: DetectedBrowser[];
+  player?: PlaylistPlayerApi;
   onBack: () => void;
   onOpenItem: (m: MediaItem) => void;
   onRemoveItem: (itemId: string) => void;
@@ -63,6 +71,10 @@ export function PlaylistDetail({
   };
 
   const total = totalDuration(items);
+
+  const isLivePlaylist =
+    player != null && player.player.active && player.player.playlistId === playlist.id;
+  const nowPlayingItemId = isLivePlaylist ? player.player.currentItemId ?? null : null;
 
   return (
     <div className="pilpod-vault-list">
@@ -113,6 +125,10 @@ export function PlaylistDetail({
         </span>
       </div>
 
+      {player && browsers ? (
+        <PlaylistPlayerControls playlist={playlist} browsers={browsers} api={player} />
+      ) : null}
+
       {items.length === 0 ? (
         <EmptyState
           icon={<IconMusicNote />}
@@ -124,12 +140,14 @@ export function PlaylistDetail({
           {items.map((m, i) => {
             const title = m.mediaTitle?.trim() || m.pageTitle?.trim() || m.url;
             const art = m.artworkUrl?.trim() || null;
+            const isNowPlaying = nowPlayingItemId === m.id;
             return (
               <li
                 key={m.id}
                 className={[
                   "pilpod-vault-row",
                   dragId === m.id ? "pilpod-vault-row--dragging" : "",
+                  isNowPlaying ? "pilpod-vault-row--now-playing" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -163,6 +181,21 @@ export function PlaylistDetail({
                     </span>
                   </button>
                   <div className="pilpod-vault-row__actions">
+                    {isNowPlaying ? (
+                      <span className="pilpod-vault-row__now-playing-badge" aria-live="polite">
+                        <IconMusicNote className="pilpod-icon--sm" /> playing
+                      </span>
+                    ) : isLivePlaylist && player ? (
+                      <button
+                        type="button"
+                        className="pilpod-vault-row__icon"
+                        title="Play this track now"
+                        aria-label={`Play ${title} now`}
+                        onClick={() => void player.playItem(m.id)}
+                      >
+                        <IconPlay className="pilpod-icon--sm" />
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="pilpod-vault-row__icon"

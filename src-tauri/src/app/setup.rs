@@ -52,6 +52,9 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     let ws_connections = crate::browser_bridge::new_ws_connection_map();
 
+    // Playlist player session state (reads vault, drives the bridge).
+    crate::playlist_player::init(app);
+
     let sync_flag: crate::browser_bridge::SyncRequestedFlag = std::sync::Arc::new(
         std::sync::atomic::AtomicBool::new(false),
     );

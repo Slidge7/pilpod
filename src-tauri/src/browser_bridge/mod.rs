@@ -17,7 +17,7 @@ pub use protocol::CONNECTED_WINDOW_SECS;
 #[allow(unused_imports)]
 pub use security::set_pairing_token;
 
-pub use connections::{new_ws_connection_map, WsConnectionMap};
+pub use connections::{new_ws_connection_map, push_ws_frame, ws_supports_nav, WsConnectionMap};
 pub use handler::{invalidate_slots_on_resume, BridgeContext};
 pub use system_events::spawn_power_listener;
 

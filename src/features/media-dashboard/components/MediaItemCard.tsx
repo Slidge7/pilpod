@@ -71,6 +71,16 @@ type Props = {
   /** Optional accessory buttons rendered right of PiP in the transport row. */
   saveButton?: ReactNode;
   downloadButton?: ReactNode;
+  /**
+   * Hide the in-tab previous/next (media-session) buttons. Used by the
+   * playlist player card, whose wrapper owns track navigation.
+   */
+  hideTrackTransport?: boolean;
+  /**
+   * Hide the reload/close tab buttons. Used by the playlist player card —
+   * the tab's lifecycle belongs to the playlist session there (stop closes it).
+   */
+  hideTabActions?: boolean;
 };
 
 function getStateBadgeClass(tabState?: string): string {
@@ -115,6 +125,8 @@ export function MediaItemCard({
   onPip,
   saveButton,
   downloadButton,
+  hideTrackTransport = false,
+  hideTabActions = false,
 }: Props) {
   const playing = isTabPlaying(tab);
   const hasMediaControls = tabHasMediaControls(tab);
@@ -352,24 +364,28 @@ export function MediaItemCard({
                 <div className="pilpod-media-item__state-dot" />
                 <span>{badgeLabel}</span>
               </div>
-              <button
-                type="button"
-                className="pilpod-media-item__icon-btn"
-                onClick={handleReload}
-                title="Reload"
-                aria-label="Reload"
-              >
-                <IconReload className={reloadSpin ? "pilpod-media-item__icon--spin" : undefined} />
-              </button>
-              <button
-                type="button"
-                className={`pilpod-media-item__icon-btn pilpod-media-item__icon-btn--danger${closeConfirm ? " pilpod-media-item__icon-btn--confirm" : ""}`}
-                onClick={handleClose}
-                title={closeTitle}
-                aria-label="Close tab"
-              >
-                <IconX />
-              </button>
+              {!hideTabActions ? (
+                <>
+                  <button
+                    type="button"
+                    className="pilpod-media-item__icon-btn"
+                    onClick={handleReload}
+                    title="Reload"
+                    aria-label="Reload"
+                  >
+                    <IconReload className={reloadSpin ? "pilpod-media-item__icon--spin" : undefined} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`pilpod-media-item__icon-btn pilpod-media-item__icon-btn--danger${closeConfirm ? " pilpod-media-item__icon-btn--confirm" : ""}`}
+                    onClick={handleClose}
+                    title={closeTitle}
+                    aria-label="Close tab"
+                  >
+                    <IconX />
+                  </button>
+                </>
+              ) : null}
             </div>
           </div>
 
@@ -411,7 +427,7 @@ export function MediaItemCard({
             ) : null}
 
             <div className="pilpod-media-item__transport">
-              {tab.media && canPrev ? (
+              {tab.media && canPrev && !hideTrackTransport ? (
                 <button
                   type="button"
                   className="pilpod-media-item__icon-btn pilpod-media-item__transport-btn"
@@ -422,7 +438,7 @@ export function MediaItemCard({
                   <IconSkipBack />
                 </button>
               ) : null}
-              {tab.media && canNext ? (
+              {tab.media && canNext && !hideTrackTransport ? (
                 <button
                   type="button"
                   className="pilpod-media-item__icon-btn pilpod-media-item__transport-btn"

@@ -43,6 +43,8 @@ pub type WsOutbound = mpsc::UnboundedSender<String>;
 struct Connection {
     /// Sink for frames destined to this profile's WebSocket writer task.
     out: WsOutbound,
+    /// Negotiated on `hello`: client understands `open`/`nav` frames.
+    nav: bool,
 }
 
 impl Connection {
@@ -60,10 +62,20 @@ pub struct SessionManager {
 }
 
 impl SessionManager {
-    fn register(&self, browser_id: &str, out: WsOutbound) {
+    fn register(&self, browser_id: &str, out: WsOutbound, nav: bool) {
         if let Ok(mut sessions) = self.sessions.lock() {
-            sessions.insert(browser_id.to_string(), Connection { out });
+            sessions.insert(browser_id.to_string(), Connection { out, nav });
         }
+    }
+
+    /// True when the profile has a live session whose client negotiated the
+    /// `nav` capability on `hello`.
+    fn supports_nav(&self, browser_id: &str) -> bool {
+        self.sessions
+            .lock()
+            .ok()
+            .map(|sessions| sessions.get(browser_id).is_some_and(|c| c.nav))
+            .unwrap_or(false)
     }
 
     fn unregister(&self, browser_id: &str) {
@@ -123,8 +135,25 @@ pub fn new_ws_connection_map() -> WsConnectionMap {
     Arc::new(SessionManager::default())
 }
 
-pub fn register_ws_connection(map: &WsConnectionMap, browser_id: &str, tx: WsOutbound) {
-    map.register(browser_id, tx);
+pub fn register_ws_connection(
+    map: &WsConnectionMap,
+    browser_id: &str,
+    tx: WsOutbound,
+    nav: bool,
+) {
+    map.register(browser_id, tx, nav);
+}
+
+/// True when `browser_id` has a live session that negotiated `open`/`nav`.
+pub fn ws_supports_nav(map: &WsConnectionMap, browser_id: &str) -> bool {
+    map.supports_nav(browser_id)
+}
+
+/// Push one typed frame to a specific profile. Returns false when the browser
+/// has no live socket. Used by the playlist player for `open`/`nav`, which have
+/// no queued-command fallback (a stale open/nav is worse than a failed one).
+pub fn push_ws_frame(map: &WsConnectionMap, browser_id: &str, frame: &ServerMsg) -> bool {
+    map.send_to(browser_id, &frame.to_frame())
 }
 
 pub fn unregister_ws_connection(map: &WsConnectionMap, browser_id: &str) {

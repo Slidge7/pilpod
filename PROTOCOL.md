@@ -24,7 +24,9 @@
 { "t":"hello", "v":2, "browserId":"<uuid>",
   "browser":{ "name":"Chrome", "type":"chrome", "version":"126" },
   "extVersion":"3.0.0", "token":"<pairing-token|null>",
-  "caps":{ "delta":true, "progress":true } }
+  "caps":{ "delta":true, "progress":true, "nav":true } }
+//   caps.nav: client understands the `open`/`nav` frames (playlist player).
+//   Absent/false ⇒ the app disables playlist playback for this browser.
 
 // full — complete snapshot. Sent right after hello, and on every resync request.
 { "t":"full", "rev":1, "tabs":[ <TabState>, ... ] }
@@ -41,6 +43,11 @@
 
 // pong — reply to ping.
 { "t":"pong", "seq":<n> }
+
+// opened — reply to an `open` frame: identity of the created player tab.
+// ok:false carries a human-readable error (window create failed, url rejected…).
+{ "t":"opened", "id":"<open-frame-id>", "ok":true,
+  "tabId":123, "windowId":4, "error":null }
 
 // bye — best-effort on unload.
 { "t":"bye" }
@@ -88,6 +95,17 @@ tab** when any field changes — per-field diffing is not worth the JS CPU.
 
 // ping
 { "t":"ping", "seq":<n> }
+
+// open — create the playlist player tab (requires hello.caps.nav).
+// newWindow:true ⇒ chrome.windows.create({url}); else chrome.tabs.create({url}).
+// Client MUST reply with `opened` carrying the created tabId/windowId; the new
+// tab then flows into normal delta sync like any other tab.
+{ "t":"open", "id":"o-1", "url":"https://…", "newWindow":true }
+
+// nav — navigate an existing tab to a new URL (requires hello.caps.nav).
+// chrome.tabs.update(tabId, {url}). No dedicated reply — the resulting tab
+// change arrives as a normal delta. Unknown tabId ⇒ `ack {ok:false}` optional.
+{ "t":"nav", "id":"n-2", "tabId":123, "url":"https://…" }
 ```
 
 ### `action` enum (shared, both sides)

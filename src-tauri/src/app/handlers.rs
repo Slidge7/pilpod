@@ -50,6 +50,13 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::vault::commands::vault_export,
         crate::vault::commands::vault_import,
         crate::vault::open::vault_open_entry,
+        crate::playlist_player::commands::player_get_state,
+        crate::playlist_player::commands::player_start,
+        crate::playlist_player::commands::player_stop,
+        crate::playlist_player::commands::player_next,
+        crate::playlist_player::commands::player_prev,
+        crate::playlist_player::commands::player_play_item,
+        crate::playlist_player::commands::player_set_modes,
     ])
 }
 
@@ -105,5 +112,13 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::vault::commands::vault_import,
         // Smart open is Windows-only; non-Windows gets the stub.
         crate::platform::stub_commands::vault_open_entry,
+        // Playlist player rides the browser bridge — Windows-only, stubs here.
+        crate::platform::stub_commands::player_get_state,
+        crate::platform::stub_commands::player_start,
+        crate::platform::stub_commands::player_stop,
+        crate::platform::stub_commands::player_next,
+        crate::platform::stub_commands::player_prev,
+        crate::platform::stub_commands::player_play_item,
+        crate::platform::stub_commands::player_set_modes,
     ])
 }

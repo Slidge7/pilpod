@@ -163,3 +163,60 @@ pub fn dl_retry(_task_id: String) -> Result<String, String> {
 pub fn vault_open_entry(_url: String, _normalized_url: String) -> Result<String, String> {
     Err("Opening saved entries requires Windows".into())
 }
+
+// ---- Playlist player stubs (rides the Windows-only browser bridge) ----
+
+const PLAYER_WIN_ONLY: &str = "Playlist playback requires Windows";
+
+#[tauri::command]
+pub fn player_get_state() -> serde_json::Value {
+    serde_json::json!({
+        "active": false,
+        "status": "idle",
+        "trackNumber": 0,
+        "totalTracks": 0,
+        "repeat": "off",
+        "shuffle": false,
+        "autoPlay": true,
+    })
+}
+
+#[tauri::command]
+pub fn player_start(
+    _playlist_id: String,
+    _browser_id: String,
+    _shuffle: Option<bool>,
+    _repeat: Option<String>,
+    _auto_play: Option<bool>,
+) -> Result<(), String> {
+    Err(PLAYER_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn player_stop(_close_tab: bool) -> Result<(), String> {
+    Err(PLAYER_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn player_next() -> Result<(), String> {
+    Err(PLAYER_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn player_prev() -> Result<(), String> {
+    Err(PLAYER_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn player_play_item(_item_id: String) -> Result<(), String> {
+    Err(PLAYER_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn player_set_modes(
+    _repeat: Option<String>,
+    _shuffle: Option<bool>,
+    _auto_play: Option<bool>,
+) -> Result<(), String> {
+    Err(PLAYER_WIN_ONLY.into())
+}

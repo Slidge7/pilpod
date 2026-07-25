@@ -221,7 +221,7 @@ fn handle_client_msg(
     out_tx: &tokio::sync::mpsc::UnboundedSender<String>,
 ) -> ControlFlow<()> {
     match msg {
-        ClientMsg::Hello { v, browser_id, browser, ext_version, token, .. } => {
+        ClientMsg::Hello { v, browser_id, browser, ext_version, token, caps } => {
             if negotiate(v).is_err() {
                 eprintln!("[browser-bridge-ws] unsupported protocol v{v}");
                 return ControlFlow::Break(());
@@ -265,7 +265,7 @@ fn handle_client_msg(
                 );
             }
 
-            register_ws_connection(ws_connections, &browser_id, out_tx.clone());
+            register_ws_connection(ws_connections, &browser_id, out_tx.clone(), caps.nav);
             clear_reconnecting(&ctx.reconnecting, &browser_id);
             emit_on_connection_change(
                 &ctx.app,
@@ -347,6 +347,16 @@ fn handle_client_msg(
 
         ClientMsg::Ack { .. } => ControlFlow::Continue(()),
 
+        // Player-tab creation result — hand off to the playlist player.
+        ClientMsg::Opened { id, ok, tab_id, window_id, error } => {
+            if let Some(browser_id) = session.browser_id.as_deref() {
+                crate::playlist_player::on_opened(
+                    &ctx.app, browser_id, &id, ok, tab_id, window_id, error,
+                );
+            }
+            ControlFlow::Continue(())
+        }
+
         ClientMsg::Bye => ControlFlow::Break(()),
     }
 }
@@ -359,6 +369,11 @@ fn ingest_and_push(
     is_prog: bool,
 ) {
     let Some(id) = session.browser_id.clone() else { return };
+
+    // Let the playlist player observe the merged tab set (track-end detection,
+    // player-tab adoption/loss). Cheap no-op when no playlist session is active.
+    crate::playlist_player::observe_tabs(&ctx.app, &id, &session.tabs, &ctx.ws_connections);
+
     let result = apply_ingest(
         BridgeIngest {
             browser_id: id,

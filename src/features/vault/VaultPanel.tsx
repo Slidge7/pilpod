@@ -25,11 +25,14 @@ export function VaultPanel({
   api,
   browsers,
   forceSub,
+  player,
 }: {
   api: VaultApi;
   browsers: DetectedBrowser[];
   /** When set, locks the panel to this sub-view and hides the internal tab bar. */
   forceSub?: SubView;
+  /** Playlist player session (mounted once in MediaDashboard). */
+  player?: import("../playlist-player/hooks/usePlaylistPlayer").PlaylistPlayerApi;
 }) {
   const [internalSub, setInternalSub] = useState<SubView>("bookmarks");
   const sub = forceSub ?? internalSub;
@@ -184,6 +187,8 @@ export function VaultPanel({
             playlist={openPlaylist}
             items={openPlaylistItems}
             canOpen={VAULT_OPEN_ENABLED}
+            browsers={browsers}
+            player={player}
             onBack={() => setOpenPlaylistId(null)}
             onOpenItem={openMedia}
             onRemoveItem={(itemId) => void api.removeFromPlaylist(openPlaylist.id, itemId)}
@@ -246,6 +251,9 @@ export function VaultPanel({
           <PlaylistList
             playlists={vault.playlists}
             itemCountFor={(p: Playlist) => p.itemIds.length}
+            playingPlaylistId={
+              player?.player.active ? player.player.playlistId ?? null : null
+            }
             onOpen={(p) => setOpenPlaylistId(p.id)}
             onCreate={(name, emoji) => void api.createPlaylist(name, emoji)}
             onDelete={(id) => void api.deletePlaylist(id)}

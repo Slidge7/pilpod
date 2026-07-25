@@ -163,6 +163,12 @@ type Props = {
     browserDisplayName: string,
     isMediaTab: boolean,
   ) => TabAccessories;
+  /**
+   * Playlist player mini card, rendered under the search bar and above the
+   * active-media strip. Passed as a node so this panel stays decoupled from
+   * the playlist-player feature.
+   */
+  playerSlot?: ReactNode;
 };
 
 function BrowserHeader({
@@ -960,6 +966,7 @@ export function BrowserSessionsPanel({
   onMuteAll,
   onResetAllVolumes,
   renderTabAccessories,
+  playerSlot,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [excludedSites, setExcludedSites] = useState<Set<string>>(() => new Set());
@@ -1099,6 +1106,8 @@ export function BrowserSessionsPanel({
         onExcludeSite={handleExcludeSite}
         onExcludeBrowser={handleExcludeBrowser}
       />
+
+      {playerSlot}
 
       <ActiveMediaStrip
         browsers={browsers}

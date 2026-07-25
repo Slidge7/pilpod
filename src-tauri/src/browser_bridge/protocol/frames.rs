@@ -115,6 +115,10 @@ pub struct HelloCaps {
     pub delta: bool,
     #[serde(default)]
     pub progress: bool,
+    /// Client supports `open`/`nav` frames (playlist player tab control).
+    /// Defaults false so pre-nav companions are detected and gated cleanly.
+    #[serde(default)]
+    pub nav: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -165,6 +169,19 @@ pub enum ClientMsg {
 
     #[serde(rename = "pong")]
     Pong { seq: u64 },
+
+    /// Reply to a server `open` frame: the created player tab's identity.
+    #[serde(rename = "opened", rename_all = "camelCase")]
+    Opened {
+        id: String,
+        ok: bool,
+        #[serde(default)]
+        tab_id: Option<i64>,
+        #[serde(default)]
+        window_id: Option<i64>,
+        #[serde(default)]
+        error: Option<String>,
+    },
 
     #[serde(rename = "bye")]
     Bye,
@@ -225,6 +242,26 @@ pub enum ServerMsg {
 
     #[serde(rename = "ping")]
     Ping { seq: u64 },
+
+    /// Open `url` in a new tab (optionally a new window) and reply with
+    /// `opened` carrying the created tab's `tabId`/`windowId`. Used by the
+    /// playlist player to create its dedicated player tab.
+    #[serde(rename = "open", rename_all = "camelCase")]
+    Open {
+        id: String,
+        url: String,
+        #[serde(default)]
+        new_window: bool,
+    },
+
+    /// Navigate an existing tab to `url` (`chrome.tabs.update(tabId, {url})`).
+    /// The playlist player's track changes ride on this frame.
+    #[serde(rename = "nav", rename_all = "camelCase")]
+    Nav {
+        id: String,
+        tab_id: i64,
+        url: String,
+    },
 }
 
 impl ServerMsg {
@@ -310,6 +347,63 @@ mod tests {
             ServerMsg::Welcome { caps, .. } => assert_eq!(caps.progress_hz, 5),
             _ => panic!("wrong variant"),
         }
+    }
+
+    #[test]
+    fn open_and_nav_frames_round_trip() {
+        let open = ServerMsg::Open {
+            id: "o-1".into(),
+            url: "https://example.com/watch?v=1".into(),
+            new_window: true,
+        };
+        let json = open.to_frame();
+        assert!(json.contains("\"t\":\"open\""));
+        assert!(json.contains("\"newWindow\":true"));
+        let back: ServerMsg = serde_json::from_str(&json).expect("decode open");
+        assert!(matches!(back, ServerMsg::Open { new_window: true, .. }));
+
+        let nav = ServerMsg::Nav {
+            id: "n-2".into(),
+            tab_id: 42,
+            url: "https://example.com/watch?v=2".into(),
+        };
+        let json = nav.to_frame();
+        assert!(json.contains("\"t\":\"nav\""));
+        assert!(json.contains("\"tabId\":42"));
+        let back: ServerMsg = serde_json::from_str(&json).expect("decode nav");
+        assert!(matches!(back, ServerMsg::Nav { tab_id: 42, .. }));
+    }
+
+    #[test]
+    fn opened_decodes_with_and_without_ids() {
+        let raw = r#"{"t":"opened","id":"o-1","ok":true,"tabId":7,"windowId":3,"error":null}"#;
+        let msg: ClientMsg = serde_json::from_str(raw).expect("decode opened");
+        match msg {
+            ClientMsg::Opened { ok, tab_id, window_id, .. } => {
+                assert!(ok);
+                assert_eq!(tab_id, Some(7));
+                assert_eq!(window_id, Some(3));
+            }
+            _ => panic!("wrong variant"),
+        }
+        let raw = r#"{"t":"opened","id":"o-2","ok":false,"error":"blocked"}"#;
+        let msg: ClientMsg = serde_json::from_str(raw).expect("decode failed opened");
+        match msg {
+            ClientMsg::Opened { ok, tab_id, error, .. } => {
+                assert!(!ok);
+                assert!(tab_id.is_none());
+                assert_eq!(error.as_deref(), Some("blocked"));
+            }
+            _ => panic!("wrong variant"),
+        }
+    }
+
+    #[test]
+    fn hello_caps_nav_defaults_false() {
+        // Pre-nav companions omit the flag entirely — must decode as false.
+        let raw = r#"{"delta":true,"progress":true}"#;
+        let caps: HelloCaps = serde_json::from_str(raw).expect("decode caps");
+        assert!(!caps.nav);
     }
 
     #[test]

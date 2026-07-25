@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrowserDockBar } from "./components/BrowserDockBar";
 import { invoke } from "@tauri-apps/api/core";
 import { DownloadPanel, DOWNLOADER_UI_ENABLED, useDownloader } from "../downloader";
 import { downloadStatusForUrl } from "../downloader/lib";
 import { TabDownloadButton } from "../downloader/components/TabDownloadButton";
 import { VaultPanel, useVault, VAULT_UI_ENABLED } from "../vault";
+import { PlaylistPlayerCard, usePlaylistPlayer } from "../playlist-player";
 import { normalizeUrl } from "../vault/lib/normalizeUrl";
 import { SaveTabButton } from "../vault/components/SaveTabButton";
 import { DownloadDockCard } from "../downloader/components/DownloadDockCard";
@@ -83,6 +84,27 @@ export function MediaDashboard() {
 
   // Vault state (source of truth in Rust); mounted once, shared across views.
   const vault = useVault();
+
+  // Playlist player session (source of truth in Rust); mounted once, shared
+  // by the playlist page and the dashboard mini card.
+  const playlistPlayer = usePlaylistPlayer();
+
+  // The player tab lives ONLY in the playlist card: hide it from the browser
+  // cards and the active-media strip. Identity-preserving when inactive so the
+  // memoized panel tree doesn't re-render for nothing.
+  const dashboardBrowsers = useMemo(() => {
+    const p = playlistPlayer.player;
+    if (!p.active || p.tabId == null || !p.browserId) return browsers;
+    return browsers.map((b) =>
+      b.id === p.browserId && b.tabs.some((t) => t.tabId === p.tabId)
+        ? {
+            ...b,
+            tabs: b.tabs.filter((t) => t.tabId !== p.tabId),
+            tabCount: Math.max(0, b.tabCount - 1),
+          }
+        : b,
+    );
+  }, [browsers, playlistPlayer.player]);
 
   // Downloader state — lifted so the floating card + in-tab buttons share one
   // snapshot with the full Download panel (single event listener).
@@ -273,7 +295,12 @@ export function MediaDashboard() {
           ) : activeTab === "vault" && VAULT_UI_ENABLED ? (
             <VaultPanel api={vault} browsers={browsers} forceSub="bookmarks" />
           ) : activeTab === "playlist" && VAULT_UI_ENABLED ? (
-            <VaultPanel api={vault} browsers={browsers} forceSub="playlists" />
+            <VaultPanel
+              api={vault}
+              browsers={browsers}
+              forceSub="playlists"
+              player={playlistPlayer}
+            />
           ) : (
             <>
               <DownloadDockCard
@@ -284,7 +311,7 @@ export function MediaDashboard() {
                 onClear={dl.clearDone}
               />
               <BrowserSessionsPanel
-                browsers={browsers}
+                browsers={dashboardBrowsers}
                 pendingKeys={browserPendingKeys}
                 browserAudio={browserAudio}
                 onPlayPause={toggleBrowserTab}
@@ -302,6 +329,22 @@ export function MediaDashboard() {
                 onMuteAll={() => void muteAllBrowserTabs()}
                 onResetAllVolumes={() => void resetAllBrowserTabVolumes()}
                 renderTabAccessories={renderTabAccessories}
+                playerSlot={
+                  <PlaylistPlayerCard
+                    api={playlistPlayer}
+                    browsers={browsers}
+                    playlists={vault.vault.playlists}
+                    pendingKeys={browserPendingKeys}
+                    onPlayPause={toggleBrowserTab}
+                    onFocusTab={focusBrowserTab}
+                    onReload={reloadBrowserTab}
+                    onClose={closeBrowserTab}
+                    onSeekTab={seekBrowserTab}
+                    onSetTabVolume={setTabVolumeBrowserTab}
+                    onPip={pipBrowserTab}
+                    renderTabAccessories={renderTabAccessories}
+                  />
+                }
               />
             </>
           )}

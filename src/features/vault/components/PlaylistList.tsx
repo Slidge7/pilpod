@@ -6,12 +6,15 @@ import { IconMusicNote, IconChevronRight, IconTrash } from "../../../shared/ui/i
 export function PlaylistList({
   playlists,
   itemCountFor,
+  playingPlaylistId,
   onOpen,
   onCreate,
   onDelete,
 }: {
   playlists: Playlist[];
   itemCountFor: (p: Playlist) => number;
+  /** Id of the playlist currently playing through the player (if any). */
+  playingPlaylistId?: string | null;
   onOpen: (p: Playlist) => void;
   onCreate: (name: string, emoji: string | null) => void;
   onDelete: (id: string) => void;
@@ -84,7 +87,15 @@ export function PlaylistList({
       ) : (
         <ul className="pilpod-vault-rows">
           {playlists.map((p) => (
-            <li key={p.id} className="pilpod-vault-row">
+            <li
+              key={p.id}
+              className={[
+                "pilpod-vault-row",
+                playingPlaylistId === p.id ? "pilpod-vault-row--playlist-live" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
               <div className="pilpod-vault-row__main">
                 <div className="pilpod-vault-row__thumb pilpod-vault-row__thumb--emoji" aria-hidden>
                   {p.emoji || <IconMusicNote className="pilpod-icon--sm" />}
@@ -100,6 +111,11 @@ export function PlaylistList({
                   </span>
                 </button>
                 <div className="pilpod-vault-row__actions">
+                  {playingPlaylistId === p.id ? (
+                    <span className="pilpod-vault-row__now-playing-badge" aria-label="Currently playing">
+                      <IconMusicNote className="pilpod-icon--sm" /> playing
+                    </span>
+                  ) : null}
                   <button
                     type="button"
                     className={[
