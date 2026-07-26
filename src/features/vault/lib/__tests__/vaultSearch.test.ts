@@ -5,6 +5,9 @@ import {
   orderBookmarks,
   collectTags,
   searchMediaItems,
+  countByCollection,
+  filterBookmarksByCollection,
+  UNFILED,
 } from "../vaultSearch";
 import type { Bookmark, MediaItem } from "../../types";
 
@@ -17,6 +20,7 @@ function bm(over: Partial<Bookmark> & { id: string }): Bookmark {
     openCount: 0,
     pinned: false,
     tags: [],
+    collectionIds: [],
     ...over,
   };
 }
@@ -69,6 +73,46 @@ describe("filterBookmarksByTags", () => {
 
   it("empty tag set returns all", () => {
     expect(filterBookmarksByTags([bm({ id: "a" })], new Set())).toHaveLength(1);
+  });
+});
+
+describe("filterBookmarksByCollection", () => {
+  const filed = bm({ id: "filed", collectionIds: ["c1"] });
+  const multi = bm({ id: "multi", collectionIds: ["c1", "c2"] });
+  const unfiled = bm({ id: "unfiled" });
+  const list = [filed, multi, unfiled];
+
+  it("null returns every bookmark", () => {
+    expect(filterBookmarksByCollection(list, null)).toHaveLength(3);
+  });
+
+  it("UNFILED returns only bookmarks in no collection", () => {
+    expect(filterBookmarksByCollection(list, UNFILED).map((b) => b.id)).toEqual([
+      "unfiled",
+    ]);
+  });
+
+  it("an id returns every member, including multi-collection bookmarks", () => {
+    expect(filterBookmarksByCollection(list, "c1").map((b) => b.id)).toEqual([
+      "filed",
+      "multi",
+    ]);
+    expect(filterBookmarksByCollection(list, "c2").map((b) => b.id)).toEqual(["multi"]);
+    expect(filterBookmarksByCollection(list, "ghost")).toHaveLength(0);
+  });
+});
+
+describe("countByCollection", () => {
+  it("counts each membership and the unfiled bucket separately", () => {
+    const { byId, unfiled } = countByCollection([
+      bm({ id: "a", collectionIds: ["c1"] }),
+      bm({ id: "b", collectionIds: ["c1", "c2"] }),
+      bm({ id: "c" }),
+      bm({ id: "d" }),
+    ]);
+    expect(byId.get("c1")).toBe(2);
+    expect(byId.get("c2")).toBe(1);
+    expect(unfiled).toBe(2);
   });
 });
 

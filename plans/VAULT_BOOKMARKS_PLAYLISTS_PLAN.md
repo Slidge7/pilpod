@@ -100,6 +100,29 @@ Deduplication key: `normalized_url` (lowercased host, stripped tracking params, 
 ordering of remaining query params — implemented in `vault/url.rs`, mirrored in
 `src/features/vault/lib/normalizeUrl.ts` with a shared test-vector file so both sides agree).
 
+### 3.2b Bookmark collections: membership lives on the bookmark
+
+Bookmark collections are named groups (`BookmarkCollection`: id, name, emoji, timestamps)
+that hold **no member list**. Membership is a `collection_ids: Vec<String>` field on the
+*bookmark* — the opposite direction from playlists, deliberately:
+
+- **Performance.** The hot query is "which collections is *this open tab* in?", asked once
+  per tab row every time the save menu renders. Reading a field off the already-located
+  bookmark is O(1); scanning every collection's member list would be O(collections x members).
+- **Referential integrity.** Deleting a bookmark can't leave a dangling id anywhere, so
+  there is no bookmark equivalent of `gc_orphan_media`. Deleting a collection is one
+  `retain` pass over the bookmarks, and the bookmarks themselves always survive.
+- **Ordering.** Playlists own `item_ids` because playback order *is* the feature.
+  Collections have no intrinsic order; their bookmarks inherit the canonical bookmark
+  order (pinned, then newest). Nothing to store, nothing to keep in sync.
+
+The **default collection is derived, not stored**: a bookmark with an empty `collection_ids`
+is "unfiled". That means the default save target can never be renamed away or deleted.
+Invariants enforced in `state.rs` and unit-tested: unknown ids are dropped on every write,
+collection names are unique case-insensitively (`name_taken`), and imports are sanitized in
+`replace_all`. Both `Bookmark::collection_ids` and `VaultData::collections` are
+`#[serde(default)]`, so pre-collections stores load unchanged — **no `STORE_VERSION` bump**.
+
 ### 3.3 Opening saved entries: "smart open" with a graceful fallback
 
 The bridge protocol (`browser_bridge/protocol/frames.rs` → `MediaAction`) has **no
@@ -220,8 +243,13 @@ vault/
 |---|---|
 | `vault_get_state` | → full `VaultData` DTO |
 | `vault_add_bookmark` | captured-tab payload → new id / `already_saved` error |
-| `vault_update_bookmark` | id + patch (title/pinned/tags/notes) |
+| `vault_update_bookmark` | id + patch (title/pinned/tags/notes/collectionIds) |
 | `vault_remove_bookmark` | id |
+| `vault_save_bookmark_to_collection` | captured-tab payload + collectionId? → bookmark id (upsert; null = default view) |
+| `vault_create_collection` | name, emoji? → id / `name_taken` error |
+| `vault_update_collection` | id + patch (name/emoji) |
+| `vault_delete_collection` | id (bookmarks are kept, just detached) |
+| `vault_toggle_bookmark_collection` | bookmark id + collection id → new membership state |
 | `vault_create_playlist` | name, emoji? → id |
 | `vault_update_playlist` | id + patch (name/emoji) |
 | `vault_delete_playlist` | id |
@@ -250,13 +278,23 @@ vault/
 ├── lib/
 │   ├── normalizeUrl.ts         // mirrors vault/url.rs; shared test vectors
 │   ├── capture.ts              // BrowserTab+DetectedBrowser → capture payloads
-│   ├── vaultSearch.ts          // in-memory filter/rank (title/url/tags/artist)
+│   ├── vaultSearch.ts          // in-memory filter/rank (title/url/tags/artist),
+│   │                           //   collection filter + counts
+│   ├── vaultIndex.ts           // memoized O(1) lookup maps (bookmark-by-url,
+│   │                           //   playlists-by-url, media-id-by-url)
 │   └── __tests__/…
 └── components/
     ├── BookmarkList.tsx / BookmarkRow.tsx     // pinned first, search box, tag chips
+    ├── CollectionBar.tsx                      // All | Unfiled | <collections> filter,
+    │                                          //   with rename/delete on the active chip
     ├── PlaylistList.tsx / PlaylistDetail.tsx  // list → detail; reorder (same pointer-
     │                                          //   drag conventions as existing rows)
-    ├── SaveTabButton.tsx                      // bookmark toggle for tab rows
+    ├── SaveTabMenuButton.tsx                  // tab-row bookmark button: owns the writes,
+    │                                          //   anchors the menu (useAnchoredMenu)
+    ├── SaveTargetMenu.tsx                     // presentational popover: Playlists section
+    │                                          //   (media tabs only, on top) then Bookmarks
+    │                                          //   (All bookmarks + collections), each with
+    │                                          //   inline create
     ├── AddToPlaylistMenu.tsx                  // popover: playlist list + inline create
     │                                          //   (float-menu styling from
     │                                          //   pilpod-media-item__body-menu)

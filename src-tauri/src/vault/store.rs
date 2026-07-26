@@ -150,6 +150,7 @@ mod tests {
             pinned: false,
             tags: vec![],
             notes: None,
+            collection_ids: vec![],
         });
         d
     }

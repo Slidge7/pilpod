@@ -8,6 +8,11 @@
 //!   * bookmarks are deduplicated by `normalized_url` — a duplicate add is
 //!     rejected with [`ERR_ALREADY_SAVED`] so the UI can show "Already saved"
 //!     and highlight the existing row.
+//!   * a bookmark's `collection_ids` may only reference collections that exist;
+//!     unknown ids are dropped on write (see [`sanitize_collection_ids`]) and
+//!     deleting a collection detaches it from every bookmark. Together these
+//!     make dangling references unrepresentable, so reads never have to filter.
+//!   * collection names are unique case-insensitively ⇒ [`ERR_NAME_TAKEN`].
 //!
 //! Locking rule: mutation methods take the lock, mutate, mark dirty, and return
 //! an owned result. Callers compute the snapshot/hash and emit *after* the lock
@@ -18,7 +23,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use super::dto::{Bookmark, MediaItem, Playlist, VaultData};
+use super::dto::{Bookmark, BookmarkCollection, MediaItem, Playlist, VaultData};
 
 /// A duplicate `normalized_url` was submitted for a new bookmark.
 pub const ERR_ALREADY_SAVED: &str = "already_saved";
@@ -28,6 +33,40 @@ pub const ERR_NOT_FOUND: &str = "not_found";
 pub const ERR_POISONED: &str = "state_poisoned";
 /// A reorder payload was not a permutation of the playlist's current items.
 pub const ERR_REORDER_MISMATCH: &str = "reorder_mismatch";
+/// Another collection already uses this name (case-insensitive).
+pub const ERR_NAME_TAKEN: &str = "name_taken";
+/// The collection cap was reached.
+pub const ERR_TOO_MANY_COLLECTIONS: &str = "too_many_collections";
+
+/// Upper bound on bookmark collections. A picker list is the whole UI for these,
+/// so the practical ceiling is far below this; the cap exists only to keep a
+/// runaway caller from bloating the store.
+pub const MAX_COLLECTIONS: usize = 500;
+
+/// Drop unknown ids and duplicates from a bookmark's collection membership,
+/// preserving order. Called on every write path so stored membership is always
+/// referentially valid — readers get to skip validation entirely.
+fn sanitize_collection_ids(data: &VaultData, ids: Vec<String>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::with_capacity(ids.len());
+    for id in ids {
+        if out.iter().any(|e| e == &id) {
+            continue;
+        }
+        if data.collections.iter().any(|c| c.id == id) {
+            out.push(id);
+        }
+    }
+    out
+}
+
+/// Case-insensitive name match, ignoring `skip_id` (so a rename to the same
+/// name with different casing is allowed).
+fn name_taken(data: &VaultData, name: &str, skip_id: Option<&str>) -> bool {
+    let needle = name.trim().to_lowercase();
+    data.collections
+        .iter()
+        .any(|c| Some(c.id.as_str()) != skip_id && c.name.trim().to_lowercase() == needle)
+}
 
 /// Garbage-collect media items no playlist references. A media item is only
 /// meaningful as a member of at least one playlist; once orphaned it is dropped
@@ -60,6 +99,8 @@ pub struct BookmarkPatch {
     pub pinned: Option<bool>,
     pub tags: Option<Vec<String>>,
     pub notes: Option<Option<String>>,
+    /// Replaces the whole membership set (sanitized against known collections).
+    pub collection_ids: Option<Vec<String>>,
 }
 
 impl VaultState {
@@ -102,6 +143,14 @@ impl VaultState {
         });
         data.media_items.sort_by(|a, b| a.id.cmp(&b.id));
         data.playlists.sort_by(|a, b| a.id.cmp(&b.id));
+        // Collections are a picker list: alphabetical is the order the UI wants,
+        // so canonicalize to it here and let every consumer render as-is.
+        data.collections.sort_by(|a, b| {
+            a.name
+                .to_lowercase()
+                .cmp(&b.name.to_lowercase())
+                .then(a.id.cmp(&b.id))
+        });
         data
     }
 
@@ -147,20 +196,79 @@ impl VaultState {
         {
             return Err(ERR_ALREADY_SAVED.to_string());
         }
+        let mut bookmark = bookmark;
+        let ids = std::mem::take(&mut bookmark.collection_ids);
+        bookmark.collection_ids = sanitize_collection_ids(&data, ids);
         data.bookmarks.push(bookmark.clone());
         drop(data);
         self.mark_dirty();
         Ok(bookmark)
     }
 
+    /// Save-or-attach: the single write behind the tab save menu.
+    ///
+    /// If a bookmark with the same `normalized_url` already exists it is reused
+    /// (never duplicated) and `collection_id` is attached to it; otherwise
+    /// `bookmark` is inserted with that collection. `None` targets the default
+    /// (unfiled) view and only ensures the bookmark exists. Idempotent, so
+    /// double-clicking the same menu row is harmless.
+    ///
+    /// One command instead of read-then-write keeps the operation atomic under
+    /// the state lock and costs the UI a single IPC round trip.
+    pub fn save_bookmark_to_collection(
+        &self,
+        bookmark: Bookmark,
+        collection_id: Option<&str>,
+    ) -> Result<Bookmark, String> {
+        let mut data = self.data.lock().map_err(|_| ERR_POISONED.to_string())?;
+        if let Some(cid) = collection_id {
+            if !data.collections.iter().any(|c| c.id == cid) {
+                return Err(ERR_NOT_FOUND.to_string());
+            }
+        }
+        // Resolve to an index first: holding an `iter_mut` borrow across both
+        // match arms would conflict with the `push` in the insert arm.
+        let existing_idx = data
+            .bookmarks
+            .iter()
+            .position(|b| b.normalized_url == bookmark.normalized_url);
+        let saved = match existing_idx {
+            Some(idx) => {
+                let existing = &mut data.bookmarks[idx];
+                if let Some(cid) = collection_id {
+                    if !existing.collection_ids.iter().any(|c| c == cid) {
+                        existing.collection_ids.push(cid.to_string());
+                    }
+                }
+                existing.clone()
+            }
+            None => {
+                let mut fresh = bookmark;
+                fresh.collection_ids = collection_id.map(|c| vec![c.to_string()]).unwrap_or_default();
+                data.bookmarks.push(fresh.clone());
+                fresh
+            }
+        };
+        drop(data);
+        self.mark_dirty();
+        Ok(saved)
+    }
+
     /// Apply a patch to an existing bookmark. Unknown id ⇒ [`ERR_NOT_FOUND`].
     pub fn update_bookmark(&self, id: &str, patch: BookmarkPatch) -> Result<Bookmark, String> {
         let mut data = self.data.lock().map_err(|_| ERR_POISONED.to_string())?;
+        // Sanitize before the mutable borrow: needs to see `data.collections`.
+        let collection_ids = patch
+            .collection_ids
+            .map(|ids| sanitize_collection_ids(&data, ids));
         let bm = data
             .bookmarks
             .iter_mut()
             .find(|b| b.id == id)
             .ok_or_else(|| ERR_NOT_FOUND.to_string())?;
+        if let Some(ids) = collection_ids {
+            bm.collection_ids = ids;
+        }
         if let Some(title) = patch.title {
             bm.title = title;
         }
@@ -190,6 +298,118 @@ impl VaultState {
         drop(data);
         self.mark_dirty();
         Ok(())
+    }
+
+    // ── Bookmark collections ───────────────────────────────────────────────
+
+    /// Create a collection. Duplicate name (case-insensitive) ⇒
+    /// [`ERR_NAME_TAKEN`] — a picker with two identically named rows is a bug,
+    /// not a feature.
+    pub fn create_collection(
+        &self,
+        collection: BookmarkCollection,
+    ) -> Result<BookmarkCollection, String> {
+        let mut data = self.data.lock().map_err(|_| ERR_POISONED.to_string())?;
+        if data.collections.len() >= MAX_COLLECTIONS {
+            return Err(ERR_TOO_MANY_COLLECTIONS.to_string());
+        }
+        if name_taken(&data, &collection.name, None) {
+            return Err(ERR_NAME_TAKEN.to_string());
+        }
+        data.collections.push(collection.clone());
+        drop(data);
+        self.mark_dirty();
+        Ok(collection)
+    }
+
+    /// Patch a collection's name/emoji. Unknown id ⇒ [`ERR_NOT_FOUND`];
+    /// colliding name ⇒ [`ERR_NAME_TAKEN`].
+    pub fn update_collection(
+        &self,
+        id: &str,
+        name: Option<String>,
+        emoji: Option<Option<String>>,
+        now_ms: u64,
+    ) -> Result<BookmarkCollection, String> {
+        let mut data = self.data.lock().map_err(|_| ERR_POISONED.to_string())?;
+        if !data.collections.iter().any(|c| c.id == id) {
+            return Err(ERR_NOT_FOUND.to_string());
+        }
+        if let Some(n) = name.as_deref() {
+            if name_taken(&data, n, Some(id)) {
+                return Err(ERR_NAME_TAKEN.to_string());
+            }
+        }
+        let c = data
+            .collections
+            .iter_mut()
+            .find(|c| c.id == id)
+            .ok_or_else(|| ERR_NOT_FOUND.to_string())?;
+        if let Some(n) = name {
+            c.name = n;
+        }
+        if let Some(e) = emoji {
+            c.emoji = e;
+        }
+        c.updated_at_ms = now_ms;
+        let out = c.clone();
+        drop(data);
+        self.mark_dirty();
+        Ok(out)
+    }
+
+    /// Delete a collection and detach it from every bookmark. Bookmarks are
+    /// never deleted — they simply fall back to the default (unfiled) view, so
+    /// this is the safe inverse of "create". Unknown id ⇒ [`ERR_NOT_FOUND`].
+    pub fn delete_collection(&self, id: &str) -> Result<(), String> {
+        let mut data = self.data.lock().map_err(|_| ERR_POISONED.to_string())?;
+        let before = data.collections.len();
+        data.collections.retain(|c| c.id != id);
+        if data.collections.len() == before {
+            return Err(ERR_NOT_FOUND.to_string());
+        }
+        for b in data.bookmarks.iter_mut() {
+            b.collection_ids.retain(|c| c != id);
+        }
+        drop(data);
+        self.mark_dirty();
+        Ok(())
+    }
+
+    /// Toggle one bookmark's membership of one collection. Returns the new
+    /// membership state (`true` = now in the collection). Unknown bookmark or
+    /// collection ⇒ [`ERR_NOT_FOUND`].
+    pub fn toggle_bookmark_collection(
+        &self,
+        bookmark_id: &str,
+        collection_id: &str,
+    ) -> Result<bool, String> {
+        let mut data = self.data.lock().map_err(|_| ERR_POISONED.to_string())?;
+        if !data.collections.iter().any(|c| c.id == collection_id) {
+            return Err(ERR_NOT_FOUND.to_string());
+        }
+        let bm = data
+            .bookmarks
+            .iter_mut()
+            .find(|b| b.id == bookmark_id)
+            .ok_or_else(|| ERR_NOT_FOUND.to_string())?;
+        // Bound to a `let` first: a `match` keeps its scrutinee temporaries (here
+        // the iterator's immutable borrow) alive across every arm, which would
+        // clash with the `remove`/`push` below.
+        let at = bm.collection_ids.iter().position(|c| c == collection_id);
+        let now_in = match at {
+            Some(idx) => {
+                bm.collection_ids.remove(idx);
+                false
+            }
+            None => {
+                bm.collection_ids.push(collection_id.to_string());
+                true
+            }
+        };
+        drop(data);
+        self.mark_dirty();
+        Ok(now_in)
     }
 
     // ── Playlist & media mutations (Phase 3) ───────────────────────────────
@@ -388,8 +608,16 @@ impl VaultState {
     }
 
     /// Replace the entire in-memory vault (used by import). Marks dirty so the
-    /// new contents are persisted.
+    /// new contents are persisted. Imported membership is sanitized here — an
+    /// exported file could name collections that were edited away since, and
+    /// the "no dangling references" invariant has to hold for imports too.
     pub fn replace_all(&self, data: VaultData) {
+        let mut data = data;
+        let known: std::collections::HashSet<String> =
+            data.collections.iter().map(|c| c.id.clone()).collect();
+        for b in data.bookmarks.iter_mut() {
+            b.collection_ids.retain(|id| known.contains(id));
+        }
         match self.data.lock() {
             Ok(mut g) => *g = data,
             Err(p) => *p.into_inner() = data,
@@ -417,6 +645,17 @@ mod tests {
             pinned,
             tags: vec![],
             notes: None,
+            collection_ids: vec![],
+        }
+    }
+
+    fn collection(id: &str, name: &str) -> BookmarkCollection {
+        BookmarkCollection {
+            id: id.into(),
+            name: name.into(),
+            emoji: None,
+            created_at_ms: 1,
+            updated_at_ms: 1,
         }
     }
 
@@ -525,6 +764,172 @@ mod tests {
         s.add_bookmark(bm("b_1", "example.com/a", 1, false)).unwrap();
         assert!(s.should_emit(), "content changed → emit");
         assert!(!s.should_emit(), "no change → no emit");
+    }
+
+    // ── Bookmark collections ───────────────────────────────────────────────
+
+    #[test]
+    fn create_collection_rejects_duplicate_name_case_insensitively() {
+        let s = VaultState::new(VaultData::default());
+        s.create_collection(collection("c_1", "Reading")).unwrap();
+        assert_eq!(
+            s.create_collection(collection("c_2", "  reading ")).unwrap_err(),
+            ERR_NAME_TAKEN
+        );
+        assert_eq!(s.snapshot().collections.len(), 1);
+    }
+
+    #[test]
+    fn rename_to_own_name_with_new_casing_is_allowed() {
+        let s = VaultState::new(VaultData::default());
+        s.create_collection(collection("c_1", "reading")).unwrap();
+        let out = s
+            .update_collection("c_1", Some("Reading".into()), None, 9)
+            .unwrap();
+        assert_eq!(out.name, "Reading");
+        assert_eq!(out.updated_at_ms, 9);
+    }
+
+    #[test]
+    fn rename_onto_another_collection_is_rejected() {
+        let s = VaultState::new(VaultData::default());
+        s.create_collection(collection("c_1", "A")).unwrap();
+        s.create_collection(collection("c_2", "B")).unwrap();
+        assert_eq!(
+            s.update_collection("c_2", Some("a".into()), None, 1).unwrap_err(),
+            ERR_NAME_TAKEN
+        );
+        // The failed rename left the collection untouched.
+        let snap = s.snapshot();
+        assert_eq!(snap.collections.iter().find(|c| c.id == "c_2").unwrap().name, "B");
+    }
+
+    #[test]
+    fn unknown_collection_ids_are_dropped_on_write() {
+        let s = VaultState::new(VaultData::default());
+        s.create_collection(collection("c_1", "A")).unwrap();
+        let mut b = bm("b_1", "example.com/a", 1, false);
+        b.collection_ids = vec!["c_1".into(), "c_ghost".into(), "c_1".into()];
+        let saved = s.add_bookmark(b).unwrap();
+        assert_eq!(saved.collection_ids, vec!["c_1".to_string()]);
+    }
+
+    #[test]
+    fn delete_collection_detaches_but_keeps_bookmarks() {
+        let s = VaultState::new(VaultData::default());
+        s.create_collection(collection("c_1", "A")).unwrap();
+        let mut b = bm("b_1", "example.com/a", 1, false);
+        b.collection_ids = vec!["c_1".into()];
+        s.add_bookmark(b).unwrap();
+        s.delete_collection("c_1").unwrap();
+        let snap = s.snapshot();
+        assert!(snap.collections.is_empty());
+        assert_eq!(snap.bookmarks.len(), 1, "bookmark survives its collection");
+        assert!(snap.bookmarks[0].collection_ids.is_empty());
+        assert_eq!(s.delete_collection("c_1").unwrap_err(), ERR_NOT_FOUND);
+    }
+
+    #[test]
+    fn save_to_collection_creates_then_attaches_without_duplicating() {
+        let s = VaultState::new(VaultData::default());
+        s.create_collection(collection("c_1", "A")).unwrap();
+        s.create_collection(collection("c_2", "B")).unwrap();
+
+        let first = s
+            .save_bookmark_to_collection(bm("b_1", "example.com/a", 1, false), Some("c_1"))
+            .unwrap();
+        assert_eq!(first.collection_ids, vec!["c_1".to_string()]);
+
+        // Same URL again (different candidate id) reuses the stored bookmark.
+        let second = s
+            .save_bookmark_to_collection(bm("b_2", "example.com/a", 2, false), Some("c_2"))
+            .unwrap();
+        assert_eq!(second.id, "b_1");
+        assert_eq!(
+            second.collection_ids,
+            vec!["c_1".to_string(), "c_2".to_string()]
+        );
+        assert_eq!(s.snapshot().bookmarks.len(), 1, "never duplicated");
+    }
+
+    #[test]
+    fn save_to_collection_is_idempotent_and_default_is_unfiled() {
+        let s = VaultState::new(VaultData::default());
+        s.create_collection(collection("c_1", "A")).unwrap();
+        s.save_bookmark_to_collection(bm("b_1", "example.com/a", 1, false), Some("c_1"))
+            .unwrap();
+        let again = s
+            .save_bookmark_to_collection(bm("b_1", "example.com/a", 1, false), Some("c_1"))
+            .unwrap();
+        assert_eq!(again.collection_ids, vec!["c_1".to_string()]);
+
+        // `None` = default view: ensures existence, changes no membership.
+        let unfiled = s
+            .save_bookmark_to_collection(bm("b_9", "example.com/z", 1, false), None)
+            .unwrap();
+        assert!(unfiled.collection_ids.is_empty());
+    }
+
+    #[test]
+    fn save_to_unknown_collection_inserts_nothing() {
+        let s = VaultState::new(VaultData::default());
+        let err = s
+            .save_bookmark_to_collection(bm("b_1", "example.com/a", 1, false), Some("nope"))
+            .unwrap_err();
+        assert_eq!(err, ERR_NOT_FOUND);
+        assert!(s.snapshot().bookmarks.is_empty());
+    }
+
+    #[test]
+    fn toggle_membership_round_trips() {
+        let s = VaultState::new(VaultData::default());
+        s.create_collection(collection("c_1", "A")).unwrap();
+        s.add_bookmark(bm("b_1", "example.com/a", 1, false)).unwrap();
+        assert!(s.toggle_bookmark_collection("b_1", "c_1").unwrap());
+        assert_eq!(s.snapshot().bookmarks[0].collection_ids, vec!["c_1".to_string()]);
+        assert!(!s.toggle_bookmark_collection("b_1", "c_1").unwrap());
+        assert!(s.snapshot().bookmarks[0].collection_ids.is_empty());
+        assert_eq!(
+            s.toggle_bookmark_collection("b_1", "ghost").unwrap_err(),
+            ERR_NOT_FOUND
+        );
+    }
+
+    #[test]
+    fn update_bookmark_replaces_membership_and_sanitizes() {
+        let s = VaultState::new(VaultData::default());
+        s.create_collection(collection("c_1", "A")).unwrap();
+        s.add_bookmark(bm("b_1", "example.com/a", 1, false)).unwrap();
+        let out = s
+            .update_bookmark(
+                "b_1",
+                BookmarkPatch {
+                    collection_ids: Some(vec!["c_1".into(), "ghost".into()]),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(out.collection_ids, vec!["c_1".to_string()]);
+    }
+
+    #[test]
+    fn snapshot_orders_collections_alphabetically() {
+        let s = VaultState::new(VaultData::default());
+        s.create_collection(collection("c_1", "zeta")).unwrap();
+        s.create_collection(collection("c_2", "Alpha")).unwrap();
+        let names: Vec<String> = s.snapshot().collections.iter().map(|c| c.name.clone()).collect();
+        assert_eq!(names, vec!["Alpha", "zeta"]);
+    }
+
+    #[test]
+    fn replace_all_drops_dangling_membership_from_imports() {
+        let s = VaultState::new(VaultData::default());
+        let mut fresh = VaultData::default();
+        let mut b = bm("b_1", "a.com", 1, false);
+        b.collection_ids = vec!["c_gone".into()];
+        fresh.bookmarks.push(b);
+        s.replace_all(fresh);
+        assert!(s.snapshot().bookmarks[0].collection_ids.is_empty());
     }
 
     // ── Phase 3: playlists & media ─────────────────────────────────────────

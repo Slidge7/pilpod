@@ -4,11 +4,30 @@
 //! `src/features/vault/types.ts`. Rust is the source of truth; the TS types are
 //! a hand-kept mirror. Keep the two in sync when this file changes.
 //!
-//! The store file (`vault_store.json`) holds three collections plus a `version`
-//! gate. Bookmarks are generic saved pages; media items carry rich playback
-//! metadata; playlists are ordered lists of media-item ids. Only bookmarks are
-//! mutated in Phase 1 — `mediaItems` and `playlists` are present (empty) so the
-//! on-disk schema is stable and Phase 3 needs no version bump.
+//! The store file (`vault_store.json`) holds four pools plus a `version` gate.
+//! Bookmarks are generic saved pages; media items carry rich playback metadata;
+//! playlists are ordered lists of media-item ids; bookmark collections are
+//! named groups of bookmarks. Only bookmarks are mutated in Phase 1 —
+//! `mediaItems` and `playlists` are present (empty) so the on-disk schema is
+//! stable and Phase 3 needs no version bump.
+//!
+//! ## Membership direction (deliberate asymmetry with playlists)
+//!
+//! A playlist owns an **ordered** `item_ids` list because playback order is the
+//! feature. A bookmark collection owns nothing: membership lives on the
+//! bookmark as [`Bookmark::collection_ids`]. That direction is chosen for three
+//! reasons and should not be flipped casually:
+//!
+//! 1. **Performance** — the hot query is "which collections is *this tab* in?",
+//!    asked once per open tab every time the save menu renders. Reading a field
+//!    off the already-located bookmark is O(1); scanning every collection's
+//!    member list would be O(collections × members).
+//! 2. **Referential integrity** — deleting a bookmark cannot leave a dangling
+//!    id anywhere, so there is no bookmark equivalent of `gc_orphan_media`.
+//!    Deleting a collection is one `retain` pass over the bookmarks.
+//! 3. **Ordering** — collections have no intrinsic order; bookmarks inside one
+//!    inherit the canonical bookmark order (pinned, then newest). Nothing to
+//!    store, nothing to keep in sync.
 
 use serde::{Deserialize, Serialize};
 
@@ -50,6 +69,28 @@ pub struct Bookmark {
     pub tags: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+    /// Ids of the [`BookmarkCollection`]s this bookmark belongs to. Empty means
+    /// "default collection" (unfiled) — that is a *derived* view, never a real
+    /// collection row, so the default can never be renamed or deleted.
+    /// `#[serde(default)]` keeps version-1 files written before collections
+    /// existed loadable without a schema bump.
+    #[serde(default)]
+    pub collection_ids: Vec<String>,
+}
+
+/// A named group of bookmarks. Metadata only — see the module docs for why
+/// membership is stored on [`Bookmark::collection_ids`] instead of here.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BookmarkCollection {
+    /// `c_<uuid v4>`.
+    pub id: String,
+    /// Unique case-insensitively (enforced in `state.rs`).
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub emoji: Option<String>,
+    pub created_at_ms: u64,
+    pub updated_at_ms: u64,
 }
 
 /// A saved media tab with playback metadata. Referenced by playlists via id.
@@ -115,6 +156,10 @@ pub struct VaultData {
     pub media_items: Vec<MediaItem>,
     #[serde(default)]
     pub playlists: Vec<Playlist>,
+    /// Bookmark collections. `#[serde(default)]` ⇒ pre-collections stores load
+    /// as an empty list (every existing bookmark lands in the default view).
+    #[serde(default)]
+    pub collections: Vec<BookmarkCollection>,
 }
 
 impl Default for VaultData {
@@ -124,6 +169,7 @@ impl Default for VaultData {
             bookmarks: Vec::new(),
             media_items: Vec::new(),
             playlists: Vec::new(),
+            collections: Vec::new(),
         }
     }
 }
@@ -157,6 +203,7 @@ mod tests {
             pinned: true,
             tags: vec!["docs".into(), "rust".into()],
             notes: None,
+            collection_ids: vec!["c_1".into()],
         };
         let json = serde_json::to_string(&b).unwrap();
         assert!(json.contains("\"normalizedUrl\""));
@@ -177,5 +224,37 @@ mod tests {
         let m: MediaItem = serde_json::from_str(json).unwrap();
         assert_eq!(m.kind, "unknown");
         assert_eq!(m.play_count, 0);
+    }
+
+    #[test]
+    fn pre_collections_store_loads_with_empty_defaults() {
+        // A version-1 file written before collections existed: no `collections`
+        // key on the vault and no `collectionIds` on the bookmark. Both must
+        // default rather than fail to parse (no STORE_VERSION bump needed).
+        let json = r#"{
+            "version":1,
+            "bookmarks":[{
+                "id":"b_1","url":"https://x","normalizedUrl":"x",
+                "title":"X","createdAtMs":1
+            }],
+            "mediaItems":[],"playlists":[]
+        }"#;
+        let d: VaultData = serde_json::from_str(json).unwrap();
+        assert!(d.collections.is_empty());
+        assert!(d.bookmarks[0].collection_ids.is_empty());
+    }
+
+    #[test]
+    fn collection_round_trips_camel_case() {
+        let c = BookmarkCollection {
+            id: "c_1".into(),
+            name: "Reading".into(),
+            emoji: Some("📚".into()),
+            created_at_ms: 1,
+            updated_at_ms: 2,
+        };
+        let json = serde_json::to_string(&c).unwrap();
+        assert!(json.contains("\"createdAtMs\""));
+        assert_eq!(serde_json::from_str::<BookmarkCollection>(&json).unwrap(), c);
     }
 }

@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { VaultPanel } from "../../VaultPanel";
 import { useVault } from "../../hooks/useVault";
-import { SaveTabButton } from "../../components/SaveTabButton";
+import { SaveTabMenuButton } from "../../components/SaveTabMenuButton";
+import { SaveTargetMenu } from "../../components/SaveTargetMenu";
+import { CollectionBar } from "../../components/CollectionBar";
 import { BookmarkList } from "../../components/BookmarkList";
 import { PlaylistList } from "../../components/PlaylistList";
 import { PlaylistDetail } from "../../components/PlaylistDetail";
@@ -14,7 +16,9 @@ describe("vault module smoke", () => {
     for (const fn of [
       VaultPanel,
       useVault,
-      SaveTabButton,
+      SaveTabMenuButton,
+      SaveTargetMenu,
+      CollectionBar,
       BookmarkList,
       PlaylistList,
       PlaylistDetail,

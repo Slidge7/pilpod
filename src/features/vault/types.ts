@@ -20,6 +20,22 @@ export interface Bookmark {
   pinned: boolean;
   tags: string[];
   notes?: string | null;
+  /**
+   * Collections this bookmark belongs to. Empty = the default (unfiled) view,
+   * which is derived, never a stored row. Membership lives here rather than on
+   * the collection so "which collections is this tab in?" is an O(1) read —
+   * see the module docs in `src-tauri/src/vault/dto.rs`.
+   */
+  collectionIds: string[];
+}
+
+/** A named group of bookmarks. Metadata only; membership is on the bookmark. */
+export interface BookmarkCollection {
+  id: string;
+  name: string;
+  emoji?: string | null;
+  createdAtMs: number;
+  updatedAtMs: number;
 }
 
 export type MediaKind = "video" | "audio" | "unknown";
@@ -56,6 +72,7 @@ export interface VaultData {
   bookmarks: Bookmark[];
   mediaItems: MediaItem[];
   playlists: Playlist[];
+  collections: BookmarkCollection[];
 }
 
 /** Event names (mirror of the Rust `EVT_*` consts). */
@@ -76,6 +93,8 @@ export interface AddBookmarkArgs {
   tags?: string[];
   notes?: string | null;
   pinned?: boolean;
+  /** Collections to file the new bookmark under. Omit/empty ⇒ default view. */
+  collectionIds?: string[];
 }
 
 /** Argument payload for `vault_add_media_to_playlist` (Phase 3). */
@@ -100,10 +119,15 @@ export interface BookmarkPatchArgs {
   tags?: string[];
   /** Omit to leave unchanged; empty string to clear; non-empty to set. */
   notes?: string;
+  /** Omit to leave unchanged; present replaces the whole set (`[]` unfiles). */
+  collectionIds?: string[];
 }
 
 /** Typed backend error codes surfaced to the UI. */
 export const VAULT_ERRORS = {
   alreadySaved: "already_saved",
   notFound: "not_found",
+  /** A collection with that name (case-insensitive) already exists. */
+  nameTaken: "name_taken",
+  tooManyCollections: "too_many_collections",
 } as const;

@@ -54,6 +54,39 @@ export function filterBookmarksByTags(
   });
 }
 
+/**
+ * The bookmark-list collection filter. `null` = every bookmark;
+ * [`UNFILED`] = only bookmarks in no collection (the derived default view);
+ * any other value = that collection id.
+ */
+export const UNFILED = "__unfiled__" as const;
+export type CollectionFilter = string | null;
+
+export function filterBookmarksByCollection(
+  bookmarks: readonly Bookmark[],
+  filter: CollectionFilter,
+): Bookmark[] {
+  if (filter == null) return [...bookmarks];
+  if (filter === UNFILED) return bookmarks.filter((b) => b.collectionIds.length === 0);
+  return bookmarks.filter((b) => b.collectionIds.includes(filter));
+}
+
+/** Bookmark count per collection id, plus the size of the unfiled bucket. */
+export function countByCollection(
+  bookmarks: readonly Bookmark[],
+): { byId: Map<string, number>; unfiled: number } {
+  const byId = new Map<string, number>();
+  let unfiled = 0;
+  for (const b of bookmarks) {
+    if (b.collectionIds.length === 0) {
+      unfiled += 1;
+      continue;
+    }
+    for (const id of b.collectionIds) byId.set(id, (byId.get(id) ?? 0) + 1);
+  }
+  return { byId, unfiled };
+}
+
 /** Pinned first, then newest-first, then id for stability. */
 export function orderBookmarks(bookmarks: readonly Bookmark[]): Bookmark[] {
   return [...bookmarks].sort(

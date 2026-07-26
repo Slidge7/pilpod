@@ -6,8 +6,7 @@ import { downloadStatusForUrl } from "../downloader/lib";
 import { TabDownloadButton } from "../downloader/components/TabDownloadButton";
 import { VaultPanel, useVault, VAULT_UI_ENABLED } from "../vault";
 import { PlaylistPlayerCard, usePlaylistPlayer } from "../playlist-player";
-import { normalizeUrl } from "../vault/lib/normalizeUrl";
-import { SaveTabButton } from "../vault/components/SaveTabButton";
+import { SaveTabMenuButton } from "../vault/components/SaveTabMenuButton";
 import { DownloadDockCard } from "../downloader/components/DownloadDockCard";
 import { PremiumGate } from "../premium";
 import type { BrowserTab } from "../../types/media";
@@ -113,6 +112,14 @@ export function MediaDashboard() {
   // Seed URL for prefilling the Download panel from an in-tab download button.
   const [downloadSeed, setDownloadSeed] = useState<string | null>(null);
 
+  // Provenance lookup for anything the save menu creates. Built from the live
+  // browser list so a bookmark records the real OS browser + profile rather
+  // than the internal row id.
+  const browserById = useMemo(
+    () => new Map(browsers.map((b) => [b.id, b])),
+    [browsers],
+  );
+
   // Render accessory buttons (bookmark + download) for each tab row.
   const renderTabAccessories = useCallback(
     (
@@ -122,18 +129,17 @@ export function MediaDashboard() {
       isMediaTab: boolean,
     ): TabAccessories => {
       const url = tab.url ?? "";
+      const b = browserById.get(browserId);
       const save = (
-        <SaveTabButton
-          saved={vault.savedUrlSet.has(normalizeUrl(url))}
-          onToggle={() =>
-            void vault.toggleBookmark({
-              url,
-              title: tab.title?.trim() || null,
-              faviconUrl: tab.favIconUrl ?? tab.faviconUrl ?? null,
-              sourceOsBrowserId: browserId,
-              sourceProfileLabel: browserDisplayName,
-            })
-          }
+        <SaveTabMenuButton
+          api={vault}
+          tab={tab}
+          isMediaTab={isMediaTab}
+          browser={{
+            osBrowserId: b?.osBrowserId ?? browserId,
+            profileLabel: b?.profileLabel ?? null,
+            displayName: b?.displayName ?? browserDisplayName,
+          }}
         />
       );
       const download =
@@ -148,7 +154,7 @@ export function MediaDashboard() {
         ) : undefined;
       return { save, download };
     },
-    [vault, dl.tasks, setActiveTab],
+    [vault, browserById, dl.tasks, setActiveTab],
   );
 
   const browserTabCount = browsers.reduce(

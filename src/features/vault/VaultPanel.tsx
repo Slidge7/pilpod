@@ -7,13 +7,13 @@ import { BookmarkList } from "./components/BookmarkList";
 import { PlaylistList } from "./components/PlaylistList";
 import { PlaylistDetail } from "./components/PlaylistDetail";
 import { AddToPlaylistMenu } from "./components/AddToPlaylistMenu";
-import { SaveTabButton } from "./components/SaveTabButton";
+import { SaveTabMenuButton } from "./components/SaveTabMenuButton";
 import { EmptyState } from "./components/EmptyState";
-import { captureBookmark, captureMedia } from "./lib/capture";
-import { normalizeUrl } from "./lib/normalizeUrl";
+import { captureMedia } from "./lib/capture";
 import {
   collectActiveMediaTabs,
   faviconFromUrl,
+  tabIsLinkIdentifiedMedia,
 } from "../media-dashboard/lib/browserMedia";
 import { IconBookmark, IconMusicNote } from "../../shared/ui/icons";
 import { VAULT_OPEN_ENABLED } from "./constants";
@@ -156,29 +156,19 @@ export function VaultPanel({
             </button>
           </div>
 
-          {savingOpenTabs ? (
-            <OpenTabsSaver
-              tabs={allOpenTabs}
-              isSaved={(url) => api.savedUrlSet.has(normalizeUrl(url))}
-              onToggle={(entry) =>
-                void api.toggleBookmark(
-                  captureBookmark(entry.tab, {
-                    osBrowserId: entry.browser.osBrowserId,
-                    profileLabel: entry.browser.profileLabel,
-                    displayName: entry.browser.displayName,
-                  }),
-                )
-              }
-            />
-          ) : null}
+          {savingOpenTabs ? <OpenTabsSaver api={api} tabs={allOpenTabs} /> : null}
 
           <BookmarkList
             bookmarks={vault.bookmarks}
+            collections={vault.collections}
             canOpen={VAULT_OPEN_ENABLED}
             onOpen={openBookmark}
             onTogglePin={togglePin}
             onRemove={(id) => void api.removeBookmark(id)}
             onSaveEdit={(patch) => void api.updateBookmark(patch)}
+            onCreateCollection={(name) => void api.createCollection(name)}
+            onRenameCollection={(id, name) => void api.updateCollection(id, { name })}
+            onDeleteCollection={(id) => void api.deleteCollection(id)}
           />
         </>
       ) : openPlaylist ? (
@@ -215,14 +205,7 @@ export function VaultPanel({
           <NowPlayingAdder
             playing={playingTabs}
             playlists={vault.playlists}
-            containingIdsFor={(url) => {
-              const normalized = normalizeUrl(url);
-              const item = vault.mediaItems.find((m) => m.normalizedUrl === normalized);
-              if (!item) return new Set<string>();
-              return new Set(
-                vault.playlists.filter((p) => p.itemIds.includes(item.id)).map((p) => p.id),
-              );
-            }}
+            containingIdsFor={api.playlistIdsFor}
             onAdd={async (browserId, tab, playlistId) => {
               const browser = browserById.get(browserId);
               await api.addMediaToPlaylist(
@@ -334,15 +317,13 @@ function NowPlayingAdder({
   );
 }
 
-/** Compact list of open tabs, each with a save/unsave toggle. */
+/** Compact list of open tabs, each with the full "save to…" menu. */
 function OpenTabsSaver({
+  api,
   tabs,
-  isSaved,
-  onToggle,
 }: {
+  api: VaultApi;
   tabs: Array<{ browser: DetectedBrowser; tab: import("../../types/media").BrowserTab }>;
-  isSaved: (url: string) => boolean;
-  onToggle: (entry: { browser: DetectedBrowser; tab: import("../../types/media").BrowserTab }) => void;
 }) {
   const [q, setQ] = useState("");
   const query = q.trim().toLowerCase();
@@ -398,9 +379,15 @@ function OpenTabsSaver({
                   <span className="pilpod-vault-row__url">{e.browser.displayName}</span>
                 </div>
                 <div className="pilpod-vault-row__actions">
-                  <SaveTabButton
-                    saved={isSaved(e.tab.url ?? "")}
-                    onToggle={() => onToggle(e)}
+                  <SaveTabMenuButton
+                    api={api}
+                    tab={e.tab}
+                    isMediaTab={tabIsLinkIdentifiedMedia(e.tab)}
+                    browser={{
+                      osBrowserId: e.browser.osBrowserId,
+                      profileLabel: e.browser.profileLabel,
+                      displayName: e.browser.displayName,
+                    }}
                   />
                 </div>
               </div>
