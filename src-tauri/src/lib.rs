@@ -29,6 +29,8 @@ mod browser_focus_win;
 mod audio_mixer;
 #[cfg(windows)]
 mod playlist_player;
+#[cfg(windows)]
+mod inapp_player;
 mod wallpaper;
 #[cfg(not(windows))]
 mod platform;

@@ -10,6 +10,11 @@ import {
   readStoredGlassStrength,
 } from "./theme/glassAppearance";
 
+// Tells the injected stage agent that this document is PilPod's own, so it
+// keeps its cinema layout and pointer lock off our pages. Module scripts run
+// before `DOMContentLoaded`, i.e. before the agent acts on anything.
+(window as unknown as { __PILPOD_STAGE_APP?: boolean }).__PILPOD_STAGE_APP = true;
+
 applyAppearance(readStoredAppearance());
 applyGlassStrength(readStoredGlassStrength());
 

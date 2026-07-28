@@ -55,6 +55,9 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Playlist player session state (reads vault, drives the bridge).
     crate::playlist_player::init(app);
 
+    // In-app playback target: PilPod's own webview as a playlist surface.
+    crate::inapp_player::init();
+
     let sync_flag: crate::browser_bridge::SyncRequestedFlag = std::sync::Arc::new(
         std::sync::atomic::AtomicBool::new(false),
     );

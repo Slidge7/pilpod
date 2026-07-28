@@ -19,7 +19,8 @@
         "resizable": true,
         "decorations": false,
         "transparent": true,
-        "shadow": false
+        "shadow": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --autoplay-policy=no-user-gesture-required --disable-background-timer-throttling"
       }
     ],
     "security": {

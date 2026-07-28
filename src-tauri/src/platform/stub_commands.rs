@@ -173,6 +173,7 @@ pub fn player_get_state() -> serde_json::Value {
     serde_json::json!({
         "active": false,
         "status": "idle",
+        "target": "browser",
         "trackNumber": 0,
         "totalTracks": 0,
         "repeat": "off",
@@ -184,7 +185,8 @@ pub fn player_get_state() -> serde_json::Value {
 #[tauri::command]
 pub fn player_start(
     _playlist_id: String,
-    _browser_id: String,
+    _target: Option<String>,
+    _browser_id: Option<String>,
     _shuffle: Option<bool>,
     _repeat: Option<String>,
     _auto_play: Option<bool>,
@@ -219,4 +221,39 @@ pub fn player_set_modes(
     _auto_play: Option<bool>,
 ) -> Result<(), String> {
     Err(PLAYER_WIN_ONLY.into())
+}
+
+#[tauri::command]
+pub fn inapp_drag_window() {}
+
+#[tauri::command]
+pub fn inapp_stage_get() -> serde_json::Value {
+    serde_json::json!({ "kind": "idle", "volume": 100.0 })
+}
+
+#[tauri::command]
+pub fn inapp_stage_report(_report: serde_json::Value) {}
+
+#[tauri::command]
+pub fn inapp_stage_ended() {}
+
+#[tauri::command]
+pub fn inapp_minimize_window() {}
+
+#[tauri::command]
+pub fn inapp_get_media() -> serde_json::Value {
+    serde_json::json!({
+        "active": false,
+        "loading": false,
+        "url": "",
+        "title": "",
+        "artist": "",
+        "artworkUrl": "",
+        "playbackState": "none",
+        "duration": 0.0,
+        "currentTime": 0.0,
+        "volume": 100.0,
+        "muted": false,
+        "canSeek": false,
+    })
 }

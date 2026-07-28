@@ -31,7 +31,7 @@ use crate::browser_bridge::protocol::frames::ServerMsg;
 use crate::browser_bridge::{push_ws_frame, WsConnectionMap};
 use crate::browser_dto::BrowserTab;
 use dto::PlayerStateDto;
-use state::{PlayerSession, PlayerStatus, Step};
+use state::{PlaybackTarget, PlayerSession, PlayerStatus, Step};
 
 /// Full-snapshot player state event.
 pub const EVT_UPDATE: &str = "player://update";
@@ -119,19 +119,39 @@ fn dto_of(guard: &Option<PlayerSession>) -> PlayerStateDto {
         .unwrap_or_else(PlayerStateDto::idle)
 }
 
-/// Send a `nav` frame moving the player tab to `pos`. Mutates the session's
-/// position/bookkeeping. Returns false when the socket is gone (session is
-/// flipped to Error).
-fn navigate(session: &mut PlayerSession, ws: &WsConnectionMap, handle: &PlayerState, pos: usize) -> bool {
-    let (Some(tab_id), Some(track)) = (session.tab_id, session.track_at(pos)) else {
+/// Move the player to `pos` on whichever target the session uses. Mutates the
+/// session's position/bookkeeping. Returns false when the target is gone (the
+/// session is flipped to Error).
+fn navigate(
+    app: &AppHandle,
+    session: &mut PlayerSession,
+    ws: &WsConnectionMap,
+    handle: &PlayerState,
+    pos: usize,
+) -> bool {
+    let Some(url) = session.track_at(pos).map(|t| t.url.clone()) else {
         return false;
     };
-    let frame = ServerMsg::Nav {
-        id: handle.next_id("n"),
-        tab_id,
-        url: track.url.clone(),
+
+    let delivered = match &session.target {
+        // In-app: PilPod owns the webview, so navigation cannot "fail" here —
+        // a missing window surfaces as `on_inapp_closed`, not as an error.
+        PlaybackTarget::InApp => {
+            crate::inapp_player::navigate(app, &url);
+            true
+        }
+        PlaybackTarget::Browser(browser_id) => {
+            let Some(tab_id) = session.tab_id else { return false };
+            let frame = ServerMsg::Nav {
+                id: handle.next_id("n"),
+                tab_id,
+                url,
+            };
+            push_ws_frame(ws, browser_id, &frame)
+        }
     };
-    if push_ws_frame(ws, &session.browser_id, &frame) {
+
+    if delivered {
         session.pos = pos;
         session.status = PlayerStatus::Ready;
         session.error = None;
@@ -150,15 +170,21 @@ fn navigate(session: &mut PlayerSession, ws: &WsConnectionMap, handle: &PlayerSt
 
 /// Apply a [`Step`] (manual skip or auto-advance). Returns true when the
 /// session content changed (caller emits).
-fn apply_step(session: &mut PlayerSession, ws: &WsConnectionMap, handle: &PlayerState, step: Step) -> bool {
+fn apply_step(
+    app: &AppHandle,
+    session: &mut PlayerSession,
+    ws: &WsConnectionMap,
+    handle: &PlayerState,
+    step: Step,
+) -> bool {
     match step {
         Step::To(pos) => {
-            navigate(session, ws, handle, pos);
+            navigate(app, session, ws, handle, pos);
             true
         }
         Step::Restart => {
             let pos = session.pos;
-            navigate(session, ws, handle, pos);
+            navigate(app, session, ws, handle, pos);
             true
         }
         Step::Ended => {
@@ -186,7 +212,7 @@ pub fn on_opened(
     let dto = {
         let Ok(mut guard) = handle.session.lock() else { return };
         let Some(session) = guard.as_mut() else { return };
-        if session.browser_id != browser_id
+        if session.browser_id() != Some(browser_id)
             || session.pending_open_id.as_deref() != Some(open_id)
         {
             return;
@@ -207,6 +233,65 @@ pub fn on_opened(
     emit(app, &dto);
 }
 
+// ── in-app target hooks ─────────────────────────────────────────────────────
+//
+// The browser path has to *infer* the end of a track from periodic tab
+// snapshots (see `observe_tabs`), because that is all the extension can give
+// it. The in-app path gets the truth: the agent fires on the media element's
+// own `ended` event. Two entry points, no heuristics, no epsilons.
+
+/// The in-app player's current track finished on its own.
+pub fn on_track_ended(app: &AppHandle) {
+    let Some(handle) = app.try_state::<PlayerHandle>() else { return };
+    let Some(ws) = app.try_state::<WsConnectionMap>() else { return };
+    let dto = {
+        let Ok(mut guard) = handle.session.lock() else { return };
+        let Some(session) = guard.as_mut() else { return };
+        if !session.target.is_in_app() {
+            return;
+        }
+        let step = if session.auto_play { session.auto_step() } else { Step::Ended };
+        if !apply_step(app, session, &ws, &handle, step) {
+            return;
+        }
+        dto_of(&guard)
+    };
+    emit(app, &dto);
+}
+
+/// The player window could not be created. Keep the session so the UI can say
+/// why, instead of the playlist silently disappearing.
+pub fn on_inapp_error(app: &AppHandle, error: &str) {
+    let Some(handle) = app.try_state::<PlayerHandle>() else { return };
+    let dto = {
+        let Ok(mut guard) = handle.session.lock() else { return };
+        let Some(session) = guard.as_mut() else { return };
+        if !session.target.is_in_app() {
+            return;
+        }
+        session.status = PlayerStatus::Error;
+        session.error = Some(format!("player_window_failed: {error}"));
+        dto_of(&guard)
+    };
+    emit(app, &dto);
+}
+
+/// The player window went away — the session dies with it, exactly like the
+/// browser path when the user closes the player tab.
+pub fn on_inapp_closed(app: &AppHandle) {
+    let Some(handle) = app.try_state::<PlayerHandle>() else { return };
+    let dto = {
+        let Ok(mut guard) = handle.session.lock() else { return };
+        let Some(session) = guard.as_ref() else { return };
+        if !session.target.is_in_app() {
+            return;
+        }
+        *guard = None;
+        dto_of(&guard)
+    };
+    emit(app, &dto);
+}
+
 /// Observe one browser's merged tab set after ingest. Drives player-tab
 /// adoption, loss detection, and track-end auto-advance. Cheap no-op while no
 /// session targets `browser_id`.
@@ -220,7 +305,9 @@ pub fn observe_tabs(
     let dto = {
         let Ok(mut guard) = handle.session.lock() else { return };
         let Some(session) = guard.as_mut() else { return };
-        if session.browser_id != browser_id {
+        // In-app sessions never ride the bridge: they report through the agent
+        // and end on an explicit `ended` event, so this observer ignores them.
+        if session.browser_id() != Some(browser_id) {
             return;
         }
         let now = now_ms();
@@ -345,7 +432,7 @@ pub fn observe_tabs(
             // track (repeat mode respected); with auto-play off, just end.
             session.was_playing = false;
             let step = if session.auto_play { session.auto_step() } else { Step::Ended };
-            changed |= apply_step(session, ws, &handle, step);
+            changed |= apply_step(app, session, ws, &handle, step);
         } else if !playing && on_track && session.was_playing && since_nav > NAV_GRACE_MS {
             // Natural end on our own URL: live paused-at-the-end reading (if
             // its duration is plausibly the track's, not an ad's), else the
@@ -362,7 +449,7 @@ pub fn observe_tabs(
             session.was_playing = false;
             if ended {
                 let step = if session.auto_play { session.auto_step() } else { Step::Ended };
-                changed |= apply_step(session, ws, &handle, step);
+                changed |= apply_step(app, session, ws, &handle, step);
             }
             // Not ended ⇒ plain user pause; nothing to emit.
         }

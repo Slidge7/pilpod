@@ -1,4 +1,4 @@
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use crate::browser_bridge::WsConnectionMap;
 use crate::browser_focus_win;
@@ -6,6 +6,7 @@ use crate::browser_tabs::{enqueue_browser_command, BrowserCommandsQueue};
 
 #[tauri::command]
 pub fn browser_media_control(
+    app: AppHandle,
     queue: State<'_, BrowserCommandsQueue>,
     ws_connections: State<'_, WsConnectionMap>,
     browser_id: String,
@@ -34,6 +35,18 @@ pub fn browser_media_control(
         "pip" | "pictureinpicture" | "picture_in_picture" => "pip",
         _ => return Err(format!("unknown action: {action}")),
     };
+
+    // The in-app player is a media source like any tab, but it lives in our own
+    // webview — no extension, no socket. One branch keeps every control in the
+    // dashboard working for it unchanged.
+    if browser_id == crate::inapp_player::INAPP_BROWSER_ID {
+        return if crate::inapp_player::send_command(&app, normalized, value) {
+            Ok(())
+        } else {
+            Err("in-app player is not running".into())
+        };
+    }
+
     enqueue_browser_command(
         &queue,
         Some(&ws_connections),

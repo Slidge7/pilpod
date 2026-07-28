@@ -5,6 +5,7 @@ import {
   IDLE_PLAYER_STATE,
   PLAYER_EVENTS,
   playerErrorMessage,
+  type PlaybackTarget,
   type PlayerStateDto,
   type RepeatMode,
 } from "../types";
@@ -16,11 +17,23 @@ export interface StartOptions {
 }
 
 /**
+ * Where to play. `inApp` needs no browser; `browser` carries the profile id.
+ * Modelled as a union so an impossible combination cannot be expressed.
+ */
+export type StartTarget =
+  | { target: Extract<PlaybackTarget, "inApp"> }
+  | { target: Extract<PlaybackTarget, "browser">; browserId: string };
+
+/**
  * The single stateful playlist-player hook (pattern: `useVault`). Rust owns
  * the session; this hydrates via `player_get_state`, then trusts
  * `player://update`. Mount once (MediaDashboard) and pass down.
+ *
+ * `pollMs` adds a periodic re-read on top of the event stream. The dashboard
+ * does not need it (events are cheap and reliable there); the player window
+ * passes it so its UI can never be left stale by an event that did not arrive.
  */
-export function usePlaylistPlayer() {
+export function usePlaylistPlayer(pollMs?: number) {
   const [player, setPlayer] = useState<PlayerStateDto>(IDLE_PLAYER_STATE);
   const [lastError, setLastError] = useState<string | null>(null);
   const alive = useRef(true);
@@ -34,17 +47,22 @@ export function usePlaylistPlayer() {
       },
     );
 
-    invoke<PlayerStateDto>("player_get_state")
-      .then((data) => {
-        if (alive.current && data) setPlayer(data);
-      })
-      .catch(() => {});
+    const read = () =>
+      invoke<PlayerStateDto>("player_get_state")
+        .then((data) => {
+          if (alive.current && data) setPlayer(data);
+        })
+        .catch(() => {});
+
+    void read();
+    const timer = pollMs ? window.setInterval(read, pollMs) : null;
 
     return () => {
       alive.current = false;
+      if (timer) window.clearInterval(timer);
       void unlisten.then((fn) => fn());
     };
-  }, []);
+  }, [pollMs]);
 
   const run = useCallback(async (cmd: string, args?: Record<string, unknown>) => {
     try {
@@ -58,10 +76,11 @@ export function usePlaylistPlayer() {
   }, []);
 
   const start = useCallback(
-    (playlistId: string, browserId: string, opts?: StartOptions) =>
+    (playlistId: string, where: StartTarget, opts?: StartOptions) =>
       run("player_start", {
         playlistId,
-        browserId,
+        target: where.target,
+        browserId: where.target === "browser" ? where.browserId : null,
         shuffle: opts?.shuffle ?? null,
         repeat: opts?.repeat ?? null,
         autoPlay: opts?.autoPlay ?? null,

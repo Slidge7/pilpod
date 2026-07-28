@@ -139,7 +139,11 @@ export function PlaylistPlayerCard({
         <button
           type="button"
           className="pilpod-player-mode-btn pilpod-player-mode-btn--compact pilpod-playlist-player__dismiss"
-          title="Stop playlist and close the player tab"
+          title={
+            player.target === "inApp"
+              ? "Stop playlist and close the player window"
+              : "Stop playlist and close the player tab"
+          }
           aria-label="Stop playlist"
           onClick={() => void api.stop(true)}
         >
@@ -181,7 +185,11 @@ export function PlaylistPlayerCard({
           ) : (
             <>
               <Spinner />
-              <span>Opening player tab…</span>
+              <span>
+                {player.target === "inApp"
+                  ? "Opening player window…"
+                  : "Opening player tab…"}
+              </span>
             </>
           )}
         </div>

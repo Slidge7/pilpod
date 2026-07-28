@@ -8,9 +8,20 @@ export type RepeatMode = "off" | "one" | "all";
 
 export type PlayerStatus = "idle" | "opening" | "ready" | "ended" | "error";
 
+/**
+ * Where a playlist plays: a tab in a connected browser, or PilPod's own
+ * webview window (no extension involved).
+ */
+export type PlaybackTarget = "browser" | "inApp";
+
+/** Synthetic browser id of the in-app player (mirrors `inapp_player::state`). */
+export const INAPP_BROWSER_ID = "pilpod-inapp";
+
 export interface PlayerStateDto {
   active: boolean;
   playlistId?: string;
+  target: PlaybackTarget;
+  /** `pilpod-inapp` for in-app sessions — the tab lookup is identical. */
   browserId?: string;
   tabId?: number;
   windowId?: number;
@@ -32,6 +43,7 @@ export const PLAYER_EVENTS = {
 export const IDLE_PLAYER_STATE: PlayerStateDto = {
   active: false,
   status: "idle",
+  target: "browser",
   trackNumber: 0,
   totalTracks: 0,
   repeat: "off",
@@ -41,6 +53,14 @@ export const IDLE_PLAYER_STATE: PlayerStateDto = {
 
 /** Typed backend error codes → user-facing messages. */
 export function playerErrorMessage(code: string): string {
+  // Window-creation failures carry the OS/webview reason after the colon —
+  // keep it visible, it is the only clue when the surface never appears.
+  if (code.startsWith("player_window_failed")) {
+    const reason = code.slice("player_window_failed:".length).trim();
+    return reason
+      ? `Could not open the player window — ${reason}`
+      : "Could not open the player window.";
+  }
   switch (code) {
     case "companion_nav_unsupported":
       return "Update the PilPod companion extension in this browser to play playlists.";
@@ -52,6 +72,10 @@ export function playerErrorMessage(code: string): string {
       return "This playlist has no playable items.";
     case "playlist_not_found":
       return "Playlist not found.";
+    case "no_browser_picked":
+      return "Pick where to play this playlist.";
+    case "in-app player is not running":
+      return "The in-app player window is closed.";
     case "open_timeout":
       return "The browser did not open the player tab in time.";
     case "open_failed":

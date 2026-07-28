@@ -12,6 +12,11 @@ pub struct PlayerStateDto {
     pub active: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub playlist_id: Option<String>,
+    /// `"browser" | "inApp"` — where this session plays.
+    pub target: String,
+    /// For in-app sessions this is the synthetic `pilpod-inapp` id, so the UI
+    /// resolves the session's "tab" through exactly the same lookup it uses for
+    /// a real browser.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -38,6 +43,7 @@ impl PlayerStateDto {
         Self {
             active: false,
             playlist_id: None,
+            target: "browser".into(),
             browser_id: None,
             tab_id: None,
             window_id: None,
@@ -56,7 +62,12 @@ impl PlayerStateDto {
         Self {
             active: true,
             playlist_id: Some(s.playlist_id.clone()),
-            browser_id: Some(s.browser_id.clone()),
+            target: s.target.as_str().into(),
+            browser_id: Some(
+                s.browser_id()
+                    .unwrap_or(crate::inapp_player::INAPP_BROWSER_ID)
+                    .to_string(),
+            ),
             tab_id: s.tab_id,
             window_id: s.window_id,
             status: s.status.as_str().into(),

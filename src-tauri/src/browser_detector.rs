@@ -416,13 +416,20 @@ pub fn build_browsers_payload(
     let reconnecting_set = reconnecting.lock().unwrap_or_else(|e| e.into_inner());
     let ws_connected = ws_connected_ids(ws_connections);
 
-    let browsers = merge_detected_and_slots(
+    let mut browsers = merge_detected_and_slots(
         &detected_list,
         &*slots_map,
         &*store,
         &*reconnecting_set,
         &ws_connected,
     );
+
+    // The in-app player is a one-tab media source of its own. Appending it here
+    // (and nowhere else) is what makes the whole dashboard control it without
+    // knowing it is not a browser. No session ⇒ nothing appended.
+    if let Some(row) = crate::inapp_player::detected_browser_row() {
+        browsers.push(row);
+    }
 
     #[cfg(windows)]
     let browser_audio = crate::browser_audio::browser_audio_for_slots(&slots_map);

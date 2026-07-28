@@ -62,6 +62,12 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::playlist_player::commands::player_prev,
         crate::playlist_player::commands::player_play_item,
         crate::playlist_player::commands::player_set_modes,
+        crate::inapp_player::commands::inapp_get_media,
+        crate::inapp_player::commands::inapp_drag_window,
+        crate::inapp_player::commands::inapp_minimize_window,
+        crate::inapp_player::commands::inapp_stage_get,
+        crate::inapp_player::commands::inapp_stage_report,
+        crate::inapp_player::commands::inapp_stage_ended,
     ])
 }
 
@@ -130,5 +136,11 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::platform::stub_commands::player_prev,
         crate::platform::stub_commands::player_play_item,
         crate::platform::stub_commands::player_set_modes,
+        crate::platform::stub_commands::inapp_get_media,
+        crate::platform::stub_commands::inapp_drag_window,
+        crate::platform::stub_commands::inapp_minimize_window,
+        crate::platform::stub_commands::inapp_stage_get,
+        crate::platform::stub_commands::inapp_stage_report,
+        crate::platform::stub_commands::inapp_stage_ended,
     ])
 }

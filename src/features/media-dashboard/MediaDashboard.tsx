@@ -6,6 +6,7 @@ import { downloadStatusForUrl } from "../downloader/lib";
 import { TabDownloadButton } from "../downloader/components/TabDownloadButton";
 import { VaultPanel, useVault, VAULT_UI_ENABLED } from "../vault";
 import { PlaylistPlayerCard, usePlaylistPlayer } from "../playlist-player";
+import { INAPP_BROWSER_ID } from "../playlist-player/types";
 import { SaveTabMenuButton } from "../vault/components/SaveTabMenuButton";
 import { DownloadDockCard } from "../downloader/components/DownloadDockCard";
 import { PremiumGate } from "../premium";
@@ -94,15 +95,14 @@ export function MediaDashboard() {
   const dashboardBrowsers = useMemo(() => {
     const p = playlistPlayer.player;
     if (!p.active || p.tabId == null || !p.browserId) return browsers;
-    return browsers.map((b) =>
-      b.id === p.browserId && b.tabs.some((t) => t.tabId === p.tabId)
-        ? {
-            ...b,
-            tabs: b.tabs.filter((t) => t.tabId !== p.tabId),
-            tabCount: Math.max(0, b.tabCount - 1),
-          }
-        : b,
-    );
+    return browsers.flatMap((b) => {
+      if (b.id !== p.browserId || !b.tabs.some((t) => t.tabId === p.tabId)) return [b];
+      const tabs = b.tabs.filter((t) => t.tabId !== p.tabId);
+      // The in-app player exists only to host this playlist — with its one tab
+      // shown in the playlist card there is no source row left to render.
+      if (b.id === INAPP_BROWSER_ID && tabs.length === 0) return [];
+      return [{ ...b, tabs, tabCount: Math.max(0, b.tabCount - 1) }];
+    });
   }, [browsers, playlistPlayer.player]);
 
   // Downloader state — lifted so the floating card + in-tab buttons share one

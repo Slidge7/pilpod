@@ -9,6 +9,69 @@
 /// Query keys that bind a YouTube URL to a site-side playlist / radio / queue.
 const YT_PLAYLIST_PARAMS: &[&str] = &["list", "index", "start_radio", "playnext", "pp"];
 
+/// Extract a YouTube video id from any of its URL shapes.
+pub fn youtube_video_id(url: &str) -> Option<String> {
+    let base = url.split('#').next().unwrap_or(url);
+    let (before_q, query) = match base.find('?') {
+        Some(i) => (&base[..i], &base[i + 1..]),
+        None => (base, ""),
+    };
+    let after_scheme = before_q.split("://").nth(1)?;
+    let mut parts = after_scheme.split('/');
+    let host = parts.next()?.split(':').next()?.to_ascii_lowercase();
+    if !is_youtube_host(&host) {
+        return None;
+    }
+
+    let segments: Vec<&str> = parts.filter(|s| !s.is_empty()).collect();
+
+    // youtu.be/<id>
+    if host == "youtu.be" {
+        return segments.first().map(|s| (*s).to_string());
+    }
+    // /embed/<id>, /shorts/<id>, /live/<id>, /v/<id>
+    if let (Some(kind), Some(id)) = (segments.first(), segments.get(1)) {
+        if matches!(*kind, "embed" | "shorts" | "live" | "v") {
+            return Some((*id).to_string());
+        }
+    }
+    // /watch?v=<id>
+    query
+        .split('&')
+        .find_map(|kv| kv.strip_prefix("v="))
+        .map(|v| v.to_string())
+}
+
+/// How the in-app stage should show a track.
+///
+/// YouTube gets neither of the obvious treatments. Its mobile watch page is not
+/// a player — it renders a thumbnail, an "Open App" bar and **no `<video>`
+/// element** until the user taps, so there is nothing to strip. And navigating
+/// straight to `/embed/<id>` fails with *"Error 153 — video player
+/// configuration error"*, because a top-level navigation carries no referrer
+/// and YouTube requires one for embeds.
+///
+/// So YouTube plays through its **IFrame Player API**, inside an iframe on
+/// PilPod's own page: a real referrer, a supported API for play/pause/seek/
+/// volume/ended, and no site chrome to fight. Everything else loads its page
+/// directly and is handled by the agent's generic cinema layout.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StagePlan {
+    /// PilPod's local stage page, driving the YouTube IFrame API.
+    Youtube { video_id: String },
+    /// The site's own page, stripped down in place by the agent.
+    Page { url: String },
+}
+
+pub fn stage_plan(url: &str) -> StagePlan {
+    match youtube_video_id(url) {
+        Some(video_id) if !video_id.is_empty() => StagePlan::Youtube { video_id },
+        _ => StagePlan::Page {
+            url: url.to_string(),
+        },
+    }
+}
+
 fn is_youtube_host(host: &str) -> bool {
     host == "youtu.be"
         || host.ends_with("youtube.com")
@@ -106,6 +169,36 @@ mod tests {
         assert_eq!(sanitize_track_url(u), u);
         let s = "https://soundcloud.com/a/b#t=30";
         assert_eq!(sanitize_track_url(s), s);
+    }
+
+    #[test]
+    fn youtube_tracks_plan_as_iframe_api_players() {
+        for url in [
+            "https://www.youtube.com/watch?v=abc123",
+            "https://m.youtube.com/watch?v=abc123&t=10s",
+            "https://youtu.be/abc123",
+            "https://music.youtube.com/watch?v=abc123",
+            "https://www.youtube.com/shorts/abc123",
+            "https://www.youtube.com/embed/abc123",
+        ] {
+            assert_eq!(
+                stage_plan(url),
+                StagePlan::Youtube { video_id: "abc123".into() },
+                "{url}"
+            );
+        }
+    }
+
+    #[test]
+    fn everything_else_plans_as_its_own_page() {
+        for url in [
+            "https://soundcloud.com/a/b",
+            "not a url",
+            // A YouTube URL with no video id is a page, not garbage.
+            "https://www.youtube.com/feed/subscriptions",
+        ] {
+            assert_eq!(stage_plan(url), StagePlan::Page { url: url.into() });
+        }
     }
 
     #[test]

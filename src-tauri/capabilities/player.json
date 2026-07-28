@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "player-window",
+  "description": "PilPod's own surfaces inside the in-app player window: the playlist UI, and the stage page that drives the YouTube IFrame API. When the stage is showing a *site's* page instead, that document is a remote origin and this capability does not apply to it.",
+  "windows": ["pilpod-player"],
+  "webviews": ["player-ui", "player-stage"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-focus"
+  ]
+}

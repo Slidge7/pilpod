@@ -2,6 +2,40 @@
 //! no locks: everything here is synchronous and unit-tested. `commands.rs` and
 //! the bridge observer in `mod.rs` are thin shells that lock, call, emit.
 
+/// Where a session plays. The rest of this file is target-independent: order,
+/// shuffle, repeat and the [`Step`] machine behave identically either way.
+///
+/// * `Browser` — a tab in a connected browser, driven over protocol v2.
+/// * `InApp`   — PilPod's own webview window (`inapp_player`), no extension
+///   involved.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PlaybackTarget {
+    Browser(String),
+    InApp,
+}
+
+impl PlaybackTarget {
+    /// The extension `browserId` this session drives, if any.
+    pub fn browser_id(&self) -> Option<&str> {
+        match self {
+            Self::Browser(id) => Some(id.as_str()),
+            Self::InApp => None,
+        }
+    }
+
+    pub fn is_in_app(&self) -> bool {
+        matches!(self, Self::InApp)
+    }
+
+    /// Wire value mirrored in `types.ts`.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Browser(_) => "browser",
+            Self::InApp => "inApp",
+        }
+    }
+}
+
 /// How the player reached the end-of-track / skip decision.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RepeatMode {
@@ -78,8 +112,8 @@ pub enum Step {
 #[derive(Debug, Clone)]
 pub struct PlayerSession {
     pub playlist_id: String,
-    /// Extension `browserId` UUID of the profile hosting the player tab.
-    pub browser_id: String,
+    /// Where this session plays: a connected browser, or PilPod's own webview.
+    pub target: PlaybackTarget,
     pub tab_id: Option<i64>,
     pub window_id: Option<i64>,
     pub status: PlayerStatus,
@@ -115,7 +149,7 @@ impl PlayerSession {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         playlist_id: String,
-        browser_id: String,
+        target: PlaybackTarget,
         tracks: Vec<PlayerTrack>,
         shuffle: bool,
         repeat: RepeatMode,
@@ -129,7 +163,7 @@ impl PlayerSession {
         }
         Self {
             playlist_id,
-            browser_id,
+            target,
             tab_id: None,
             window_id: None,
             status: PlayerStatus::Opening,
@@ -148,6 +182,11 @@ impl PlayerSession {
             last_seen_dur: 0.0,
             landing_normalized: None,
         }
+    }
+
+    /// Convenience for the bridge observer, which is browser-only.
+    pub fn browser_id(&self) -> Option<&str> {
+        self.target.browser_id()
     }
 
     pub fn current_track(&self) -> Option<&PlayerTrack> {
@@ -251,7 +290,7 @@ mod tests {
             .collect();
         PlayerSession::new(
             "p_1".into(),
-            "b_1".into(),
+            PlaybackTarget::Browser("b_1".into()),
             tracks,
             shuffle,
             repeat,
@@ -259,6 +298,43 @@ mod tests {
             1_000,
             42,
         )
+    }
+
+    #[test]
+    fn target_exposes_browser_id_only_for_browser_sessions() {
+        let browser = PlaybackTarget::Browser("b_9".into());
+        assert_eq!(browser.browser_id(), Some("b_9"));
+        assert_eq!(browser.as_str(), "browser");
+        assert!(!browser.is_in_app());
+
+        assert_eq!(PlaybackTarget::InApp.browser_id(), None);
+        assert_eq!(PlaybackTarget::InApp.as_str(), "inApp");
+        assert!(PlaybackTarget::InApp.is_in_app());
+    }
+
+    #[test]
+    fn step_machine_is_target_independent() {
+        let tracks: Vec<PlayerTrack> = (0..3)
+            .map(|i| PlayerTrack {
+                item_id: format!("m_{i}"),
+                url: format!("https://x.test/{i}"),
+                normalized_url: format!("x.test/{i}"),
+                expected_dur_secs: None,
+            })
+            .collect();
+        let mut in_app = PlayerSession::new(
+            "p_1".into(),
+            PlaybackTarget::InApp,
+            tracks,
+            false,
+            RepeatMode::All,
+            true,
+            1_000,
+            42,
+        );
+        in_app.pos = 2;
+        assert_eq!(in_app.next_step(), Step::To(0));
+        assert_eq!(in_app.browser_id(), None);
     }
 
     #[test]

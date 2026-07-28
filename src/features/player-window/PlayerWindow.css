@@ -1,0 +1,596 @@
+/* In-app player window — the `player-ui` webview.
+ *
+ * Styled from the app's own tokens (`--pilpod-*`, set in index.css and
+ * glass-appearance.css and applied by main.tsx before render), so this surface
+ * follows the media tab: same glass, same radii, same light/dark switch. It is
+ * opaque rather than translucent because it sits directly under the video
+ * stage, which is a separate native webview and cannot be seen through. */
+
+.pilpod-pw {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--pilpod-bg-shell);
+  color: var(--pilpod-text);
+  font-size: 12px;
+  user-select: none;
+}
+
+/* ── title bar ──────────────────────────────────────────────────────────── */
+
+/* Height is a contract with Rust: `window::HEADER_H` positions the video stage
+ * at exactly this offset. Change one, change the other. */
+.pilpod-pw-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 6px 0 10px;
+  background: var(--pilpod-bg-elevated);
+  border-bottom: 1px solid var(--pilpod-border-muted);
+  cursor: grab;
+}
+
+.pilpod-pw-head:active {
+  cursor: grabbing;
+}
+
+/* The visual affordance that this bar is draggable. */
+.pilpod-pw-head__grip {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 36px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--pilpod-border-strong);
+  opacity: 0.5;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.pilpod-pw-head__note {
+  flex: none;
+  color: var(--pilpod-text-subtle);
+  pointer-events: none;
+}
+
+.pilpod-pw-head__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.pilpod-pw-head__counter {
+  flex: none;
+  color: var(--pilpod-text-subtle);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.pilpod-pw-head__btn {
+  all: unset;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  color: var(--pilpod-text-secondary);
+  cursor: pointer;
+}
+
+.pilpod-pw-head__btn:hover {
+  background: var(--pilpod-bg-row-hover);
+  color: var(--pilpod-text);
+}
+
+.pilpod-pw-head__btn--close:hover {
+  background: var(--pilpod-dismiss-hover, var(--pilpod-bg-row-hover));
+}
+
+/* ── video slot ─────────────────────────────────────────────────────────── */
+
+/* Empty on purpose: the `player-stage` webview is laid over this rectangle.
+ * The 16:9 ratio mirrors `window::STAGE_ASPECT`; black so any rounding
+ * difference against the native stage reads as letterboxing, not as a seam. */
+.pilpod-pw-stage-slot {
+  flex: none;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+/* ── now playing ────────────────────────────────────────────────────────── */
+
+.pilpod-pw-now {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  padding: 8px 10px 6px;
+}
+
+.pilpod-pw-now__art {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--pilpod-bg-thumb);
+  color: var(--pilpod-text-subtle);
+}
+
+.pilpod-pw-now__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pilpod-pw-now__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.pilpod-pw-now__title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-pw-now__artist,
+.pilpod-pw-now__loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--pilpod-text-subtle);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-pw-error {
+  margin: 0 10px 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--pilpod-error-bg);
+  border: 1px solid var(--pilpod-error-border);
+  color: var(--pilpod-error-text);
+  font-size: 11px;
+}
+
+/* ── transport ──────────────────────────────────────────────────────────── */
+
+.pilpod-pw-transport {
+  flex: none;
+  padding: 0 10px 8px;
+  border-bottom: 1px solid var(--pilpod-border-muted);
+}
+
+/* The seek bar and volume slider ARE the media tab's components. Only their
+ * placement differs: in a card the seek bar is pinned to the bottom edge, here
+ * it sits in the flow between two timestamps. Everything visual — track height,
+ * fill colour, hover growth, the 0–600% volume scale — comes from
+ * MediaItemCard.css untouched. */
+
+.pilpod-pw-seekbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pilpod-pw-seekbar .pilpod-media-item__seek-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  height: 14px;
+  align-items: center;
+  pointer-events: none;
+}
+
+.pilpod-pw-seekbar .pilpod-media-item__seek-wrap--active {
+  pointer-events: all;
+}
+
+.pilpod-pw-seekbar .pilpod-media-item__seek-track,
+.pilpod-pw-seekbar .pilpod-media-item__seek-fill {
+  border-radius: 999px;
+}
+
+/* The card reveals the slider on hover because space there is tight; in the
+ * player it is always out. */
+.pilpod-pw-volume .pilpod-media-item__vol-slider-wrap {
+  flex: 1 1 auto;
+  width: auto;
+  margin: 0 6px;
+}
+
+.pilpod-pw-volume {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.pilpod-pw-time {
+  flex: none;
+  width: 38px;
+  color: var(--pilpod-text-subtle);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  text-align: center;
+}
+
+.pilpod-pw-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 0 4px;
+}
+
+.pilpod-pw-btn {
+  all: unset;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  color: var(--pilpod-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.pilpod-pw-btn:hover {
+  background: var(--pilpod-bg-row-hover);
+  color: var(--pilpod-text);
+}
+
+.pilpod-pw-btn--sm {
+  width: 24px;
+  height: 24px;
+}
+
+/* Mirrors the media card's play button. */
+.pilpod-pw-btn--primary {
+  width: 40px;
+  height: 40px;
+  background: var(--pilpod-glass-play-bg);
+  border: 1px solid var(--pilpod-glass-play-border);
+  color: var(--pilpod-glass-play-color);
+  box-shadow: var(--pilpod-glass-play-shadow);
+}
+
+.pilpod-pw-btn--primary:hover {
+  background: var(--pilpod-glass-play-hover-bg);
+  border-color: var(--pilpod-glass-play-hover-border);
+  box-shadow: var(--pilpod-glass-play-hover-shadow);
+}
+
+.pilpod-pw-btn--on {
+  color: var(--pilpod-accent-blue);
+  background: var(--pilpod-accent-blue-muted);
+}
+
+.pilpod-pw-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pilpod-pw-chip {
+  all: unset;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--pilpod-text-subtle);
+  background: var(--pilpod-bg-muted);
+  cursor: pointer;
+}
+
+.pilpod-pw-chip--on {
+  color: var(--pilpod-accent-blue);
+  background: var(--pilpod-accent-blue-muted);
+}
+
+
+/* ── track list ─────────────────────────────────────────────────────────── */
+
+.pilpod-pw-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.pilpod-pw-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.pilpod-pw-row {
+  display: flex;
+  align-items: center;
+  position: relative;
+  /* Rows slide out of the way of a dragged one; the dragged row itself sets
+     `transition: none` inline so it tracks the pointer exactly. */
+  transition: transform 0.16s cubic-bezier(0.2, 0, 0, 1);
+  touch-action: pan-y;
+}
+
+.pilpod-pw-row:hover {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.pilpod-pw-row--current {
+  background: var(--pilpod-accent-blue-muted);
+}
+
+/* The row under the pointer: lifted off the list while it travels. */
+.pilpod-pw-row--dragging {
+  background: var(--pilpod-bg-elevated);
+  border-radius: 8px;
+  box-shadow: var(--pilpod-card-shadow);
+  cursor: grabbing;
+}
+
+.pilpod-pw-row--dragging .pilpod-pw-row__grip {
+  opacity: 1;
+}
+
+.pilpod-pw-row__grip {
+  flex: none;
+  width: 14px;
+  padding-left: 4px;
+  color: var(--pilpod-text-subtle);
+  font-size: 11px;
+  line-height: 1;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.pilpod-pw-row:hover .pilpod-pw-row__grip {
+  opacity: 0.7;
+}
+
+.pilpod-pw-row__btn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 5px 4px 5px 6px;
+  cursor: pointer;
+}
+
+/* ── per-track menu ─────────────────────────────────────────────────────── */
+
+.pilpod-pw-menu {
+  position: relative;
+  flex: none;
+}
+
+.pilpod-pw-menu__trigger {
+  all: unset;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 24px;
+  margin-right: 6px;
+  border-radius: 7px;
+  color: var(--pilpod-text-subtle);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.pilpod-pw-row:hover .pilpod-pw-menu__trigger,
+.pilpod-pw-menu__trigger[aria-expanded="true"] {
+  opacity: 1;
+}
+
+.pilpod-pw-menu__trigger:hover {
+  background: var(--pilpod-bg-muted);
+  color: var(--pilpod-text);
+}
+
+.pilpod-pw-menu__pop {
+  position: absolute;
+  right: 4px;
+  top: calc(100% + 2px);
+  z-index: 40;
+  min-width: 176px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--pilpod-glass-menu-bg, var(--pilpod-bg-elevated));
+  border: 1px solid var(--pilpod-glass-menu-border, var(--pilpod-border));
+  box-shadow: var(--pilpod-card-shadow);
+}
+
+.pilpod-pw-menu__item {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border-radius: 7px;
+  color: var(--pilpod-text);
+  cursor: pointer;
+}
+
+.pilpod-pw-menu__item:hover {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.pilpod-pw-menu__item[disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pilpod-pw-menu__item[disabled]:hover {
+  background: transparent;
+}
+
+.pilpod-pw-menu__item--danger {
+  color: var(--pilpod-error-text);
+}
+
+.pilpod-pw-menu__item--back {
+  color: var(--pilpod-text-subtle);
+  font-weight: 600;
+}
+
+.pilpod-pw-menu__flip {
+  transform: scaleX(-1);
+}
+
+.pilpod-pw-menu__item span:first-of-type {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-pw-menu__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-pw-menu__emoji {
+  flex: none;
+}
+
+.pilpod-pw-menu__sep {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--pilpod-border-muted);
+}
+
+.pilpod-pw-menu__scroll {
+  max-height: 168px;
+  overflow-y: auto;
+}
+
+.pilpod-pw-row__index {
+  flex: none;
+  width: 16px;
+  text-align: center;
+  color: var(--pilpod-text-subtle);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pilpod-pw-row--current .pilpod-pw-row__index {
+  color: var(--pilpod-accent-blue);
+}
+
+.pilpod-pw-row__thumb {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--pilpod-bg-thumb);
+}
+
+.pilpod-pw-row__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pilpod-pw-row__thumb-letter {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pilpod-bg-thumb-letter, var(--pilpod-text-subtle));
+}
+
+.pilpod-pw-row__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pilpod-pw-row__title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-pw-row__artist {
+  color: var(--pilpod-text-subtle);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-pw-row__time {
+  flex: none;
+  color: var(--pilpod-text-subtle);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pilpod-pw-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 26px 12px;
+  color: var(--pilpod-text-subtle);
+}
+
+/* ── footer ─────────────────────────────────────────────────────────────── */
+
+.pilpod-pw-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 6px 10px;
+  border-top: 1px solid var(--pilpod-border-muted);
+  background: var(--pilpod-bg-elevated);
+  color: var(--pilpod-text-subtle);
+  font-size: 10px;
+}
+
+.pilpod-pw-foot__spacer {
+  flex: 1 1 auto;
+}
