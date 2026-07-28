@@ -33,6 +33,7 @@ import {
   type SearchTagOption,
 } from "../lib/browserMedia";
 import { browserProfileDomId } from "../lib/browserProfileScroll";
+import { isBrowserLocked } from "../../extension-setup";
 import { UnifiedTabRow } from "./UnifiedTabRow";
 import { MediaItemCard } from "./MediaItemCard";
 import { ActiveMediaStrip } from "./ActiveMediaStrip";
@@ -57,7 +58,10 @@ type BrowserConnectionStatus =
 
 function resolveBrowserStatus(browser: DetectedBrowser): BrowserConnectionStatus {
   if (!browser.running) return "closed";
-  if (!browser.extensionInstalled) return "no-ext";
+  // Gated on verified activation rather than the old `extensionInstalled`
+  // boolean, so a browser whose extension was removed or disabled (`revoked`)
+  // reverts to the same "needs setup" treatment as one that never had it.
+  if (isBrowserLocked(browser.activationState)) return "no-ext";
   if (
     browser.extensionReconnecting === true &&
     !browser.extensionConnected
@@ -149,6 +153,8 @@ type Props = {
   onReactivate: (tab: BrowserTab, browserId: string) => void | Promise<void>;
   onMixerVolume: (instanceId: string, volume: number) => void;
   onRefreshBrowser: (browserId: string) => void | Promise<void>;
+  /** Jump to the extension setup section for a browser whose row is locked. */
+  onOpenSetup?: (osBrowserId: string) => void;
   onSeekTab?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
   onPip?: (tab: BrowserTab, browserId: string) => void;
@@ -581,10 +587,13 @@ function BrowserBody({
   onSetTabVolume,
   onPip,
   renderTabAccessories,
+  onOpenSetup,
 }: {
   browser: DetectedBrowser;
   pendingKeys: ReadonlySet<string>;
   searching: boolean;
+  /** Opens the extension setup section for this browser. */
+  onOpenSetup?: (osBrowserId: string) => void;
   profileAudio: AudioSessionInfoDto | undefined;
   onPlayPause: (tab: BrowserTab, browserId: string) => void;
   onFocusTab: (tab: BrowserTab, browserId: string, displayName: string) => void | Promise<void>;
@@ -665,23 +674,38 @@ function BrowserBody({
     );
   }
 
+  const locked = isBrowserLocked(browser.activationState);
+
   // Browser not running — nothing actionable to show.
   if (!browser.running) {
     return (
       <p className="pilpod-browser-panel__empty pilpod-browser-panel__empty--inline">
-        {browser.extensionInstalled
-          ? "Browser is closed. Open it to see tabs."
-          : "Open this browser and install the companion extension to see tabs."}
+        {locked
+          ? "Open this browser and set up the companion extension to see tabs."
+          : "Browser is closed. Open it to see tabs."}
       </p>
     );
   }
 
-  // Running but extension never installed.
-  if (!browser.extensionInstalled) {
+  // Running but not verified — never set up, skipped, or the extension is gone.
+  if (locked) {
     return (
-      <p className="pilpod-browser-panel__empty pilpod-browser-panel__empty--inline">
-        Install the PilPod companion extension to see tabs.
-      </p>
+      <div className="pilpod-browser-panel__empty pilpod-browser-panel__empty--inline">
+        <span>
+          {browser.activationState === "revoked"
+            ? "The companion extension is no longer responding in this browser."
+            : "Set up the companion extension to see tabs."}
+        </span>
+        {onOpenSetup && (
+          <button
+            type="button"
+            className="pilpod-browser-panel__setup-btn"
+            onClick={() => onOpenSetup(browser.osBrowserId)}
+          >
+            {browser.activationState === "revoked" ? "Reconnect" : "Set up"}
+          </button>
+        )}
+      </div>
     );
   }
 
@@ -959,6 +983,7 @@ export function BrowserSessionsPanel({
   onReactivate,
   onMixerVolume,
   onRefreshBrowser,
+  onOpenSetup,
   onSeekTab,
   onSetTabVolume,
   onPip,
@@ -1163,6 +1188,7 @@ export function BrowserSessionsPanel({
                 pendingKeys={pendingKeys}
                 searching={narrowResults}
                 profileAudio={profileAudio}
+                onOpenSetup={onOpenSetup}
                 onPlayPause={onPlayPause}
                 onFocusTab={onFocusTab}
                 onReload={onReload}

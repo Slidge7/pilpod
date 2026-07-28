@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BrowserDockBar } from "./components/BrowserDockBar";
+import { BrowserDockBar, type ViewType } from "./components/BrowserDockBar";
 import { invoke } from "@tauri-apps/api/core";
 import { DownloadPanel, DOWNLOADER_UI_ENABLED, useDownloader } from "../downloader";
 import { downloadStatusForUrl } from "../downloader/lib";
@@ -10,6 +10,13 @@ import { INAPP_BROWSER_ID } from "../playlist-player/types";
 import { SaveTabMenuButton } from "../vault/components/SaveTabMenuButton";
 import { DownloadDockCard } from "../downloader/components/DownloadDockCard";
 import { PremiumGate } from "../premium";
+import {
+  ExtensionSetupPanel,
+  OnboardingGate,
+  isBrowserLocked,
+  setupBadgeCount,
+  useExtensionSetup,
+} from "../extension-setup";
 import type { BrowserTab } from "../../types/media";
 import type { TabAccessories } from "./components/BrowserSessionsPanel";
 import "./MediaDashboard.css";
@@ -41,7 +48,7 @@ export function MediaDashboard() {
   // identical static slices (see useStaticGlassWallpaper.ts for the why).
   const staticGlass = useStaticGlassWallpaper(wallpaper.dataUrl, glassStrength);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"media" | "download" | "vault" | "playlist">("media");
+  const [activeTab, setActiveTab] = useState<ViewType>("media");
   const [activeDockBrowserId, setActiveDockBrowserId] = useState<string | null>(
     null,
   );
@@ -105,6 +112,16 @@ export function MediaDashboard() {
     });
   }, [browsers, playlistPlayer.player]);
 
+  // Extension setup — lifted so the first-run gate, the menu badge and the
+  // setup section all read one snapshot (single event listener).
+  const extensionSetup = useExtensionSetup();
+  const setupBadge = setupBadgeCount(extensionSetup.overview.browsers);
+
+  const openSetupSection = useCallback(() => {
+    setActiveTab("setup");
+    setMenuOpen(false);
+  }, []);
+
   // Downloader state — lifted so the floating card + in-tab buttons share one
   // snapshot with the full Download panel (single event listener).
   const dl = useDownloader();
@@ -157,8 +174,11 @@ export function MediaDashboard() {
     [vault, browserById, dl.tasks, setActiveTab],
   );
 
+  // Only verified browsers contribute: a locked row shows no tabs, so counting
+  // its cached tab total would put a number in the menu that nothing on screen
+  // adds up to.
   const browserTabCount = browsers.reduce(
-    (sum, b) => sum + (b.extensionInstalled ? b.tabCount : 0),
+    (sum, b) => sum + (isBrowserLocked(b.activationState) ? 0 : b.tabCount),
     0,
   );
 
@@ -279,6 +299,8 @@ export function MediaDashboard() {
           onRefresh={refresh}
           onToggleWidgetEnabled={toggleWidgetEnabled}
           onOpenDevLab={openDevLab}
+          onOpenExtensionSetup={openSetupSection}
+          extensionSetupBadge={setupBadge}
         />
 
         <main className="pilpod-dashboard-shell__main">
@@ -298,6 +320,8 @@ export function MediaDashboard() {
                 onSeedConsumed={() => setDownloadSeed(null)}
               />
             </PremiumGate>
+          ) : activeTab === "setup" ? (
+            <ExtensionSetupPanel api={extensionSetup} />
           ) : activeTab === "vault" && VAULT_UI_ENABLED ? (
             <VaultPanel api={vault} browsers={browsers} forceSub="bookmarks" />
           ) : activeTab === "playlist" && VAULT_UI_ENABLED ? (
@@ -327,6 +351,7 @@ export function MediaDashboard() {
                 onReactivate={reactivateBrowserTab}
                 onMixerVolume={(id, v) => void setMixerVolume(id, v)}
                 onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
+                onOpenSetup={openSetupSection}
                 onSeekTab={seekBrowserTab}
                 onSetTabVolume={setTabVolumeBrowserTab}
                 onPip={pipBrowserTab}
@@ -368,6 +393,8 @@ export function MediaDashboard() {
         />
 
         <div className="pilpod-dashboard-glass-edge" aria-hidden="true" />
+
+        <OnboardingGate api={extensionSetup}>{null}</OnboardingGate>
       </div>
     </div>
   );

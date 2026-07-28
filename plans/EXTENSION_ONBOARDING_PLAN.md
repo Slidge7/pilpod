@@ -1,4 +1,20 @@
-# PilPod — Browser Extension Onboarding & Activation Plan (v2)
+> ## ⚠️ SUPERSEDED — see `plans/EXTENSION_SETUP_PLAN.md`
+>
+> This plan assumed the companion could only be side-loaded as an **unpacked**
+> extension via Developer Mode. It is now published to the Chrome Web Store as
+> an **unlisted** item (`ooogjmdnagfepkocppnldkafbcbmdhal`), so install is a
+> normal one-click add from a URL.
+>
+> **Dropped:** companion path resolution, `reveal_companion_folder`, bundling
+> the extension as a Tauri resource, Developer Mode steps, the drag-and-drop
+> install path, and the Firefox temporary-addon question.
+>
+> **Kept and built:** the activation state machine, peer-PID handshake
+> attribution, dashboard gating, and the dynamic per-browser guide.
+>
+> Retained for history only. Do not implement from this file.
+
+# PilPod — Browser Extension Onboarding & Activation Plan (v2, superseded)
 
 > **Goal:** On first launch (and continuously after), PilPod detects installed browsers,
 > forces/prompts extension setup per browser via a dynamic 3-step unpacked-install guide,

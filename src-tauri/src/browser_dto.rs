@@ -67,7 +67,16 @@ pub struct DetectedBrowser {
     pub running: bool,
     /// True when the extension has ever successfully connected to PilPod for
     /// this browser. Persisted across app restarts.
+    ///
+    /// Superseded by [`Self::activation_state`], which distinguishes the cases
+    /// this boolean flattens together. Kept so existing consumers keep working;
+    /// new code should read `activation_state`.
     pub extension_installed: bool,
+    /// Setup/verification state for this browser: `inactive`, `setupPending`,
+    /// `active`, `revoked` or `skipped`. The dashboard gates features on
+    /// `active`; the setup screen drives everything else.
+    #[serde(default)]
+    pub activation_state: crate::extension_setup::ActivationState,
     /// True when the extension sent a POST within the last 3 seconds.
     pub extension_connected: bool,
     pub tab_count: u32,

@@ -28,7 +28,9 @@ use crate::browser_detector::{clear_reconnecting, emit_on_connection_change};
 use crate::browser_dto::{BrowserTab, TabMedia};
 
 use super::connections::{register_ws_connection, unregister_ws_connection, WsConnectionMap};
-use super::handler::{apply_ingest, BridgeContext, BridgeIngest};
+use super::handler::{
+    apply_ingest, apply_verified_handshake, BridgeContext, BridgeIngest,
+};
 use super::protocol::frames::{ClientMsg, ServerMsg, TabState};
 use super::protocol::version::{self, negotiate};
 use super::security::{action_from_str, origin_allowed, token_ok};
@@ -119,6 +121,10 @@ async fn handle_connection(
         .ok()
         .and_then(|peer| super::peer_pid::verified_os_id_for_peer(peer, super::BROWSER_WS_PORT));
     // Origin allowlist enforced during the upgrade handshake (Phase 5 security).
+    //
+    // The large `Err` variant is tungstenite's `ErrorResponse` — the callback
+    // signature is fixed by `accept_hdr_async`, so boxing it is not an option.
+    #[allow(clippy::result_large_err)]
     let origin_check = |req: &Request, resp: Response| -> Result<Response, ErrorResponse> {
         let origin = req
             .headers()
@@ -193,6 +199,9 @@ async fn handle_connection(
                         }
                     }
                     Message::Close(_) => break,
+                    // False positive: clippy suggests folding this into a match
+                    // guard, but guards cannot contain `.await`.
+                    #[allow(clippy::collapsible_match)]
                     Message::Ping(p) => {
                         if write.send(Message::Pong(p)).await.is_err() {
                             break;
@@ -267,6 +276,17 @@ fn handle_client_msg(
 
             register_ws_connection(ws_connections, &browser_id, out_tx.clone(), caps.nav);
             clear_reconnecting(&ctx.reconnecting, &browser_id);
+
+            // Activate here, not on the first `full`.
+            //
+            // `hello` is the earliest moment we know *which* browser this is,
+            // and peer-PID attribution has already run at socket accept. Waiting
+            // for `full` would leave the browser's row locked for an extra
+            // round trip, and would strand any client that connects but has
+            // nothing to report yet. It also gets the ordering right: the emit
+            // below then carries the new `active` state instead of a stale one.
+            apply_verified_handshake(&ctx.app, session.verified_os_id.as_deref());
+
             emit_on_connection_change(
                 &ctx.app,
                 &ctx.detected_browsers,

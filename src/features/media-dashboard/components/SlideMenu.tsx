@@ -7,6 +7,7 @@ import type { WallpaperController } from "../hooks/useWallpaper";
 import { IDLE_INTERVALS, type IdleController } from "../idle";
 import {
   IconBeaker,
+  IconExtensionMissing,
   IconFolderOpen,
   IconImage,
   IconMoon,
@@ -37,6 +38,10 @@ type Props = {
   onRefresh: () => void;
   onToggleWidgetEnabled: () => void;
   onOpenDevLab?: () => void;
+  /** Opens the permanent "Browser setup" section. */
+  onOpenExtensionSetup?: () => void;
+  /** Browsers needing setup; renders a dot on the entry. 0 = no dot. */
+  extensionSetupBadge?: number;
 };
 
 /** Turn a wallpaper file name into a friendlier label, e.g. "01-aurora.jpg" -> "Aurora". */
@@ -64,6 +69,8 @@ export function SlideMenu({
   onRefresh,
   onToggleWidgetEnabled,
   onOpenDevLab,
+  onOpenExtensionSetup,
+  extensionSetupBadge = 0,
 }: Props) {
   const [glassDragging, setGlassDragging] = useState(false);
   const [wallpaperExpanded, setWallpaperExpanded] = useState(false);
@@ -206,6 +213,27 @@ export function SlideMenu({
           >
             <IconTimer />
           </button>
+          {onOpenExtensionSetup ? (
+            <button
+              type="button"
+              onClick={onOpenExtensionSetup}
+              className="pilpod-slide-menu__btn"
+              title={
+                extensionSetupBadge > 0
+                  ? `Browser setup — ${extensionSetupBadge} browser${
+                      extensionSetupBadge === 1 ? "" : "s"
+                    } need setup`
+                  : "Browser setup"
+              }
+              aria-label="Browser setup"
+              tabIndex={btnTabIndex}
+            >
+              <IconExtensionMissing />
+              {extensionSetupBadge > 0 ? (
+                <span className="pilpod-slide-menu__dot" aria-hidden="true" />
+              ) : null}
+            </button>
+          ) : null}
           {import.meta.env.DEV && onOpenDevLab ? (
             <button
               type="button"

@@ -157,6 +157,35 @@ pub fn convert_tab(post: BrowserTabPost, browser_id: &str) -> BrowserTab {
     }
 }
 
+/// Borrow the activation store from managed state, if it has been registered.
+fn activation_handle(
+    app: &AppHandle,
+) -> Option<tauri::State<'_, crate::extension_setup::ActivationStoreHandle>> {
+    tauri::Manager::try_state::<crate::extension_setup::ActivationStoreHandle>(app)
+}
+
+/// Flip a PID-verified browser to `Active`. Returns `true` when the state
+/// actually changed, so the caller knows whether to re-emit `browsers://update`.
+///
+/// **`verified_os_id` must come from peer-PID attribution, never from the
+/// extension's self-reported browser name.** Every Chromium fork reports itself
+/// as "Chrome" from an MV3 service worker, so trusting the self-report would
+/// mean installing the companion in Brave marks *Chrome* as verified — a
+/// browser with no extension in it. `None` therefore activates nothing; we fail
+/// closed and let the next frame (with a successful lookup) do the job.
+pub fn apply_verified_handshake(app: &AppHandle, verified_os_id: Option<&str>) -> bool {
+    let Some(verified) = verified_os_id else {
+        return false;
+    };
+    activation_handle(app).is_some_and(|handle| {
+        crate::extension_setup::apply_event(
+            &handle,
+            verified,
+            crate::extension_setup::ActivationEvent::HandshakeVerified,
+        )
+    })
+}
+
 pub fn apply_ingest(ingest: BridgeIngest, ctx: &BridgeContext) -> BridgeResult {
     let now = Instant::now();
     let incoming_hash = hash_tabs(&ingest.tabs);
@@ -226,9 +255,14 @@ pub fn apply_ingest(ingest: BridgeIngest, ctx: &BridgeContext) -> BridgeResult {
         store.mark_installed(&effective_os_id);
     }
 
+    // Activation uses `verified_os_id` ONLY — never `effective_os_id`. See
+    // `apply_verified_handshake` for why the self-reported name is unusable.
+    let activation_changed =
+        apply_verified_handshake(&ctx.app, ingest.verified_os_id.as_deref());
+
     let was_reconnecting = clear_reconnecting(&ctx.reconnecting, &ingest.browser_id);
 
-    if changed || was_reconnecting {
+    if changed || was_reconnecting || activation_changed {
         emit_browsers_to_ui(
             &ctx.app,
             &ctx.detected_browsers,

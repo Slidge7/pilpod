@@ -122,7 +122,7 @@ pub fn clear_reconnecting(state: &ReconnectingBrowsersState, browser_id: &str) -
     state
         .lock()
         .ok()
-        .map_or(false, |mut set| set.remove(browser_id))
+        .is_some_and(|mut set| set.remove(browser_id))
 }
 
 // ── Stable-id helpers ────────────────────────────────────────────────────────
@@ -179,11 +179,9 @@ fn scan_installed_from_hive(hive: winreg::HKEY) -> HashSet<String> {
     let mut installed = HashSet::new();
     let root = winreg::RegKey::predef(hive);
     if let Ok(key) = root.open_subkey("SOFTWARE\\Clients\\StartMenuInternet") {
-        for name_result in key.enum_keys() {
-            if let Ok(name) = name_result {
-                if let Some(entry) = browser_catalog::match_registry_key(&name) {
-                    installed.insert(entry.id.to_string());
-                }
+        for name in key.enum_keys().flatten() {
+            if let Some(entry) = browser_catalog::match_registry_key(&name) {
+                installed.insert(entry.id.to_string());
             }
         }
     }
@@ -274,6 +272,7 @@ pub fn merge_detected_and_slots(
     ext_store: &ExtensionInstalledStore,
     reconnecting: &HashSet<String>,
     ws_connected: &HashSet<String>,
+    activation: &crate::extension_setup::ActivationSnapshot,
 ) -> Vec<DetectedBrowser> {
     let slot_active_cutoff = Duration::from_secs(CONNECTED_WINDOW_SECS);
     let now = std::time::Instant::now();
@@ -324,6 +323,7 @@ pub fn merge_detected_and_slots(
             profile_label,
             running,
             extension_installed: ext_store.is_installed(&os_id),
+            activation_state: activation.state_of(&os_id),
             extension_connected,
             tab_count: slot.tabs.len() as u32,
             windows: crate::browser_dto::windows_for_tabs(&slot.tabs),
@@ -361,6 +361,7 @@ pub fn merge_detected_and_slots(
             profile_label: None,
             running: d.running,
             extension_installed: ext_store.is_installed(&d.id),
+            activation_state: activation.state_of(&d.id),
             extension_connected: false,
             tab_count: 0,
             tabs: Vec::new(),
@@ -406,6 +407,7 @@ pub fn build_browsers_payload(
     ext_store: &ExtensionInstalledState,
     reconnecting: &ReconnectingBrowsersState,
     ws_connections: &WsConnectionMap,
+    activation: &crate::extension_setup::ActivationSnapshot,
 ) -> BrowsersUpdatePayload {
     let detected_list = detected
         .lock()
@@ -418,10 +420,11 @@ pub fn build_browsers_payload(
 
     let mut browsers = merge_detected_and_slots(
         &detected_list,
-        &*slots_map,
-        &*store,
-        &*reconnecting_set,
+        &slots_map,
+        &store,
+        &reconnecting_set,
         &ws_connected,
+        activation,
     );
 
     // The in-app player is a one-tab media source of its own. Appending it here
@@ -451,12 +454,18 @@ pub fn emit_browsers_to_ui(
     reconnecting: &ReconnectingBrowsersState,
     ws_connections: &WsConnectionMap,
 ) {
+    // Activation comes from managed state rather than a parameter: this
+    // function has thirteen call sites across the bridge, dev-lab and audio
+    // paths, none of which have any business knowing about activation.
+    let activation = crate::extension_setup::snapshot_from_app(app);
+
     let payload = build_browsers_payload(
         detected,
         slots,
         ext_store,
         reconnecting,
         ws_connections,
+        &activation,
     );
 
     if let Err(e) = app.emit(BROWSERS_UPDATE_EVENT, &payload) {
@@ -480,6 +489,74 @@ pub fn emit_on_connection_change(
 
 /// Spawn a background thread that polls for OS browser changes every 2 seconds.
 /// Emits `"browsers://update"` whenever the installed/running browser list changes.
+/// One revocation pass. Returns `true` when any browser changed state, so the
+/// caller knows to re-emit.
+///
+/// Kept out of the loop body so the loop stays readable; the decision logic
+/// itself is pure and lives in [`crate::extension_setup::verify`].
+fn sweep_revocations(
+    app: &AppHandle,
+    detected: &DetectedBrowsersState,
+    slots: &BrowserSlotsMap,
+    silent_since: &mut HashMap<String, std::time::Instant>,
+    now: std::time::Instant,
+) -> bool {
+    use crate::extension_setup::{self, ActivationEvent};
+
+    let snapshot = extension_setup::snapshot_from_app(app);
+    if snapshot.is_empty() {
+        silent_since.clear();
+        return false;
+    }
+
+    let running: HashSet<String> = detected
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .iter()
+        .filter(|d| d.running)
+        .map(|d| d.id.clone())
+        .collect();
+
+    // "Connected" is deliberately generous: *any* slot for the browser, however
+    // stale, counts. Slot GC (15 min) is the real backstop for dead profiles;
+    // this sweep only needs to catch a live browser that stopped talking.
+    let connected: HashSet<String> = slots
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .values()
+        .map(|s| s.effective_os_id())
+        .collect();
+
+    let candidates = extension_setup::verify::revocation_candidates(
+        &snapshot,
+        &running,
+        &connected,
+        silent_since,
+        now,
+        Duration::from_secs(extension_setup::verify::REVOKE_GRACE_SECS),
+    );
+
+    let Some(handle) = tauri::Manager::try_state::<extension_setup::ActivationStoreHandle>(app)
+    else {
+        return false;
+    };
+
+    let mut any = false;
+    for id in candidates {
+        if extension_setup::apply_event(
+            &handle,
+            &id,
+            ActivationEvent::ExtensionLost {
+                grace_expired: true,
+            },
+        ) {
+            log::info!("[extension-setup] {id}: extension no longer responding — revoked");
+            any = true;
+        }
+    }
+    any
+}
+
 pub fn spawn_detector(
     detected: DetectedBrowsersState,
     slots: BrowserSlotsMap,
@@ -509,6 +586,10 @@ pub fn spawn_detector(
             // Phase 5: per-browser memory of the last time a process was seen,
             // used to hold "running" through brief exe swaps (browser updates).
             let mut last_running: HashMap<String, std::time::Instant> = HashMap::new();
+
+            // Per-browser memory of when a verified browser went quiet while
+            // still running. Owned by this loop; see `extension_setup::verify`.
+            let mut silent_since: HashMap<String, std::time::Instant> = HashMap::new();
 
             loop {
                 std::thread::sleep(Duration::from_secs(2));
@@ -548,7 +629,12 @@ pub fn spawn_detector(
                     eprintln!("[browser-detector] gc: removed {} stale slot(s)", removed.len());
                 }
 
-                if changed || !removed.is_empty() {
+                // Revoke browsers that are running but have gone quiet past the
+                // grace window — the extension was removed or disabled. A
+                // closed browser is never revoked; see `extension_setup::verify`.
+                let revoked = sweep_revocations(&app, &detected, &slots, &mut silent_since, now);
+
+                if changed || !removed.is_empty() || revoked {
                     emit_browsers_to_ui(
                         &app,
                         &detected,
@@ -593,6 +679,14 @@ mod tests {
         detected: Vec<DetectedBrowserInfo>,
         slots: Vec<BrowserSlot>,
     ) -> Vec<DetectedBrowser> {
+        merge_with_activation(detected, slots, &Default::default())
+    }
+
+    fn merge_with_activation(
+        detected: Vec<DetectedBrowserInfo>,
+        slots: Vec<BrowserSlot>,
+        activation: &crate::extension_setup::ActivationSnapshot,
+    ) -> Vec<DetectedBrowser> {
         let map: HashMap<String, BrowserSlot> = slots
             .into_iter()
             .map(|s| (s.browser_id.clone(), s))
@@ -603,7 +697,70 @@ mod tests {
             &ExtensionInstalledStore::default(),
             &HashSet::new(),
             &HashSet::new(),
+            activation,
         )
+    }
+
+    fn activation(pairs: &[(&str, crate::extension_setup::ActivationState)]) -> crate::extension_setup::ActivationSnapshot {
+        pairs
+            .iter()
+            .map(|(id, s)| (id.to_string(), *s))
+            .collect()
+    }
+
+    #[test]
+    fn browsers_without_a_store_entry_serialize_as_inactive() {
+        use crate::extension_setup::ActivationState;
+        let rows = merge(vec![detected("chrome", "Google Chrome", true)], vec![]);
+        assert_eq!(rows[0].activation_state, ActivationState::Inactive);
+    }
+
+    #[test]
+    fn activation_state_reaches_both_slot_and_placeholder_rows() {
+        use crate::extension_setup::ActivationState;
+        let snap = activation(&[
+            ("chrome", ActivationState::Active),
+            ("brave", ActivationState::Revoked),
+        ]);
+        // chrome has a slot (verified), brave is a placeholder row with none.
+        let rows = merge_with_activation(
+            vec![
+                detected("chrome", "Google Chrome", true),
+                detected("brave", "Brave", true),
+            ],
+            vec![slot("uuid-1", "Chrome", Some("chrome"))],
+            &snap,
+        );
+
+        let by_id = |id: &str| {
+            rows.iter()
+                .find(|r| r.os_browser_id == id)
+                .unwrap_or_else(|| panic!("no row for {id}"))
+                .activation_state
+        };
+        assert_eq!(by_id("chrome"), ActivationState::Active);
+        assert_eq!(by_id("brave"), ActivationState::Revoked);
+    }
+
+    #[test]
+    fn activation_is_keyed_by_verified_os_id_not_self_report() {
+        use crate::extension_setup::ActivationState;
+        // Brave self-reports "Chrome"; only Brave is activated. The Brave row
+        // must be the Active one — activating Chrome here would unlock a
+        // browser with no extension.
+        let rows = merge_with_activation(
+            vec![
+                detected("chrome", "Google Chrome", true),
+                detected("brave", "Brave", true),
+            ],
+            vec![slot("uuid-1", "Chrome", Some("brave"))],
+            &activation(&[("brave", ActivationState::Active)]),
+        );
+
+        let brave = rows.iter().find(|r| r.os_browser_id == "brave").unwrap();
+        let chrome = rows.iter().find(|r| r.os_browser_id == "chrome").unwrap();
+        assert_eq!(brave.activation_state, ActivationState::Active);
+        assert_eq!(chrome.activation_state, ActivationState::Inactive);
     }
 
     #[test]

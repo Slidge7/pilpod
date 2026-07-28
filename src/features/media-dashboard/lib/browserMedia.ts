@@ -1,4 +1,4 @@
-import type { BrowserTab, TabMedia } from "../../../types/media";
+import type { BrowserTab, DetectedBrowser, TabMedia } from "../../../types/media";
 import { isMediaUrl } from "../../../shared/mediaUrlRules";
 
 /** Show idle hint on media tabs when user inactive longer than this. */
@@ -278,35 +278,18 @@ export function applySearchTagFilters(
   });
 }
 
-/** Group filtered matches back into per-browser buckets for rendering. */
+/**
+ * Group filtered matches back into per-browser buckets for rendering.
+ *
+ * Takes and returns `DetectedBrowser` rather than a structural copy of its
+ * shape: this function used to re-declare all eleven fields three times over,
+ * so every field added to `DetectedBrowser` broke it in three places at once
+ * and silently dropped the new data in between.
+ */
 export function groupSearchMatchesByBrowser(
-  browsers: ReadonlyArray<{
-    id: string;
-    osBrowserId?: string;
-    displayName: string;
-    profileLabel?: string | null;
-    running: boolean;
-    extensionInstalled: boolean;
-    extensionConnected: boolean;
-    lastSyncSecs: number | null;
-    extensionReconnecting?: boolean;
-    iconUrl?: string | null;
-  }>,
+  browsers: ReadonlyArray<DetectedBrowser>,
   matches: SearchTabMatch[],
-): Array<{
-  id: string;
-  osBrowserId: string;
-  displayName: string;
-  profileLabel?: string | null;
-  running: boolean;
-  extensionInstalled: boolean;
-  extensionConnected: boolean;
-  lastSyncSecs: number | null;
-  extensionReconnecting?: boolean;
-  iconUrl?: string | null;
-  tabs: BrowserTab[];
-  tabCount: number;
-}> {
+): DetectedBrowser[] {
   const browserById = new Map(browsers.map((b) => [b.id, b]));
   const tabsByBrowser = new Map<string, BrowserTab[]>();
 
@@ -317,35 +300,17 @@ export function groupSearchMatchesByBrowser(
     else tabsByBrowser.set(match.browserId, [match.tab]);
   }
 
-  const grouped: Array<{
-    id: string;
-    osBrowserId: string;
-    displayName: string;
-    profileLabel?: string | null;
-    running: boolean;
-    extensionInstalled: boolean;
-    extensionConnected: boolean;
-    lastSyncSecs: number | null;
-    extensionReconnecting?: boolean;
-    iconUrl?: string | null;
-    tabs: BrowserTab[];
-    tabCount: number;
-  }> = [];
+  const grouped: DetectedBrowser[] = [];
 
   for (const browser of browsers) {
     const tabs = tabsByBrowser.get(browser.id);
     if (!tabs?.length) continue;
+    // `windows` is dropped on purpose: the per-window rollup describes the
+    // browser's *full* tab set, and would be wrong next to a filtered one.
+    const { windows: _windows, ...rest } = browser;
     grouped.push({
-      id: browser.id,
+      ...rest,
       osBrowserId: browser.osBrowserId ?? browser.id,
-      displayName: browser.displayName,
-      profileLabel: browser.profileLabel,
-      running: browser.running,
-      extensionInstalled: browser.extensionInstalled,
-      extensionConnected: browser.extensionConnected,
-      lastSyncSecs: browser.lastSyncSecs,
-      extensionReconnecting: browser.extensionReconnecting,
-      iconUrl: browser.iconUrl,
       tabs,
       tabCount: tabs.length,
     });

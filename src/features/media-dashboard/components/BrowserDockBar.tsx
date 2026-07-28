@@ -8,7 +8,15 @@ import {
   IconMusicNote,
 } from "../../../shared/ui/icons";
 
-type ViewType = "media" | "download" | "vault" | "playlist";
+/**
+ * The dashboard's main views. Exported so `MediaDashboard` shares this exact
+ * union instead of re-declaring it — they drifted once already.
+ *
+ * `"setup"` has no dock button on purpose: it is reached from the menu and from
+ * locked browser rows, and while it is open no dock button reads as active,
+ * which is the honest signal that you are somewhere else.
+ */
+export type ViewType = "media" | "download" | "vault" | "playlist" | "setup";
 
 type Props = {
   browsers: DetectedBrowser[];

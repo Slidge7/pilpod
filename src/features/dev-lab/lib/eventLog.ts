@@ -126,6 +126,18 @@ export function diffBrowsersPayload(
         ),
       );
     }
+    // Activation is what actually gates the dashboard, so its transitions are
+    // the ones worth watching when debugging "why is this browser locked".
+    if (old.activationState !== b.activationState) {
+      out.push(
+        entry(
+          ts,
+          "installed",
+          label(b),
+          `activation ${old.activationState} → ${b.activationState}`,
+        ),
+      );
+    }
     if (old.tabCount !== b.tabCount) {
       out.push(
         entry(ts, "tabs", label(b), `tabs ${old.tabCount} → ${b.tabCount}`),

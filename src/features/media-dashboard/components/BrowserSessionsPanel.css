@@ -291,6 +291,34 @@ html.dark .pilpod-search-tag__exclude:hover {
   text-align: left;
 }
 
+/* Locked row: explanation plus the one action that unlocks it. */
+div.pilpod-browser-panel__empty--inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.pilpod-browser-panel__setup-btn {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 7px;
+  padding: 0.25rem 0.6rem;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 550;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.13s ease;
+}
+
+.pilpod-browser-panel__setup-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
 .pilpod-browser-panel__groups {
   display: flex;
   flex-direction: column;

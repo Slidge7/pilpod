@@ -1,0 +1,426 @@
+/* Extension setup — browser list, guide, diagrams.
+   Prefix `xs-` (eXtension Setup) so nothing here can collide with the
+   dashboard, vault or downloader stylesheets. */
+
+.xs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 12px 18px;
+  color: var(--pilpod-text, rgba(255, 255, 255, 0.92));
+}
+
+.xs-panel__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.xs-panel__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.xs-panel__sub {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.66;
+}
+
+.xs-empty {
+  margin: 0;
+  padding: 18px 4px;
+  font-size: 12.5px;
+  opacity: 0.6;
+  text-align: center;
+}
+
+.xs-error {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #ffb4a8;
+  opacity: 0.9;
+}
+
+/* ── Browser list ───────────────────────────────────────────────────────── */
+
+.xs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.xs-card {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 10px;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.xs-card[data-state="active"] {
+  border-color: rgba(120, 220, 160, 0.28);
+}
+
+.xs-card[data-state="revoked"] {
+  border-color: rgba(255, 190, 120, 0.3);
+}
+
+.xs-card--muted {
+  opacity: 0.55;
+}
+
+.xs-card__main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.xs-card__icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border-radius: 5px;
+  object-fit: contain;
+}
+
+.xs-card__icon--blank {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.xs-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.xs-card__name {
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.xs-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.xs-card__hint {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  opacity: 0.62;
+}
+
+/* ── Status badge ───────────────────────────────────────────────────────── */
+
+.xs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.82;
+}
+
+.xs-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 6px;
+}
+
+.xs-badge--neutral { color: rgba(255, 255, 255, 0.62); }
+.xs-badge--pending { color: #ffd28a; }
+.xs-badge--good    { color: #8fe3b0; }
+.xs-badge--warn    { color: #ffb07a; }
+.xs-badge--muted   { color: rgba(255, 255, 255, 0.4); }
+
+.xs-badge--pending .xs-badge__dot {
+  animation: xs-blink 1.1s ease-in-out infinite;
+}
+
+@keyframes xs-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+
+.xs-btn {
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 5px 11px;
+  font-size: 11.5px;
+  font-weight: 550;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 130ms ease, border-color 130ms ease, opacity 130ms ease;
+}
+
+.xs-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.xs-btn--primary {
+  background: rgba(255, 255, 255, 0.92);
+  color: #16181c;
+}
+
+.xs-btn--primary:hover:not(:disabled) {
+  background: #fff;
+}
+
+.xs-btn--ghost {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.16);
+  color: inherit;
+}
+
+.xs-btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Guide ──────────────────────────────────────────────────────────────── */
+
+.xs-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.xs-guide__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.xs-guide__icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  object-fit: contain;
+}
+
+.xs-guide__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.xs-guide__intro {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.7;
+}
+
+.xs-guide__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  counter-reset: none;
+}
+
+.xs-step {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.xs-step__num {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+.xs-step__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.xs-step__title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.xs-step__text {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  opacity: 0.68;
+}
+
+.xs-step__body > .xs-btn {
+  align-self: flex-start;
+}
+
+/* ── Diagrams ───────────────────────────────────────────────────────────── */
+
+.xs-diagram {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 6px;
+}
+
+.xs-diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.dg-frame {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 1;
+}
+
+.dg-fill-soft  { fill: rgba(255, 255, 255, 0.11); }
+.dg-fill-faint { fill: rgba(255, 255, 255, 0.055); }
+.dg-banner     { fill: rgba(120, 170, 255, 0.14); }
+.dg-accent     { fill: rgba(150, 200, 255, 0.85); }
+.dg-accent-text{ fill: rgba(20, 24, 32, 0.75); }
+
+.dg-arrow {
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dg-check {
+  stroke: #8fe3b0;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dg-pulse {
+  animation: xs-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes xs-pulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
+/* ── Live verification step ─────────────────────────────────────────────── */
+
+.xs-live {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.xs-live__waiting {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  opacity: 0.8;
+}
+
+.xs-live__spinner {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 11px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: rgba(255, 255, 255, 0.75);
+  animation: xs-spin 700ms linear infinite;
+}
+
+@keyframes xs-spin {
+  to { transform: rotate(360deg); }
+}
+
+.xs-live--ok {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #8fe3b0;
+  font-weight: 550;
+}
+
+.xs-live__mark {
+  font-size: 13px;
+}
+
+.xs-live__stuck {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  align-items: flex-start;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  opacity: 0.85;
+}
+
+.xs-live__stuck p {
+  margin: 0;
+}
+
+/* ── First-run gate ─────────────────────────────────────────────────────── */
+
+.xs-gate {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: rgba(14, 16, 20, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.xs-gate__inner {
+  margin: auto 0;
+  width: 100%;
+}
+
+.xs-gate__dismiss {
+  align-self: center;
+  margin-top: 4px;
+  opacity: 0.72;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xs-badge--pending .xs-badge__dot,
+  .dg-pulse,
+  .xs-live__spinner {
+    animation: none;
+  }
+}

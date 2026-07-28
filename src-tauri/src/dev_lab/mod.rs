@@ -348,6 +348,7 @@ pub fn dev_get_full_state(
     ext_store: State<'_, ExtensionInstalledState>,
     reconnecting: State<'_, ReconnectingBrowsersState>,
     ws_connections: State<'_, WsConnectionMap>,
+    app: tauri::AppHandle,
 ) -> state::DevFullState {
     let os_rows = crate::browser_os_scan::build_dev_os_browser_rows();
 
@@ -372,6 +373,7 @@ pub fn dev_get_full_state(
         &ext_store,
         &reconnecting,
         &ws_connections,
+        &crate::extension_setup::snapshot_from_app(&app),
     );
 
     state::DevFullState {

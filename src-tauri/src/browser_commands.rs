@@ -21,6 +21,7 @@ pub fn get_browsers(
     ext_store: State<'_, ExtensionInstalledState>,
     reconnecting: State<'_, ReconnectingBrowsersState>,
     ws_connections: State<'_, WsConnectionMap>,
+    app: AppHandle,
 ) -> BrowsersUpdatePayload {
     build_browsers_payload(
         &detected,
@@ -28,6 +29,7 @@ pub fn get_browsers(
         &ext_store,
         &reconnecting,
         &ws_connections,
+        &crate::extension_setup::snapshot_from_app(&app),
     )
 }
 

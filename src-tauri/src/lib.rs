@@ -1,6 +1,14 @@
 mod app;
 mod premium;
 mod vault;
+// Platform-neutral: pure file I/O + a state machine. The Windows-only pieces
+// (browser launching, registry paths) live behind cfg gates inside the module.
+//
+// TODO(phase-5): drop `allow(dead_code)` — a few read accessors and the
+// `forget`/`state_of` helpers are exercised only by unit tests until the
+// dev-lab activation panel lands.
+#[allow(dead_code)]
+mod extension_setup;
 #[cfg(windows)]
 mod downloader;
 mod browser_dto;

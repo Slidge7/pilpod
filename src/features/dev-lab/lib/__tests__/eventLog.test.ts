@@ -16,6 +16,7 @@ function browser(overrides: Partial<DetectedBrowser> = {}): DetectedBrowser {
     profileLabel: null,
     running: true,
     extensionInstalled: true,
+    activationState: "active",
     extensionConnected: true,
     tabCount: 3,
     tabs: [],

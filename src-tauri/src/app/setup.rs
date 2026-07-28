@@ -47,6 +47,13 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             crate::browser_detector::ExtensionInstalledStore::load(&handle),
         ));
 
+    // Per-browser extension activation (supersedes `ext_store`; migrates it on
+    // first load). See `plans/EXTENSION_SETUP_PLAN.md`.
+    let activation_store: crate::extension_setup::ActivationStoreHandle =
+        std::sync::Arc::new(std::sync::Mutex::new(
+            crate::extension_setup::load_store(&handle),
+        ));
+
     let reconnecting: crate::browser_detector::ReconnectingBrowsersState =
         crate::browser_detector::new_reconnecting_state();
 
@@ -66,6 +73,7 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let _ = app.manage(std::sync::Arc::clone(&detected_browsers));
     let _ = app.manage(std::sync::Arc::clone(&browser_slots));
     let _ = app.manage(std::sync::Arc::clone(&ext_store));
+    let _ = app.manage(std::sync::Arc::clone(&activation_store));
     let _ = app.manage(std::sync::Arc::clone(&sync_flag));
     let _ = app.manage(std::sync::Arc::clone(&reconnecting));
     let _ = app.manage(std::sync::Arc::clone(&ws_connections));

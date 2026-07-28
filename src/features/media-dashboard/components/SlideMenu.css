@@ -358,6 +358,24 @@
   height: 22px;
 }
 
+/* Attention dot for the browser-setup entry. Positioned relative to the button,
+   which needs an explicit stacking context for the absolute child. */
+.pilpod-slide-menu__btn:has(.pilpod-slide-menu__dot) {
+  position: relative;
+}
+
+.pilpod-slide-menu__dot {
+  position: absolute;
+  top: 0.42rem;
+  right: 0.42rem;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffb07a;
+  box-shadow: 0 0 0 2px var(--pilpod-bg-muted);
+  pointer-events: none;
+}
+
 .pilpod-slide-menu__btn:hover {
   background: var(--pilpod-bg-row-hover);
   color: var(--pilpod-text);

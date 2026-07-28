@@ -19,13 +19,32 @@ export type BrowserWindowInfo = {
   audibleCount: number;
 };
 
+/**
+ * Per-browser extension setup state. Mirrors Rust
+ * `extension_setup::ActivationState`.
+ *
+ * - `inactive`     — detected, extension never verified
+ * - `setupPending` — user is mid-install, awaiting the handshake
+ * - `active`       — verified via the bridge; the only state that unlocks features
+ * - `revoked`      — was active, extension has since gone missing
+ * - `skipped`      — user declined; locked, but never prompted again
+ */
+export type ActivationState =
+  | "inactive"
+  | "setupPending"
+  | "active"
+  | "revoked"
+  | "skipped";
+
 export type DetectedBrowser = {
   id: string;
   osBrowserId: string;
   displayName: string;
   profileLabel?: string | null;
   running: boolean;
+  /** @deprecated Superseded by `activationState`, which is not lossy. */
   extensionInstalled: boolean;
+  activationState: ActivationState;
   extensionConnected: boolean;
   tabCount: number;
   tabs: BrowserTab[];

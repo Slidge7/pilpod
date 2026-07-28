@@ -92,6 +92,11 @@ impl InAppSession {
     }
 
     /// A new session pointed at `url` before the agent has reported anything.
+    ///
+    /// Currently unreferenced — every caller goes through `opening_staged`.
+    /// Kept as the un-staged counterpart rather than deleted, since staging is
+    /// a URL-rewrite detail the plain constructor deliberately skips.
+    #[allow(dead_code)]
     pub fn opening(url: &str) -> Self {
         Self::opening_staged(url, url)
     }
@@ -228,8 +233,10 @@ impl InAppSession {
             profile_label: None,
             running: true,
             // The in-app player has no extension to install or lose — it is
-            // connected for as long as the session exists.
+            // connected for as long as the session exists, and must never be
+            // gated behind extension setup.
             extension_installed: true,
+            activation_state: crate::extension_setup::ActivationState::Active,
             extension_connected: true,
             tab_count: 1,
             windows: windows_for_tabs(&tabs),
