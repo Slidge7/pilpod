@@ -1,0 +1,53 @@
+/*
+ * Window-level shell for the widget document.
+ *
+ * The OS window is transparent and undecorated, so this element *is* the
+ * visible widget — no page background, no margins, no scrollbars. Anything
+ * that paints outside the chip's own shape would show up as a grey square
+ * floating over the user's desktop.
+ */
+
+.pilpod-widget-window {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: transparent;
+  /* The chip handles its own drag; never let the document itself scroll. */
+  overscroll-behavior: none;
+}
+
+.pilpod-widget-window__loading {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--pilpod-border-strong);
+  background: var(--pilpod-bg-shell);
+  color: var(--pilpod-text-muted);
+  font-size: 11px;
+}
+
+.pilpod-widget-window__spinner {
+  height: 18px;
+  width: 18px;
+  border-radius: 9999px;
+  border: 2px solid var(--pilpod-border-strong);
+  border-top-color: var(--pilpod-text-secondary);
+  animation: pilpod-widget-spin 700ms linear infinite;
+}
+
+@keyframes pilpod-widget-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pilpod-widget-window__spinner {
+    animation-duration: 2s;
+  }
+}

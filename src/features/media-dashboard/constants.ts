@@ -1,6 +1,8 @@
 export const BROWSERS_UPDATE_EVENT = "browsers://update";
 export const ALWAYS_ON_TOP_STORAGE_KEY = "pilpod-always-on-top";
-export const WIDGET_ENABLED_STORAGE_KEY = "pilpod-widget-enabled";
+// NOTE: the floating widget's own constants moved to `src/features/widget`.
+// Its enabled flag and placement now live in Rust (one writer for two
+// windows), so there is no widget storage key here any more.
 /** Currently selected wallpaper name, or "" / missing when wallpaper is off. */
 export const WALLPAPER_SELECTION_STORAGE_KEY = "pilpod-wallpaper-selection";
 export const WALLPAPER_RANDOM_STORAGE_KEY = "pilpod-wallpaper-random";
@@ -44,12 +46,3 @@ export const WALLPAPER_INTERVALS = [
 
 export type WallpaperIntervalId = (typeof WALLPAPER_INTERVALS)[number]["id"];
 export const WALLPAPER_DEFAULT_INTERVAL: WallpaperIntervalId = "30m";
-export const WIDGET_TRANSITION_MS = 230;
-export const WIDGET_DRAG_THRESHOLD_PX = 6;
-/** Logical inner size for the widget chip (matches Rust `WIDGET_LOGICAL`). */
-export const WIDGET_CHIP_LOGICAL_PX = 50;
-/** Logical inner size for the expanded “media list only” widget panel. */
-export const WIDGET_EXPANDED_WIDTH_LOGICAL = 360;
-export const WIDGET_EXPANDED_HEIGHT_LOGICAL = 450;
-/** Ignore blur shortly after expand so focus churn does not instant-collapse. */
-export const WIDGET_EXPAND_BLUR_GRACE_MS = 280;

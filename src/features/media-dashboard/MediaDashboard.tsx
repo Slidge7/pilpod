@@ -24,8 +24,7 @@ import "./shell/dashboard-glass-screen.css";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { SlideMenu } from "./components/SlideMenu";
 import { BrowserSessionsPanel } from "./components/BrowserSessionsPanel";
-import { WidgetMediaPanel } from "./components/WidgetMediaPanel";
-import { WidgetView } from "./components/WidgetView";
+import { useWidgetState } from "../widget";
 import { useAppearance } from "./hooks/useAppearance";
 import { useGlassAppearance } from "./hooks/useGlassAppearance";
 import { useMediaDashboard } from "./hooks/useMediaDashboard";
@@ -58,13 +57,6 @@ export function MediaDashboard() {
     alwaysOnTop,
     toggleAlwaysOnTop,
     refresh,
-    widgetEnabled,
-    toggleWidgetEnabled,
-    isWidget,
-    isWidgetExpanded,
-    dimmingToWidget,
-    fullEnterActive,
-    fullEnterVisible,
     toggleBrowserTab,
     focusBrowserTab,
     reactivateBrowserTab,
@@ -78,16 +70,17 @@ export function MediaDashboard() {
     pauseAllBrowserTabs,
     muteAllBrowserTabs,
     minimizeApp,
-    expandWidgetPanel,
-    restoreFromWidget,
-    dismissWidgetAndDisable,
     closeApp,
-    widgetGestures,
     setMixerVolume,
     refreshBrowserConnection,
     browsers,
     browserAudio,
   } = useMediaDashboard();
+
+  // The floating widget lives in its own window; the dashboard only reads and
+  // edits its settings. Nothing here can show or hide it as a side effect —
+  // the user turns it on and off from the menu, explicitly.
+  const widget = useWidgetState();
 
   // Vault state (source of truth in Rust); mounted once, shared across views.
   const vault = useVault();
@@ -184,7 +177,7 @@ export function MediaDashboard() {
 
   const idleConfig = useIdleConfig();
   const isUserIdle = useDashboardIdleMode({
-    enabled: idleConfig.enabled && !isWidget,
+    enabled: idleConfig.enabled,
     idleMs: idleConfig.ms,
   });
 
@@ -197,47 +190,11 @@ export function MediaDashboard() {
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
-  if (isWidget) {
-    if (isWidgetExpanded) {
-      return (
-        <WidgetMediaPanel
-          error={error}
-          browserPendingKeys={browserPendingKeys}
-          browsers={browsers}
-          browserAudio={browserAudio}
-          onPlayPauseBrowser={toggleBrowserTab}
-          onFocusBrowserTab={focusBrowserTab}
-          onReloadBrowserTab={reloadBrowserTab}
-          onCloseBrowserTab={closeBrowserTab}
-          onReactivateBrowserTab={reactivateBrowserTab}
-          onRefreshBrowser={(id) => void refreshBrowserConnection(id)}
-          onMixerVolume={(id, v) => void setMixerVolume(id, v)}
-          onSeekBrowserTab={seekBrowserTab}
-          onSetTabVolume={setTabVolumeBrowserTab}
-          onPip={pipBrowserTab}
-          onOpenFullWindow={() => void restoreFromWidget()}
-          onDismissWidget={() => void dismissWidgetAndDisable()}
-        />
-      );
-    }
-    return (
-      <WidgetView
-        onExpand={() => void expandWidgetPanel()}
-        onDismissWidget={() => void dismissWidgetAndDisable()}
-        gestures={widgetGestures}
-      />
-    );
-  }
-
-  const shellClass = [
-    "pilpod-shell-dim",
-    "pilpod-dashboard-shell",
-    dimmingToWidget ? "is-dimming" : "",
-    fullEnterActive ? "is-entering" : "",
-    fullEnterVisible ? "is-entered" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  // No widget branch: this component renders the dashboard window and only the
+  // dashboard window. The widget is a separate document (`widget.html`) in a
+  // separate OS window, so nothing that happens here can resize, hide or
+  // otherwise disturb it.
+  const shellClass = "pilpod-shell-dim pilpod-dashboard-shell";
 
   const openDevLab = () => {
     void invoke("open_dev_lab_window").catch((err: unknown) => {
@@ -273,7 +230,7 @@ export function MediaDashboard() {
       >
         <DashboardHeader
           menuOpen={menuOpen}
-          widgetEnabled={widgetEnabled}
+          widgetEnabled={widget.enabled}
           alwaysOnTop={alwaysOnTop}
           onToggleMenu={() => setMenuOpen((o) => !o)}
           onToggleAlwaysOnTop={toggleAlwaysOnTop}
@@ -287,7 +244,7 @@ export function MediaDashboard() {
           open={menuOpen}
           appearance={appearance}
           alwaysOnTop={alwaysOnTop}
-          widgetEnabled={widgetEnabled}
+          widget={widget}
           wallpaper={wallpaper}
           idleConfig={idleConfig}
           browserTabCount={browserTabCount}
@@ -297,7 +254,6 @@ export function MediaDashboard() {
           onToggleAlwaysOnTop={toggleAlwaysOnTop}
           onToggleAppearance={toggle}
           onRefresh={refresh}
-          onToggleWidgetEnabled={toggleWidgetEnabled}
           onOpenDevLab={openDevLab}
           onOpenExtensionSetup={openSetupSection}
           extensionSetupBadge={setupBadge}

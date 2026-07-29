@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // Match the app's theme before first paint. Both windows share an origin,
+      // so this is the same key the dashboard writes — no flash of the wrong
+      // appearance while the module graph loads.
+      try {
+        var v = localStorage.getItem("pilpod-theme");
+        var isDark = v !== "light";
+        document.documentElement.classList.toggle("dark", isDark);
+        document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+      } catch (_) {}
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PilPod Widget</title>
+    <style>
+      /* The window is transparent and undecorated: the widget's own shape is
+         the only thing that should ever paint. A default body background here
+         would render as an opaque square over the user's desktop. */
+      html,
+      body,
+      #root {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: transparent;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/widget-main.tsx"></script>
+  </body>
+</html>

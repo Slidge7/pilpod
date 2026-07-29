@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "widget",
+  "description": "Capability for the independent floating widget window. Deliberately narrow: the widget drags itself (free placement) and nothing else — sizing, positioning and always-on-top are driven from Rust so placement has exactly one owner.",
+  "windows": ["widget"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-focus"
+  ]
+}

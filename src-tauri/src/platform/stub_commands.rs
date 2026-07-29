@@ -16,10 +16,9 @@ pub fn browser_media_control(
     Err("PilPod requires Windows".into())
 }
 
-#[tauri::command]
-pub fn toggle_widget_mode(_is_mini: bool) -> Result<(), String> {
-    Err("PilPod requires Windows".into())
-}
+// NOTE: the floating widget has no stub here. `crate::widget` is
+// platform-neutral (Tauri window APIs + integer geometry), so the real
+// commands are registered on every platform.
 
 #[tauri::command]
 pub fn get_browsers() -> BrowsersUpdatePayload {

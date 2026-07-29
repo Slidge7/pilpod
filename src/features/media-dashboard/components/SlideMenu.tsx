@@ -5,6 +5,8 @@ import { GlassStrengthSlider } from "../../../shared/ui/GlassStrengthSlider";
 import { WALLPAPER_INTERVALS } from "../constants";
 import type { WallpaperController } from "../hooks/useWallpaper";
 import { IDLE_INTERVALS, type IdleController } from "../idle";
+import type { WidgetController } from "../../widget";
+import { WidgetSettingsPanel } from "./WidgetSettingsPanel";
 import {
   IconBeaker,
   IconExtensionMissing,
@@ -26,7 +28,8 @@ type Props = {
   open: boolean;
   appearance: AppearanceMode;
   alwaysOnTop: boolean;
-  widgetEnabled: boolean;
+  /** Live widget state + setters; the placement panel writes straight through it. */
+  widget: WidgetController;
   wallpaper: WallpaperController;
   idleConfig: IdleController;
   browserTabCount: number;
@@ -36,7 +39,6 @@ type Props = {
   onToggleAlwaysOnTop: () => void;
   onToggleAppearance: () => void;
   onRefresh: () => void;
-  onToggleWidgetEnabled: () => void;
   onOpenDevLab?: () => void;
   /** Opens the permanent "Browser setup" section. */
   onOpenExtensionSetup?: () => void;
@@ -57,7 +59,7 @@ export function SlideMenu({
   open,
   appearance,
   alwaysOnTop,
-  widgetEnabled,
+  widget,
   wallpaper,
   idleConfig,
   browserTabCount,
@@ -67,7 +69,6 @@ export function SlideMenu({
   onToggleAlwaysOnTop,
   onToggleAppearance,
   onRefresh,
-  onToggleWidgetEnabled,
   onOpenDevLab,
   onOpenExtensionSetup,
   extensionSetupBadge = 0,
@@ -75,20 +76,33 @@ export function SlideMenu({
   const [glassDragging, setGlassDragging] = useState(false);
   const [wallpaperExpanded, setWallpaperExpanded] = useState(false);
   const [idleExpanded, setIdleExpanded] = useState(false);
+  const [widgetExpanded, setWidgetExpanded] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setGlassDragging(false);
       setWallpaperExpanded(false);
       setIdleExpanded(false);
+      setWidgetExpanded(false);
     }
   }, [open]);
 
+  /** The menu shows one expandable section at a time. */
+  const openSection = (
+    section: "wallpaper" | "idle" | "widget",
+    next: boolean,
+  ) => {
+    setWallpaperExpanded(next && section === "wallpaper");
+    setIdleExpanded(next && section === "idle");
+    setWidgetExpanded(next && section === "widget");
+  };
+
   const appearanceTitle =
     appearance === "dark" ? "Use light appearance" : "Use dark appearance";
+  const widgetEnabled = widget.enabled;
   const widgetToggleTitle = widgetEnabled
-    ? "Floating widget on minimize: on (click to turn off)"
-    : "Floating widget on minimize: off (click to turn on)";
+    ? "Floating widget: on — click to choose where it sits"
+    : "Floating widget: off — click to turn it on and choose where it sits";
 
   const pinClass = [
     "pilpod-slide-menu__btn",
@@ -171,10 +185,11 @@ export function SlideMenu({
           </button>
           <button
             type="button"
-            onClick={onToggleWidgetEnabled}
+            onClick={() => openSection("widget", !widgetExpanded)}
             className={widgetBtnClass}
             title={widgetToggleTitle}
-            aria-label={widgetToggleTitle}
+            aria-label="Floating widget options"
+            aria-expanded={widgetExpanded}
             aria-pressed={widgetEnabled}
             tabIndex={btnTabIndex}
           >
@@ -182,10 +197,7 @@ export function SlideMenu({
           </button>
           <button
             type="button"
-            onClick={() => {
-              setWallpaperExpanded((v) => !v);
-              if (!wallpaperExpanded) setIdleExpanded(false);
-            }}
+            onClick={() => openSection("wallpaper", !wallpaperExpanded)}
             className={wallpaperBtnClass}
             title="Wallpaper options"
             aria-label="Wallpaper options"
@@ -197,10 +209,7 @@ export function SlideMenu({
           </button>
           <button
             type="button"
-            onClick={() => {
-              setIdleExpanded((v) => !v);
-              if (!idleExpanded) setWallpaperExpanded(false);
-            }}
+            onClick={() => openSection("idle", !idleExpanded)}
             className={[
               "pilpod-slide-menu__btn",
               idleConfig.enabled ? "pilpod-slide-menu__btn--active" : "",
@@ -252,6 +261,13 @@ export function SlideMenu({
           <span className="pilpod-slide-menu__glass-label">Glass effect</span>
           {glassSlider}
         </div>
+
+        {widgetExpanded ? (
+          <WidgetSettingsPanel
+            widget={widget}
+            tabIndex={open && widgetExpanded ? 0 : -1}
+          />
+        ) : null}
 
         {wallpaperExpanded ? (
           <div

@@ -40,9 +40,12 @@ mod playlist_player;
 #[cfg(windows)]
 mod inapp_player;
 mod wallpaper;
+// The floating widget owns its own top-level window and does its placement
+// math over plain integers — no Windows-only APIs, so it builds everywhere
+// Tauri does. Supersedes the old `window_widget` module, which implemented
+// "widget mode" by shrinking the main window.
+mod widget;
 #[cfg(not(windows))]
 mod platform;
-#[cfg(windows)]
-mod window_widget;
 
 pub use app::run;

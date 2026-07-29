@@ -1,0 +1,78 @@
+/*
+ * The collapsed widget: the PilPod logo alone.
+ *
+ * There is no plate, no background and no border here on purpose — the window
+ * is transparent and sized to the artwork, so the logo reads as sitting
+ * directly in the screen corner. Any box, outline or padding would reintroduce
+ * the shape and push the logo away from the edge.
+ *
+ * `--pilpod-widget-rotation` is set inline from the placement: 0deg in the
+ * bottom corners, 180deg in the top ones, so the logo always points away from
+ * the edge it is tucked against.
+ *
+ * Only `transform`, `opacity` and `filter` are animated, so the chip stays on
+ * the compositor — worth caring about for a surface that floats over whatever
+ * the user is actually doing.
+ */
+
+.pilpod-widget-chip-root {
+  --pilpod-widget-rotation: 0deg;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: transparent;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Only free placement is draggable; a pinned logo shouldn't advertise a grab. */
+.pilpod-widget-chip-root[data-placement="free"] {
+  cursor: grab;
+}
+
+.pilpod-widget-chip-root[data-placement="free"]:active {
+  cursor: grabbing;
+}
+
+.pilpod-widget-chip-root__glyph {
+  display: block;
+  height: 100%;
+  width: 100%;
+  /* Preserve the logo's aspect ratio if the artwork is ever not square. */
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
+
+  transform: rotate(var(--pilpod-widget-rotation));
+  /* Follows the logo's own alpha rather than a box, so the artwork stays
+     legible against both a bright desktop and a dark one without drawing a
+     shape around it. */
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.35));
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), filter 150ms ease;
+}
+
+.pilpod-widget-chip-root:hover .pilpod-widget-chip-root__glyph {
+  filter: drop-shadow(0 3px 7px rgb(0 0 0 / 0.45));
+}
+
+/* Keyboard users get a visible affordance without a permanent outline. */
+.pilpod-widget-chip-root:focus-visible {
+  outline: none;
+}
+
+.pilpod-widget-chip-root:focus-visible .pilpod-widget-chip-root__glyph {
+  filter: drop-shadow(0 0 3px var(--pilpod-accent, #d97706))
+    drop-shadow(0 2px 4px rgb(0 0 0 / 0.35));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pilpod-widget-chip-root__glyph {
+    transition: none;
+  }
+}

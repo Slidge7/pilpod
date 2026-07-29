@@ -1,0 +1,199 @@
+/*
+ * Placement controls for the floating widget, styled to sit alongside the
+ * wallpaper and idle panels in the slide menu.
+ *
+ * The corner picker is a 2×2 grid that reads as a miniature screen: each
+ * button occupies the position it selects, and its marker sits in the matching
+ * corner of the button. Nothing to read, nothing to decode — the control looks
+ * like the outcome.
+ */
+
+.pilpod-widget-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--pilpod-border);
+  background: var(--pilpod-bg-muted);
+  padding: 0.5rem;
+}
+
+.pilpod-widget-settings__row {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.pilpod-widget-settings__toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--pilpod-border);
+  background: var(--pilpod-bg-shell);
+  padding: 0.3rem 0.5rem;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--pilpod-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.pilpod-widget-settings__toggle:hover {
+  background: var(--pilpod-bg-tab-active);
+}
+
+.pilpod-widget-settings__toggle--active {
+  border-color: var(--pilpod-accent, #d97706);
+  color: var(--pilpod-text);
+}
+
+.pilpod-widget-settings__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  min-inline-size: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* The whole section is meaningless with the widget off — dim it rather than
+   remove it, so the layout doesn't jump on every toggle. */
+.pilpod-widget-settings__group:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pilpod-widget-settings__legend {
+  padding: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-widget-settings__modes {
+  display: flex;
+  gap: 1px;
+  border-radius: 0.375rem;
+  background: var(--pilpod-border);
+  padding: 1px;
+}
+
+.pilpod-widget-settings__mode {
+  flex: 1;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  padding: 0.25rem 0.5rem;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.pilpod-widget-settings__mode--active {
+  background: var(--pilpod-bg-shell);
+  color: var(--pilpod-text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+.pilpod-widget-settings__corners {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  border-radius: 0.375rem;
+  background: var(--pilpod-bg-shell);
+  padding: 3px;
+  transition: opacity 0.15s ease;
+}
+
+/* Free placement: the corners are still reachable (clicking one pins the
+   widget) but they no longer describe the current state. */
+.pilpod-widget-settings__corners[data-dimmed="true"] {
+  opacity: 0.55;
+}
+
+.pilpod-widget-settings__corner {
+  position: relative;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--pilpod-bg-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.pilpod-widget-settings__corner:hover {
+  background: var(--pilpod-bg-tab-active);
+}
+
+.pilpod-widget-settings__corner--active {
+  border-color: var(--pilpod-accent, #d97706);
+  background: var(--pilpod-bg-tab-active);
+}
+
+/*
+ * The marker: a quarter-round nub pinned to the corner this button selects,
+ * mirroring the shape the real widget takes in that corner.
+ */
+.pilpod-widget-settings__corner-mark {
+  position: absolute;
+  height: 9px;
+  width: 9px;
+  background: var(--pilpod-text-muted);
+  transition: background-color 0.15s ease;
+}
+
+.pilpod-widget-settings__corner--active .pilpod-widget-settings__corner-mark {
+  background: var(--pilpod-accent, #d97706);
+}
+
+.pilpod-widget-settings__corner[data-corner="topLeft"] .pilpod-widget-settings__corner-mark {
+  top: 2px;
+  left: 2px;
+  border-radius: 2px 50% 50% 50%;
+}
+
+.pilpod-widget-settings__corner[data-corner="topRight"] .pilpod-widget-settings__corner-mark {
+  top: 2px;
+  right: 2px;
+  border-radius: 50% 2px 50% 50%;
+}
+
+.pilpod-widget-settings__corner[data-corner="bottomLeft"] .pilpod-widget-settings__corner-mark {
+  bottom: 2px;
+  left: 2px;
+  border-radius: 50% 50% 50% 2px;
+}
+
+.pilpod-widget-settings__corner[data-corner="bottomRight"] .pilpod-widget-settings__corner-mark {
+  bottom: 2px;
+  right: 2px;
+  border-radius: 50% 50% 2px 50%;
+}
+
+.pilpod-widget-settings__hint {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-widget-settings__error {
+  margin: 0;
+  font-size: 10px;
+  color: #dc2626;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pilpod-widget-settings *,
+  .pilpod-widget-settings {
+    transition: none;
+  }
+}
