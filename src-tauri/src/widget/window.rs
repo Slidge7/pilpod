@@ -30,7 +30,7 @@ use tauri::{
 
 use super::geometry::{self, Rect};
 use super::model::{
-    WidgetPlacement, CHIP_LOGICAL_PX, PANEL_LOGICAL_H, PANEL_LOGICAL_W,
+    WidgetPlacement, PANEL_LOGICAL_H, PANEL_LOGICAL_H_WITH_BROWSERS, PANEL_LOGICAL_W,
 };
 use super::state::WidgetStore;
 
@@ -41,12 +41,7 @@ pub const WIDGET_LABEL: &str = "widget";
 /// widget loads *only* its own chunk — the dashboard bundle is never parsed in
 /// this window.
 fn widget_url(app: &AppHandle) -> WebviewUrl {
-    if let Some(dev_url) = app.config().build.dev_url.clone() {
-        if let Ok(joined) = dev_url.join("widget.html") {
-            return WebviewUrl::External(joined);
-        }
-    }
-    WebviewUrl::App("widget.html".into())
+    crate::frontend::url(app, "widget.html")
 }
 
 pub fn find(app: &AppHandle) -> Option<WebviewWindow> {
@@ -94,11 +89,16 @@ fn corner_work_area(window: &WebviewWindow) -> Option<Rect> {
 pub fn apply_layout(app: &AppHandle, window: &WebviewWindow) -> Result<(), String> {
     let store = app.state::<WidgetStore>();
 
-    let expanded = store.is_expanded();
-    let (logical_w, logical_h) = if expanded {
-        (PANEL_LOGICAL_W, PANEL_LOGICAL_H)
+    let chip = store.chip_size();
+    let (logical_w, logical_h) = if store.is_expanded() {
+        let h = if store.browsers_open() {
+            PANEL_LOGICAL_H_WITH_BROWSERS
+        } else {
+            PANEL_LOGICAL_H
+        };
+        (PANEL_LOGICAL_W, h)
     } else {
-        (CHIP_LOGICAL_PX, CHIP_LOGICAL_PX)
+        (chip, chip)
     };
 
     window
@@ -123,8 +123,8 @@ pub fn apply_layout(app: &AppHandle, window: &WebviewWindow) -> Result<(), Strin
             // exactly where the user left it.
             let chip_x = (x * scale).round() as i32;
             let chip_y = (y * scale).round() as i32;
-            let chip_w = (CHIP_LOGICAL_PX * scale).round() as i32;
-            let chip_h = (CHIP_LOGICAL_PX * scale).round() as i32;
+            let chip_w = (chip * scale).round() as i32;
+            let chip_h = chip_w;
 
             let areas = work_areas(window);
             let area = geometry::work_area_for(&areas, chip_x, chip_y, chip_w, chip_h)
@@ -174,10 +174,12 @@ pub fn show(app: &AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
+    let chip = app.state::<WidgetStore>().chip_size();
+
     #[allow(unused_mut)]
     let mut builder = WebviewWindowBuilder::new(app, WIDGET_LABEL, widget_url(app))
         .title("PilPod Widget")
-        .inner_size(CHIP_LOGICAL_PX, CHIP_LOGICAL_PX)
+        .inner_size(chip, chip)
         .resizable(false)
         .decorations(false)
         .transparent(true)

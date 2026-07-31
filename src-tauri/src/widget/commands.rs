@@ -1,10 +1,11 @@
 //! The widget's IPC surface.
 //!
-//! Six commands, one shape: mutate the store, reconcile the OS window,
-//! broadcast the new state. Both webviews (dashboard menu and widget) call the
-//! same commands and both re-render from the same `widget://state` event, so
-//! "pick a corner in the menu and watch the widget move" needs no extra
-//! plumbing — it falls out of having a single writer.
+//! Every command has the same shape: mutate the store, reconcile the OS
+//! window, broadcast the new state. Both webviews (dashboard menu and widget)
+//! call the same commands and both re-render from the same `widget://state`
+//! event, so "pick a corner, a colour or a size in the menu and watch the
+//! widget change" needs no extra plumbing — it falls out of having a single
+//! writer.
 //!
 //! Every command that can touch window creation is `async` and hops onto a
 //! blocking thread first: building or resizing a window from the WebView
@@ -12,7 +13,7 @@
 
 use tauri::{AppHandle, Manager, State};
 
-use super::model::{WidgetPlacement, WidgetState};
+use super::model::{self, WidgetAccent, WidgetPlacement, WidgetState};
 use super::state::{self, WidgetStore};
 use super::window;
 
@@ -110,6 +111,37 @@ pub async fn widget_use_free_placement(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Recolour the triangle. Purely cosmetic; no geometry changes.
+#[tauri::command]
+pub fn widget_set_accent(app: AppHandle, accent: WidgetAccent) -> Result<(), String> {
+    let store = app.state::<WidgetStore>();
+    if let Some(s) = store.mutate(|c| c.accent = accent) {
+        state::commit(&app, &store, s);
+    }
+    Ok(())
+}
+
+/// Resize the triangle.
+///
+/// The window *is* the triangle, so this resizes the window too — which is why
+/// it has to relayout: a corner-pinned widget must stay flush as it grows, and
+/// growing a bottom-right chip without re-placing it would push it off screen.
+#[tauri::command]
+pub async fn widget_set_size(app: AppHandle, size: f64) -> Result<(), String> {
+    let clamped = model::clamp_size(size);
+    let next = app.state::<WidgetStore>().mutate(|s| s.size = clamped);
+    if next.is_none() {
+        return Ok(());
+    }
+
+    off_webview_thread(app.clone(), window::relayout).await?;
+
+    if let Some(s) = next {
+        state::commit(&app, &app.state::<WidgetStore>(), s);
+    }
+    Ok(())
+}
+
 /// Expand the widget into the media panel, or collapse it back to the chip.
 ///
 /// The window resizes around the corner it is anchored to, so the panel
@@ -125,6 +157,25 @@ pub async fn widget_set_expanded(app: AppHandle, expanded: bool) -> Result<(), S
 
     if let Some(s) = next {
         // Live-only flag: broadcast, but nothing to persist.
+        state::emit_state(&app, s);
+    }
+    Ok(())
+}
+
+/// Show or hide the full browser list beneath the now-playing section.
+///
+/// Grows the panel rather than opening anything new, anchored on the same
+/// corner so it unfolds in place.
+#[tauri::command]
+pub async fn widget_set_browsers_open(app: AppHandle, open: bool) -> Result<(), String> {
+    let next = app.state::<WidgetStore>().set_browsers_open(open);
+    if next.is_none() {
+        return Ok(());
+    }
+
+    off_webview_thread(app.clone(), window::relayout).await?;
+
+    if let Some(s) = next {
         state::emit_state(&app, s);
     }
     Ok(())

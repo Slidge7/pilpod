@@ -26,7 +26,7 @@ use std::time::Duration;
 
 use tauri::{AppHandle, Emitter, Manager};
 
-use super::model::{WidgetPlacement, WidgetSettings, WidgetState};
+use super::model::{self, WidgetPlacement, WidgetSettings, WidgetState};
 use super::store;
 
 /// Broadcast on every settings change. Payload is [`WidgetState`].
@@ -37,21 +37,28 @@ pub const STATE_EVENT: &str = "widget://state";
 /// lose it.
 const SAVE_DEBOUNCE: Duration = Duration::from_millis(700);
 
+#[derive(Default)]
 struct Inner {
     settings: WidgetSettings,
     /// Live-only: whether the widget window is showing the expanded panel.
     /// Deliberately not persisted — see [`WidgetSettings`].
     expanded: bool,
+    /// Live-only: whether the expanded panel also shows the full browser list.
+    /// Resets with every collapse, so the panel always opens on what matters.
+    browsers_open: bool,
     /// Resolved once at init; `None` before that (and in tests).
     path: Option<PathBuf>,
 }
 
-impl Default for Inner {
-    fn default() -> Self {
-        Self {
-            settings: WidgetSettings::default(),
-            expanded: false,
-            path: None,
+impl Inner {
+    fn snapshot(&self) -> WidgetState {
+        WidgetState {
+            enabled: self.settings.enabled,
+            placement: self.settings.placement,
+            accent: self.settings.accent,
+            size: self.settings.size,
+            expanded: self.expanded,
+            browsers_open: self.browsers_open,
         }
     }
 }
@@ -74,7 +81,9 @@ impl WidgetStore {
                 return;
             }
         };
-        let loaded = store::load_from(&path);
+        let mut loaded = store::load_from(&path);
+        // A size read from disk has never been through the setter.
+        loaded.size = model::clamp_size(loaded.size);
         if let Ok(mut inner) = self.inner.lock() {
             inner.settings = loaded;
             inner.path = Some(path);
@@ -84,18 +93,10 @@ impl WidgetStore {
     /// Current state as the frontend sees it.
     pub fn state(&self) -> WidgetState {
         match self.inner.lock() {
-            Ok(inner) => WidgetState {
-                enabled: inner.settings.enabled,
-                placement: inner.settings.placement,
-                expanded: inner.expanded,
-            },
+            Ok(inner) => inner.snapshot(),
             // A poisoned lock means another thread panicked mid-update. The
             // widget is cosmetic; report defaults rather than propagate.
-            Err(_) => WidgetState {
-                enabled: false,
-                placement: WidgetPlacement::default(),
-                expanded: false,
-            },
+            Err(_) => Inner::default().snapshot(),
         }
     }
 
@@ -105,6 +106,15 @@ impl WidgetStore {
 
     pub fn is_enabled(&self) -> bool {
         self.state().enabled
+    }
+
+    /// Chip edge length in logical pixels, already clamped.
+    pub fn chip_size(&self) -> f64 {
+        model::clamp_size(self.state().size)
+    }
+
+    pub fn browsers_open(&self) -> bool {
+        self.state().browsers_open
     }
 
     /// Mutate the persisted settings and return the resulting state.
@@ -120,25 +130,34 @@ impl WidgetStore {
         if inner.settings == before {
             return None;
         }
-        Some(WidgetState {
-            enabled: inner.settings.enabled,
-            placement: inner.settings.placement,
-            expanded: inner.expanded,
-        })
+        Some(inner.snapshot())
     }
 
     /// Set the live expanded flag. Not persisted, so no save is scheduled.
+    ///
+    /// Collapsing also closes the browser list: the panel should always open
+    /// on what is playing, and re-opening into a 600px list the user expanded
+    /// once, days ago, is not what they meant.
     pub fn set_expanded(&self, expanded: bool) -> Option<WidgetState> {
         let mut inner = self.inner.lock().ok()?;
         if inner.expanded == expanded {
             return None;
         }
         inner.expanded = expanded;
-        Some(WidgetState {
-            enabled: inner.settings.enabled,
-            placement: inner.settings.placement,
-            expanded,
-        })
+        if !expanded {
+            inner.browsers_open = false;
+        }
+        Some(inner.snapshot())
+    }
+
+    /// Show or hide the full browser list inside the expanded panel.
+    pub fn set_browsers_open(&self, open: bool) -> Option<WidgetState> {
+        let mut inner = self.inner.lock().ok()?;
+        if inner.browsers_open == open {
+            return None;
+        }
+        inner.browsers_open = open;
+        Some(inner.snapshot())
     }
 
     pub fn is_expanded(&self) -> bool {
@@ -253,6 +272,27 @@ mod tests {
         assert!(store.set_expanded(true).expect("changed").expanded);
         assert!(store.set_expanded(true).is_none());
         assert!(store.is_expanded());
+    }
+
+    #[test]
+    fn collapsing_also_closes_the_browser_list() {
+        let store = WidgetStore::default();
+        store.set_expanded(true);
+        assert!(store.set_browsers_open(true).expect("changed").browsers_open);
+
+        let collapsed = store.set_expanded(false).expect("changed");
+        assert!(!collapsed.expanded);
+        assert!(!collapsed.browsers_open);
+
+        // Re-opening starts on the now-playing view again.
+        assert!(!store.set_expanded(true).expect("changed").browsers_open);
+    }
+
+    #[test]
+    fn size_from_disk_is_clamped_on_read() {
+        let store = WidgetStore::default();
+        store.mutate(|s| s.size = 5_000.0);
+        assert_eq!(store.chip_size(), crate::widget::model::CHIP_MAX_PX);
     }
 
     #[test]

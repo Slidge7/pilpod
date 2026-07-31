@@ -1,0 +1,441 @@
+/*
+ * The collapsed widget.
+ *
+ * Two forms from one element tree, selected by `data-shape`:
+ *   * `corner` — a glass triangle filling the screen corner it is pinned to.
+ *   * `bubble` — a 3D glass sphere with the PilPod mark inside, for free
+ *     placement, where a triangle would read as a shard floating in space.
+ *
+ * ## Why the glass is painted, not blurred
+ *
+ * `backdrop-filter` would give true acrylic, but it forces the compositor to
+ * sample and blur whatever is behind the window on every frame the widget is
+ * visible — which, for an always-on-top surface, is all of them. The dashboard
+ * already made this trade once (see `useStaticGlassWallpaper.ts`). Everything
+ * here is painted gradients: a tinted body, a specular sheen, a rim light and a
+ * soft outer shadow. One composited layer, zero readbacks.
+ *
+ * ## Why the hologram animates transforms and nothing else
+ *
+ * The obvious way to make colours drift is to animate gradient stops or
+ * `filter: hue-rotate`. Both repaint the element every frame, forever, on a
+ * window that is always on top. Instead three oversized gradient plates sit
+ * inside the clip and *rotate* at different rates: rotation is a compositor
+ * transform, so the paint happens once and the GPU does the rest. Their
+ * durations are mutually prime-ish (19s / 31s / 43s), so the combined pattern
+ * takes about seven hours to repeat — random enough for an eye that only ever
+ * catches it in glances.
+ */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+.pilpod-chip {
+  /* Defaults; overwritten per corner/accent/shape below. */
+  --tri-clip: polygon(100% 0, 100% 100%, 0 100%);
+  --tri-light: 315deg;
+  --tri-origin: 100% 100%;
+  --tri-shadow-x: -1px;
+  --tri-shadow-y: -1px;
+
+  --tri-body: 10 132 255;
+  --tri-glow: 120 190 255;
+  --tri-rim: 195 228 255;
+
+  position: fixed;
+  inset: 0;
+  display: block;
+  background: transparent;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  /* The reveal animation scales from here, so the triangle grows out of the
+     screen corner instead of inflating from its own middle. */
+  transform-origin: var(--tri-origin);
+  /* drop-shadow follows the clip-path's alpha, so the triangle casts a
+     triangular shadow instead of a square one. */
+  filter: drop-shadow(
+    var(--tri-shadow-x) var(--tri-shadow-y) 6px rgb(0 0 0 / 0.28)
+  );
+  transition: filter 160ms ease;
+}
+
+.pilpod-chip[data-placement="free"] {
+  cursor: grab;
+}
+
+.pilpod-chip[data-placement="free"]:active {
+  cursor: grabbing;
+}
+
+/* ---- Shared surface ---------------------------------------------------- */
+
+.pilpod-chip__body {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  clip-path: var(--tri-clip);
+  transition: clip-path 200ms ease, border-radius 200ms ease;
+}
+
+.pilpod-chip__tint {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background:
+    /* Rim light along the hypotenuse — the "polished edge" read. */
+    linear-gradient(
+      var(--tri-light),
+      rgb(var(--tri-rim) / 0.85) 0%,
+      rgb(var(--tri-rim) / 0) 42%
+    ),
+    /* Depth: brighter toward the inward edge, denser in the corner. */
+    linear-gradient(
+      var(--tri-light),
+      rgb(var(--tri-glow) / 0.55) 0%,
+      rgb(var(--tri-body) / 0.72) 55%,
+      rgb(var(--tri-body) / 0.92) 100%
+    );
+  transition: background 200ms ease;
+}
+
+/* ---- Sheen ------------------------------------------------------------- */
+
+/*
+ * A narrow specular band that slides toward the hypotenuse on hover.
+ * Opacity + transform only, so it stays on the compositor.
+ */
+.pilpod-chip__sheen {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: linear-gradient(
+    var(--tri-light),
+    rgb(255 255 255 / 0.55) 0%,
+    rgb(255 255 255 / 0.08) 18%,
+    rgb(255 255 255 / 0) 38%
+  );
+  opacity: 0.5;
+  transform: scale(1);
+  transform-origin: center;
+  transition: opacity 180ms ease, transform 220ms cubic-bezier(0.2, 0, 0, 1);
+  pointer-events: none;
+}
+
+.pilpod-chip:hover .pilpod-chip__sheen,
+.pilpod-chip:focus-visible .pilpod-chip__sheen {
+  opacity: 0.95;
+  transform: scale(1.06);
+}
+
+.pilpod-chip:active .pilpod-chip__sheen {
+  opacity: 0.7;
+  transform: scale(0.98);
+}
+
+.pilpod-chip:hover {
+  filter: drop-shadow(
+    calc(var(--tri-shadow-x) * 1.6) calc(var(--tri-shadow-y) * 1.6) 10px
+      rgb(0 0 0 / 0.34)
+  );
+}
+
+.pilpod-chip:focus-visible {
+  outline: none;
+}
+
+/* ---- Landing pulse ----------------------------------------------------- */
+
+/*
+ * Fires once when the widget arrives somewhere new (driven from
+ * `mountChip.ts`). Idle it is invisible and inert; `will-change` is
+ * deliberately absent so it does not hold a compositor layer for the
+ * 99.99% of the time it is doing nothing.
+ */
+.pilpod-chip__ping {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at var(--tri-origin),
+    rgb(var(--tri-rim) / 0.55) 0%,
+    rgb(var(--tri-glow) / 0.25) 45%,
+    rgb(var(--tri-glow) / 0) 70%
+  );
+  opacity: 0;
+  transform-origin: var(--tri-origin);
+  pointer-events: none;
+}
+
+/* ---- Bubble icon ------------------------------------------------------- */
+
+.pilpod-chip__icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: none;
+  height: 52%;
+  width: 52%;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.45));
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* ---- Shape: corner triangle -------------------------------------------- */
+
+/*
+ * Right angle in the pinned corner; hypotenuse facing the screen interior.
+ * `--tri-light` points from the corner toward that hypotenuse, and the shadow
+ * is cast the same way so the triangle appears lifted off the edge.
+ */
+.pilpod-chip[data-corner="bottomRight"] {
+  --tri-clip: polygon(100% 0, 100% 100%, 0 100%);
+  --tri-light: 315deg;
+  --tri-origin: 100% 100%;
+  --tri-shadow-x: -1px;
+  --tri-shadow-y: -1px;
+}
+
+.pilpod-chip[data-corner="bottomLeft"] {
+  --tri-clip: polygon(0 0, 100% 100%, 0 100%);
+  --tri-light: 45deg;
+  --tri-origin: 0% 100%;
+  --tri-shadow-x: 1px;
+  --tri-shadow-y: -1px;
+}
+
+.pilpod-chip[data-corner="topLeft"] {
+  --tri-clip: polygon(0 0, 100% 0, 0 100%);
+  --tri-light: 135deg;
+  --tri-origin: 0% 0%;
+  --tri-shadow-x: 1px;
+  --tri-shadow-y: 1px;
+}
+
+.pilpod-chip[data-corner="topRight"] {
+  --tri-clip: polygon(0 0, 100% 0, 100% 100%);
+  --tri-light: 225deg;
+  --tri-origin: 100% 0%;
+  --tri-shadow-x: -1px;
+  --tri-shadow-y: 1px;
+}
+
+/* ---- Shape: free-floating bubble --------------------------------------- */
+
+/*
+ * A sphere, not a disc. The read comes from stacking what light actually does
+ * to a glass ball: a broad specular near the top-left, a dark equator where
+ * the surface turns away, a bright rim at the bottom where light refracts
+ * through and bounces back up, and a tight inset highlight for the glassy edge.
+ *
+ * The bubble is inset from the window box because — unlike the flush triangle —
+ * it needs somewhere to cast its shadow. The window is sized to the triangle,
+ * so without this the sphere's shadow would be clipped square.
+ */
+.pilpod-chip[data-shape="bubble"] {
+  --tri-origin: 50% 50%;
+  --tri-light: 315deg;
+  --tri-shadow-x: 0px;
+  --tri-shadow-y: 1px;
+  padding: 6%;
+  box-sizing: border-box;
+}
+
+.pilpod-chip[data-shape="bubble"] .pilpod-chip__body {
+  inset: 6%;
+  clip-path: none;
+  border-radius: 50%;
+  /* Glassy edge + the shadowed underside of the sphere. */
+  box-shadow:
+    inset 0 1px 1px rgb(255 255 255 / 0.55),
+    inset 0 -2px 4px rgb(0 0 0 / 0.35),
+    inset 0 0 0 1px rgb(255 255 255 / 0.22);
+}
+
+.pilpod-chip[data-shape="bubble"] .pilpod-chip__tint {
+  background:
+    /* Refracted bounce light along the lower rim. */
+    radial-gradient(
+      ellipse 120% 70% at 50% 118%,
+      rgb(var(--tri-rim) / 0.5) 0%,
+      rgb(var(--tri-rim) / 0) 62%
+    ),
+    /* Body: lit shoulder top-left, turning away toward bottom-right. */
+    radial-gradient(
+      circle at 32% 26%,
+      rgb(var(--tri-glow) / 0.95) 0%,
+      rgb(var(--tri-body) / 0.9) 46%,
+      rgb(var(--tri-body) / 0.98) 78%,
+      rgb(0 0 0 / 0.22) 100%
+    );
+}
+
+/* The broad specular. Sits above the tint, below the icon. */
+.pilpod-chip[data-shape="bubble"] .pilpod-chip__sheen {
+  background: radial-gradient(
+    ellipse 46% 34% at 33% 22%,
+    rgb(255 255 255 / 0.92) 0%,
+    rgb(255 255 255 / 0.35) 42%,
+    rgb(255 255 255 / 0) 72%
+  );
+  opacity: 0.85;
+}
+
+.pilpod-chip[data-shape="bubble"]:hover .pilpod-chip__sheen {
+  opacity: 1;
+  transform: scale(1.03);
+}
+
+.pilpod-chip[data-shape="bubble"] .pilpod-chip__icon {
+  display: block;
+}
+
+.pilpod-chip[data-shape="bubble"] .pilpod-chip__ping {
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgb(var(--tri-rim) / 0.5) 0%,
+    rgb(var(--tri-glow) / 0.22) 48%,
+    rgb(var(--tri-glow) / 0) 72%
+  );
+}
+
+/* ---- Accents ----------------------------------------------------------- */
+
+.pilpod-chip[data-accent="blue"] {
+  --tri-body: 10 132 255;
+  --tri-glow: 120 190 255;
+  --tri-rim: 195 228 255;
+}
+
+.pilpod-chip[data-accent="green"] {
+  --tri-body: 26 178 104;
+  --tri-glow: 110 226 168;
+  --tri-rim: 198 248 222;
+}
+
+.pilpod-chip[data-accent="yellow"] {
+  --tri-body: 233 168 12;
+  --tri-glow: 255 216 110;
+  --tri-rim: 255 240 196;
+}
+
+.pilpod-chip[data-accent="red"] {
+  --tri-body: 228 58 52;
+  --tri-glow: 255 138 130;
+  --tri-rim: 255 208 204;
+}
+
+/* ---- Hologram ---------------------------------------------------------- */
+
+/*
+ * Hologram keeps a neutral-cool `--tri-*` set so the sheen, rim and pulse still
+ * read as glass rather than picking up whichever hue happens to be under them.
+ */
+.pilpod-chip[data-accent="hologram"] {
+  --tri-body: 120 130 190;
+  --tri-glow: 190 205 255;
+  --tri-rim: 225 235 255;
+}
+
+.pilpod-chip__holo {
+  position: absolute;
+  inset: 0;
+  display: none;
+  overflow: hidden;
+}
+
+.pilpod-chip[data-accent="hologram"] .pilpod-chip__holo {
+  display: block;
+}
+
+/* Solid accents own the surface; hologram replaces it entirely. */
+.pilpod-chip[data-accent="hologram"] .pilpod-chip__tint {
+  display: none;
+}
+
+/*
+ * Oversized so that rotating never brings an edge into view: a square rotating
+ * inside its own bounding box needs ~√2 of the diagonal to stay covering, and
+ * 260% is comfortably past that at any offset.
+ */
+.pilpod-chip__holo-plate {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 260%;
+  width: 260%;
+  margin: -130% 0 0 -130%;
+  display: block;
+  transform-origin: 50% 50%;
+  animation: pilpod-holo-drift 19s linear infinite;
+  will-change: transform;
+}
+
+.pilpod-chip__holo-plate[data-plate="0"] {
+  background: conic-gradient(
+    from 0deg,
+    rgb(96 165 250 / 0.95),
+    rgb(167 139 250 / 0.95),
+    rgb(244 114 182 / 0.95),
+    rgb(96 165 250 / 0.95)
+  );
+  animation-duration: 19s;
+}
+
+/* Reverse direction so the two never lock into a single visual beat. */
+.pilpod-chip__holo-plate[data-plate="1"] {
+  background: conic-gradient(
+    from 120deg,
+    rgb(52 211 153 / 0.55),
+    rgb(34 211 238 / 0.55),
+    rgb(129 140 248 / 0.55),
+    rgb(52 211 153 / 0.55)
+  );
+  animation-duration: 31s;
+  animation-direction: reverse;
+}
+
+/* Slowest plate carries the warm highlights that make the mix feel iridescent
+   rather than just purple. */
+.pilpod-chip__holo-plate[data-plate="2"] {
+  background: conic-gradient(
+    from 240deg,
+    rgb(253 224 71 / 0.35),
+    rgb(251 146 60 / 0.35),
+    rgb(232 121 249 / 0.3),
+    rgb(253 224 71 / 0.35)
+  );
+  animation-duration: 43s;
+}
+
+@keyframes pilpod-holo-drift {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pilpod-chip,
+  .pilpod-chip__body,
+  .pilpod-chip__tint,
+  .pilpod-chip__sheen {
+    transition: none;
+  }
+
+  /* Freeze the hologram at its start angles: still iridescent, no motion. */
+  .pilpod-chip__holo-plate {
+    animation: none;
+    will-change: auto;
+  }
+}

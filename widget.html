@@ -16,23 +16,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PilPod Widget</title>
     <style>
-      /* The window is transparent and undecorated: the widget's own shape is
-         the only thing that should ever paint. A default body background here
-         would render as an opaque square over the user's desktop. */
+      /* The window is transparent and undecorated: only the triangle (or the
+         panel) should ever paint. A default body background would render as an
+         opaque square over the user's desktop. */
       html,
-      body,
-      #root {
+      body {
         height: 100%;
         margin: 0;
         padding: 0;
         overflow: hidden;
         background: transparent;
       }
+      [hidden] {
+        display: none !important;
+      }
     </style>
   </head>
 
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/widget-main.tsx"></script>
+    <!--
+      Both surfaces exist in the markup from the start. The chip is plain DOM
+      driven by `widget-main.ts`; the panel host stays empty until the user
+      expands, at which point React is dynamically imported and mounted into
+      it. Nothing about the collapsed widget touches a UI framework.
+    -->
+    <div id="chip"></div>
+    <div id="panel" hidden></div>
+    <script type="module" src="/src/widget-main.ts"></script>
   </body>
 </html>

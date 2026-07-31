@@ -1,37 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { useCallback, useEffect, useState } from "react";
+import { watchWidgetState, widgetApi } from "./ipc";
 import {
   DEFAULT_WIDGET_STATE,
-  WIDGET_STATE_EVENT,
+  type WidgetAccent,
   type WidgetCorner,
   type WidgetPlacement,
   type WidgetState,
 } from "./types";
 
 /**
- * Typed wrappers around the widget's IPC surface, plus the hook both windows
- * use to stay in sync.
+ * React binding over {@link widgetApi} — used by the dashboard menu and by the
+ * widget's expanded panel.
  *
- * Nothing here caches or derives: Rust holds the state, every mutation returns
- * through the `widget://state` broadcast, and both the dashboard menu and the
- * widget window render straight from it. That is what makes picking a corner
- * in the menu move the live widget with no extra wiring — there is only one
- * copy of the truth to update.
+ * Setters are fire-and-forget. Rust holds the state, every mutation comes back
+ * through the `widget://state` broadcast, and the UI renders from that. There
+ * is no optimistic local copy that can disagree with the window on screen,
+ * which is what makes the menu's controls a live preview of the real widget
+ * rather than a form you submit.
  */
-
-export const widgetApi = {
-  getState: () => invoke<WidgetState>("widget_get_state"),
-  setEnabled: (enabled: boolean) => invoke<void>("widget_set_enabled", { enabled }),
-  setPlacement: (placement: WidgetPlacement) =>
-    invoke<void>("widget_set_placement", { placement }),
-  /** Unpin in place — Rust reads the widget's own position to seed the value. */
-  useFreePlacement: () => invoke<void>("widget_use_free_placement"),
-  setExpanded: (expanded: boolean) =>
-    invoke<void>("widget_set_expanded", { expanded }),
-  openMain: () => invoke<void>("widget_open_main"),
-  relayout: () => invoke<void>("widget_relayout"),
-};
 
 /** Legacy key: the widget's on/off flag lived in localStorage before Rust owned it. */
 const LEGACY_ENABLED_KEY = "pilpod-widget-enabled";
@@ -44,60 +30,35 @@ const MIGRATED_KEY = "pilpod-widget-migrated";
  * the widget turned on. The marker key stops it from re-enabling the widget
  * every launch for someone who has since turned it off.
  */
-async function migrateLegacyEnabled(current: WidgetState): Promise<boolean> {
+async function migrateLegacyEnabled(current: WidgetState): Promise<void> {
   try {
-    if (localStorage.getItem(MIGRATED_KEY) === "1") return false;
+    if (localStorage.getItem(MIGRATED_KEY) === "1") return;
     const legacy = localStorage.getItem(LEGACY_ENABLED_KEY);
     localStorage.setItem(MIGRATED_KEY, "1");
     localStorage.removeItem(LEGACY_ENABLED_KEY);
-    if (legacy !== "1" || current.enabled) return false;
+    if (legacy !== "1" || current.enabled) return;
     await widgetApi.setEnabled(true);
-    return true;
   } catch {
-    return false;
+    /* storage unavailable — nothing to migrate */
   }
 }
 
-/**
- * Subscribe to widget state.
- *
- * Mounts one event listener per window and one initial fetch. Setters are
- * fire-and-forget: the resulting broadcast is what updates the UI, so there is
- * no optimistic local copy that can disagree with the window on screen.
- */
 export function useWidgetState() {
   const [state, setState] = useState<WidgetState>(DEFAULT_WIDGET_STATE);
   const [error, setError] = useState<string | null>(null);
-  const alive = useRef(true);
 
   useEffect(() => {
-    alive.current = true;
-    let unlisten: UnlistenFn | undefined;
-
-    void listen<WidgetState>(WIDGET_STATE_EVENT, (ev) => {
-      if (alive.current) setState(ev.payload);
-    }).then((u) => {
-      // The component may have unmounted while `listen` was in flight.
-      if (alive.current) unlisten = u;
-      else void u();
+    let migrated = false;
+    const stop = watchWidgetState((next) => {
+      setState(next);
+      // Runs against the first snapshot only; a flip is corrected by the
+      // broadcast that follows it.
+      if (!migrated) {
+        migrated = true;
+        void migrateLegacyEnabled(next);
+      }
     });
-
-    void widgetApi
-      .getState()
-      .then(async (initial) => {
-        if (!alive.current) return;
-        setState(initial);
-        // If migration flips the flag, the broadcast will correct us.
-        await migrateLegacyEnabled(initial);
-      })
-      .catch(() => {
-        /* not running under Tauri (plain browser dev) — keep defaults */
-      });
-
-    return () => {
-      alive.current = false;
-      void unlisten?.();
-    };
+    return stop;
   }, []);
 
   const run = useCallback(async (op: () => Promise<void>) => {
@@ -142,8 +103,23 @@ export function useWidgetState() {
     [run],
   );
 
+  const setAccent = useCallback(
+    (accent: WidgetAccent) => void run(() => widgetApi.setAccent(accent)),
+    [run],
+  );
+
+  const setSize = useCallback(
+    (size: number) => void run(() => widgetApi.setSize(size)),
+    [run],
+  );
+
   const setExpanded = useCallback(
     (expanded: boolean) => void run(() => widgetApi.setExpanded(expanded)),
+    [run],
+  );
+
+  const setBrowsersOpen = useCallback(
+    (open: boolean) => void run(() => widgetApi.setBrowsersOpen(open)),
     [run],
   );
 
@@ -155,8 +131,12 @@ export function useWidgetState() {
     setPlacement,
     pinToCorner,
     setFree,
+    setAccent,
+    setSize,
     setExpanded,
+    setBrowsersOpen,
   };
 }
 
 export type WidgetController = ReturnType<typeof useWidgetState>;
+export { widgetApi } from "./ipc";

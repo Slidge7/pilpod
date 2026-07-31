@@ -59,10 +59,7 @@ pub async fn open_dev_lab_window(app: AppHandle) -> Result<(), String> {
 }
 
 fn dev_lab_url(app: &AppHandle) -> WebviewUrl {
-    if let Some(dev_url) = app.config().build.dev_url.clone() {
-        return WebviewUrl::External(dev_url);
-    }
-    WebviewUrl::App("index.html".into())
+    crate::frontend::url(app, "index.html")
 }
 
 fn create_or_focus_dev_lab_window(app: &AppHandle) -> Result<(), String> {

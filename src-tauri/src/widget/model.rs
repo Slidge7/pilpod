@@ -13,16 +13,53 @@ use serde::{Deserialize, Serialize};
 /// defaults rather than mangling the user's settings.
 pub const SETTINGS_VERSION: u32 = 1;
 
-/// Logical (DPI-independent) size of the collapsed chip.
+/// User-selectable bounds for the collapsed triangle, in logical pixels.
 ///
-/// The chip is the PilPod logo and nothing else — no plate, no background — so
-/// the window is sized to the artwork. Anything larger would put transparent
-/// padding between the logo and the screen edge and break the "absolute
-/// corner" look. Mirrored by `WIDGET_CHIP_PX` in `src/features/widget/types.ts`.
-pub const CHIP_LOGICAL_PX: f64 = 34.0;
-/// Logical size of the expanded "media list" panel.
+/// The window is sized to the triangle exactly — there is no plate behind it —
+/// so this is both the artwork size and the window size. Padding would put
+/// transparent space between the triangle and the screen edge and break the
+/// flush-corner look. Mirrored by `WIDGET_SIZE_*` in
+/// `src/features/widget/types.ts`.
+pub const CHIP_MIN_PX: f64 = 16.0;
+pub const CHIP_MAX_PX: f64 = 96.0;
+pub const CHIP_DEFAULT_PX: f64 = 40.0;
+
+/// Logical size of the expanded panel.
+///
+/// Two heights, not two windows: the panel opens showing only what is playing,
+/// and grows downward-into-the-screen when the user asks for the full browser
+/// list. Anchoring both on the same corner means the growth reads as the panel
+/// unfolding rather than a new surface appearing.
 pub const PANEL_LOGICAL_W: f64 = 360.0;
-pub const PANEL_LOGICAL_H: f64 = 450.0;
+pub const PANEL_LOGICAL_H: f64 = 400.0;
+pub const PANEL_LOGICAL_H_WITH_BROWSERS: f64 = 600.0;
+
+/// Accent for the glass chip.
+///
+/// A fixed palette rather than a free colour picker: each solid accent is
+/// authored as a matched set of glass stops (fill, highlight, edge) in
+/// `chip.css`, which is what keeps them looking like frosted glass instead of
+/// flat translucent paint. An arbitrary hex value would have to derive those
+/// stops at runtime and would land somewhere muddier.
+///
+/// [`Self::Hologram`] is not a colour at all — it selects an animated
+/// multi-hue treatment whose implementation lives entirely in CSS. Rust only
+/// needs to remember that the user picked it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WidgetAccent {
+    Blue,
+    Green,
+    Yellow,
+    Red,
+    Hologram,
+}
+
+impl Default for WidgetAccent {
+    fn default() -> Self {
+        Self::Blue
+    }
+}
 
 /// Which screen corner the widget is pinned to.
 ///
@@ -93,10 +130,31 @@ pub struct WidgetSettings {
     pub enabled: bool,
     #[serde(default)]
     pub placement: WidgetPlacement,
+    #[serde(default)]
+    pub accent: WidgetAccent,
+    #[serde(default = "default_size")]
+    pub size: f64,
 }
 
 const fn default_version() -> u32 {
     SETTINGS_VERSION
+}
+
+const fn default_size() -> f64 {
+    CHIP_DEFAULT_PX
+}
+
+/// Bring a size into range.
+///
+/// Clamped in Rust rather than trusted from the slider: the value also arrives
+/// from disk, where a hand-edited or truncated file could carry anything —
+/// including `NaN`, which would propagate silently through the geometry and
+/// leave the widget unpositionable.
+pub fn clamp_size(size: f64) -> f64 {
+    if !size.is_finite() {
+        return CHIP_DEFAULT_PX;
+    }
+    size.clamp(CHIP_MIN_PX, CHIP_MAX_PX)
 }
 
 impl Default for WidgetSettings {
@@ -105,6 +163,8 @@ impl Default for WidgetSettings {
             version: SETTINGS_VERSION,
             enabled: false,
             placement: WidgetPlacement::default(),
+            accent: WidgetAccent::default(),
+            size: CHIP_DEFAULT_PX,
         }
     }
 }
@@ -116,8 +176,12 @@ impl Default for WidgetSettings {
 pub struct WidgetState {
     pub enabled: bool,
     pub placement: WidgetPlacement,
+    pub accent: WidgetAccent,
+    pub size: f64,
     /// True while the widget window is showing the expanded media panel.
     pub expanded: bool,
+    /// True while the expanded panel is also showing the full browser list.
+    pub browsers_open: bool,
 }
 
 #[cfg(test)]
@@ -151,6 +215,40 @@ mod tests {
             WidgetPlacement::Corner {
                 corner: WidgetCorner::BottomRight
             }
+        );
+        assert_eq!(s.accent, WidgetAccent::Blue);
+        assert_eq!(s.size, CHIP_DEFAULT_PX);
+    }
+
+    #[test]
+    fn size_is_clamped_into_range() {
+        assert_eq!(clamp_size(40.0), 40.0);
+        assert_eq!(clamp_size(0.0), CHIP_MIN_PX);
+        assert_eq!(clamp_size(1_000.0), CHIP_MAX_PX);
+        assert_eq!(clamp_size(CHIP_MIN_PX), CHIP_MIN_PX);
+        assert_eq!(clamp_size(CHIP_MAX_PX), CHIP_MAX_PX);
+    }
+
+    #[test]
+    fn non_finite_sizes_fall_back_rather_than_poison_the_geometry() {
+        assert_eq!(clamp_size(f64::NAN), CHIP_DEFAULT_PX);
+        assert_eq!(clamp_size(f64::INFINITY), CHIP_DEFAULT_PX);
+        assert_eq!(clamp_size(f64::NEG_INFINITY), CHIP_DEFAULT_PX);
+    }
+
+    #[test]
+    fn accents_serialize_as_camel_case_names() {
+        assert_eq!(
+            serde_json::to_string(&WidgetAccent::Yellow).unwrap(),
+            r#""yellow""#
+        );
+        assert_eq!(
+            serde_json::from_str::<WidgetAccent>(r#""red""#).unwrap(),
+            WidgetAccent::Red
+        );
+        assert_eq!(
+            serde_json::to_string(&WidgetAccent::Hologram).unwrap(),
+            r#""hologram""#
         );
     }
 

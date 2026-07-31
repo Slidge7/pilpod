@@ -1,11 +1,12 @@
 /*
- * Placement controls for the floating widget, styled to sit alongside the
- * wallpaper and idle panels in the slide menu.
+ * Appearance and placement controls for the floating widget, styled to sit
+ * alongside the wallpaper and idle panels in the slide menu.
  *
- * The corner picker is a 2×2 grid that reads as a miniature screen: each
- * button occupies the position it selects, and its marker sits in the matching
- * corner of the button. Nothing to read, nothing to decode — the control looks
- * like the outcome.
+ * Both pickers show the thing they configure rather than describing it: the
+ * corner grid is a 2×2 miniature of the screen with a triangle in the matching
+ * corner, and each colour swatch is that same triangle in that colour. The
+ * accent gradients are the ones from `chip.css`, so what you press is what
+ * lands on screen.
  */
 
 .pilpod-widget-settings {
@@ -52,7 +53,7 @@
 .pilpod-widget-settings__group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
   margin: 0;
   border: 0;
   padding: 0;
@@ -60,8 +61,8 @@
   transition: opacity 0.15s ease;
 }
 
-/* The whole section is meaningless with the widget off — dim it rather than
-   remove it, so the layout doesn't jump on every toggle. */
+/* Meaningless with the widget off — dim rather than remove, so the menu
+   doesn't jump on every toggle. */
 .pilpod-widget-settings__group:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -75,6 +76,8 @@
   text-transform: uppercase;
   color: var(--pilpod-text-muted);
 }
+
+/* ---- Placement mode ---------------------------------------------------- */
 
 .pilpod-widget-settings__modes {
   display: flex;
@@ -103,6 +106,8 @@
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
 }
 
+/* ---- Corner grid ------------------------------------------------------- */
+
 .pilpod-widget-settings__corners {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -113,8 +118,8 @@
   transition: opacity 0.15s ease;
 }
 
-/* Free placement: the corners are still reachable (clicking one pins the
-   widget) but they no longer describe the current state. */
+/* Free placement: the corners still work (pressing one pins the widget) but
+   they no longer describe the current state. */
 .pilpod-widget-settings__corners[data-dimmed="true"] {
   opacity: 0.55;
 }
@@ -122,6 +127,7 @@
 .pilpod-widget-settings__corner {
   position: relative;
   height: 26px;
+  overflow: hidden;
   border: 1px solid transparent;
   border-radius: 4px;
   background: var(--pilpod-bg-muted);
@@ -138,50 +144,235 @@
   background: var(--pilpod-bg-tab-active);
 }
 
-/*
- * The marker: a quarter-round nub pinned to the corner this button selects,
- * mirroring the shape the real widget takes in that corner.
- */
-.pilpod-widget-settings__corner-mark {
+/* A miniature of the real widget, pinned to the corner this button selects. */
+.pilpod-widget-settings__corner-tri {
   position: absolute;
-  height: 9px;
-  width: 9px;
+  height: 11px;
+  width: 11px;
   background: var(--pilpod-text-muted);
   transition: background-color 0.15s ease;
 }
 
-.pilpod-widget-settings__corner--active .pilpod-widget-settings__corner-mark {
+.pilpod-widget-settings__corner--active .pilpod-widget-settings__corner-tri {
   background: var(--pilpod-accent, #d97706);
 }
 
-.pilpod-widget-settings__corner[data-corner="topLeft"] .pilpod-widget-settings__corner-mark {
-  top: 2px;
-  left: 2px;
-  border-radius: 2px 50% 50% 50%;
+.pilpod-widget-settings__corner[data-corner="topLeft"] .pilpod-widget-settings__corner-tri {
+  top: 0;
+  left: 0;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
-.pilpod-widget-settings__corner[data-corner="topRight"] .pilpod-widget-settings__corner-mark {
-  top: 2px;
-  right: 2px;
-  border-radius: 50% 2px 50% 50%;
+.pilpod-widget-settings__corner[data-corner="topRight"] .pilpod-widget-settings__corner-tri {
+  top: 0;
+  right: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
 }
 
-.pilpod-widget-settings__corner[data-corner="bottomLeft"] .pilpod-widget-settings__corner-mark {
-  bottom: 2px;
-  left: 2px;
-  border-radius: 50% 50% 50% 2px;
+.pilpod-widget-settings__corner[data-corner="bottomLeft"] .pilpod-widget-settings__corner-tri {
+  bottom: 0;
+  left: 0;
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
 }
 
-.pilpod-widget-settings__corner[data-corner="bottomRight"] .pilpod-widget-settings__corner-mark {
-  bottom: 2px;
-  right: 2px;
-  border-radius: 50% 50% 2px 50%;
+.pilpod-widget-settings__corner[data-corner="bottomRight"] .pilpod-widget-settings__corner-tri {
+  bottom: 0;
+  right: 0;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
 
-.pilpod-widget-settings__hint {
+/* ---- Accent swatches --------------------------------------------------- */
+
+.pilpod-widget-settings__accents {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.pilpod-widget-settings__accent {
+  position: relative;
+  height: 28px;
+  overflow: hidden;
+  border: 1px solid var(--pilpod-border);
+  border-radius: 6px;
+  background: var(--pilpod-bg-shell);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.pilpod-widget-settings__accent:hover {
+  transform: translateY(-1px);
+}
+
+.pilpod-widget-settings__accent--active {
+  border-color: var(--pilpod-text-secondary);
+  box-shadow: inset 0 0 0 1px var(--pilpod-bg-shell);
+}
+
+/*
+ * The same glass build as the real triangle: rim light along the hypotenuse
+ * over a body gradient. Sharing the recipe (rather than a flat fill) is what
+ * makes the swatch an honest preview.
+ */
+.pilpod-widget-settings__accent-tri {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  height: 20px;
+  width: 20px;
+  overflow: hidden;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  background:
+    linear-gradient(
+      315deg,
+      rgb(var(--sw-rim) / 0.85) 0%,
+      rgb(var(--sw-rim) / 0) 42%
+    ),
+    linear-gradient(
+      315deg,
+      rgb(var(--sw-glow) / 0.55) 0%,
+      rgb(var(--sw-body) / 0.72) 55%,
+      rgb(var(--sw-body) / 0.92) 100%
+    );
+  transition: clip-path 180ms ease, border-radius 180ms ease;
+}
+
+/* Free placement: the widget is a sphere, so the swatches are too. */
+.pilpod-widget-settings__accents[data-shape="bubble"] .pilpod-widget-settings__accent-tri {
+  right: 50%;
+  bottom: 50%;
+  clip-path: none;
+  border-radius: 50%;
+  transform: translate(50%, 50%);
+  background:
+    radial-gradient(
+      ellipse 46% 34% at 33% 22%,
+      rgb(255 255 255 / 0.85) 0%,
+      rgb(255 255 255 / 0) 70%
+    ),
+    radial-gradient(
+      circle at 32% 26%,
+      rgb(var(--sw-glow) / 0.95) 0%,
+      rgb(var(--sw-body) / 0.9) 46%,
+      rgb(var(--sw-body) / 0.98) 78%,
+      rgb(0 0 0 / 0.22) 100%
+    );
+  box-shadow: inset 0 -1px 3px rgb(0 0 0 / 0.3);
+}
+
+.pilpod-widget-settings__accent[data-accent="blue"] {
+  --sw-body: 10 132 255;
+  --sw-glow: 120 190 255;
+  --sw-rim: 195 228 255;
+}
+
+.pilpod-widget-settings__accent[data-accent="green"] {
+  --sw-body: 26 178 104;
+  --sw-glow: 110 226 168;
+  --sw-rim: 198 248 222;
+}
+
+.pilpod-widget-settings__accent[data-accent="yellow"] {
+  --sw-body: 233 168 12;
+  --sw-glow: 255 216 110;
+  --sw-rim: 255 240 196;
+}
+
+.pilpod-widget-settings__accent[data-accent="red"] {
+  --sw-body: 228 58 52;
+  --sw-glow: 255 138 130;
+  --sw-rim: 255 208 204;
+}
+
+/*
+ * Hologram swatch: the same rotating-plate trick as the widget, at one plate
+ * instead of three. A single layer is enough to say "this one moves" in a 20px
+ * preview, and keeps the menu from running three infinite animations per open.
+ */
+.pilpod-widget-settings__accent[data-accent="hologram"] .pilpod-widget-settings__accent-tri {
+  background: none;
+  box-shadow: none;
+}
+
+.pilpod-widget-settings__accent[data-accent="hologram"] .pilpod-widget-settings__accent-tri::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 260%;
+  width: 260%;
+  margin: -130% 0 0 -130%;
+  background: conic-gradient(
+    from 0deg,
+    rgb(96 165 250),
+    rgb(167 139 250),
+    rgb(244 114 182),
+    rgb(253 224 71),
+    rgb(52 211 153),
+    rgb(96 165 250)
+  );
+  animation: pilpod-swatch-drift 14s linear infinite;
+}
+
+@keyframes pilpod-swatch-drift {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- Size slider ------------------------------------------------------- */
+
+.pilpod-widget-settings__size {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pilpod-widget-settings__size-input {
+  flex: 1;
+  height: 16px;
   margin: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.pilpod-widget-settings__size-input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--pilpod-border-strong);
+}
+
+.pilpod-widget-settings__size-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 12px;
+  width: 12px;
+  margin-top: -4px;
+  border: none;
+  border-radius: 999px;
+  background: var(--pilpod-text-secondary);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: transform 0.12s ease, background-color 0.12s ease;
+}
+
+.pilpod-widget-settings__size-input:hover::-webkit-slider-thumb,
+.pilpod-widget-settings__size-input:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.18);
+  background: var(--pilpod-text);
+}
+
+.pilpod-widget-settings__size-input:focus-visible {
+  outline: none;
+}
+
+/* Tabular figures so the number doesn't jitter the row as it changes. */
+.pilpod-widget-settings__size-value {
+  min-width: 20px;
+  text-align: right;
   font-size: 10px;
-  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
   color: var(--pilpod-text-muted);
 }
 
@@ -195,5 +386,10 @@
   .pilpod-widget-settings *,
   .pilpod-widget-settings {
     transition: none;
+  }
+
+  .pilpod-widget-settings__accent[data-accent="hologram"]
+    .pilpod-widget-settings__accent-tri::before {
+    animation: none;
   }
 }

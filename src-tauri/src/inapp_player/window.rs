@@ -97,7 +97,12 @@ fn local_url(app: &AppHandle) -> Option<tauri::Url> {
             return Some(url);
         }
     }
-    app.config().build.dev_url.clone()
+    // Fallback for the window between `create` and the UI webview reporting a
+    // URL. Only the dev server can be named without asking the webview — the
+    // release asset protocol's origin is platform-specific — so in a bundle
+    // this is `None` and the caller simply skips the navigation rather than
+    // sending the stage to a dev server that does not exist.
+    crate::frontend::dev_base(app)
 }
 
 fn navigate_stage(app: &AppHandle, target: &StageTarget) {
@@ -200,10 +205,7 @@ pub fn relayout(app: &AppHandle) {
 /// Where the UI webview's document lives — dev server in dev, bundled asset in
 /// release (same resolution `dev_lab` uses).
 fn ui_url(app: &AppHandle) -> WebviewUrl {
-    match app.config().build.dev_url.clone() {
-        Some(dev_url) => WebviewUrl::External(dev_url),
-        None => WebviewUrl::App("index.html".into()),
-    }
+    crate::frontend::url(app, "index.html")
 }
 
 fn create(app: &AppHandle, target: &StageTarget) -> Result<(), String> {

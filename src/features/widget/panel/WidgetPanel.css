@@ -1,0 +1,212 @@
+/*
+ * The expanded widget panel.
+ *
+ * Same discipline as the triangle: no `backdrop-filter` anywhere. This surface
+ * floats above other applications, so a live blur would cost a compositor
+ * readback for every frame it is open. The glass read comes from layered
+ * gradients and a rim highlight instead, which is free once painted.
+ */
+
+.pilpod-wpanel {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  padding: 6px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.pilpod-wpanel__card {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--pilpod-border-strong);
+  background:
+    linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.10) 0%,
+      rgb(255 255 255 / 0) 38%
+    ),
+    var(--pilpod-bg-shell);
+  box-shadow:
+    0 12px 28px -8px rgb(0 0 0 / 0.35),
+    0 2px 6px -2px rgb(0 0 0 / 0.2);
+}
+
+/* ---- Drag grip --------------------------------------------------------- */
+
+/*
+ * The panel is a frameless window, so it needs somewhere to grab. A thin bar
+ * across the top reads as a handle without spending height on a title bar.
+ */
+.pilpod-wpanel__grip {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  height: 14px;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.pilpod-wpanel__grip:active {
+  cursor: grabbing;
+}
+
+.pilpod-wpanel__grip-bar {
+  height: 3px;
+  width: 34px;
+  border-radius: 999px;
+  background: var(--pilpod-border-strong);
+  transition: background-color 150ms ease;
+}
+
+.pilpod-wpanel__grip:hover .pilpod-wpanel__grip-bar {
+  background: var(--pilpod-text-muted);
+}
+
+/* ---- Body -------------------------------------------------------------- */
+
+.pilpod-wpanel__scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 6px 6px;
+  /* Scroll containers repaint on every frame of a scroll; promoting this one
+     keeps the media cards off the main thread's paint path. */
+  contain: layout paint;
+}
+
+.pilpod-wpanel__section + .pilpod-wpanel__section {
+  margin-top: 6px;
+  border-top: 1px solid var(--pilpod-border);
+  padding-top: 6px;
+}
+
+.pilpod-wpanel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pilpod-wpanel__item {
+  width: 100%;
+}
+
+.pilpod-wpanel__empty {
+  margin: 0;
+  padding: 22px 8px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-wpanel__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 0;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-wpanel__error {
+  margin-bottom: 6px;
+  border-radius: 6px;
+  background: rgb(220 38 38 / 0.12);
+  padding: 4px 6px;
+  font-size: 10px;
+  color: #dc2626;
+}
+
+/* ---- Footer ------------------------------------------------------------ */
+
+/*
+ * Full-width, icon only. Idle it is almost invisible — a hairline and a muted
+ * chevron. On hover a tinted glass wash sweeps up from the bottom edge and the
+ * chevron lifts, so the affordance is entirely in the motion rather than in a
+ * permanent button shape competing with the media cards above it.
+ */
+.pilpod-wpanel__footer {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  width: 100%;
+  overflow: hidden;
+  border: none;
+  border-top: 1px solid var(--pilpod-border);
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+  transition: color 180ms ease;
+}
+
+.pilpod-wpanel__footer:hover,
+.pilpod-wpanel__footer:focus-visible {
+  color: var(--pilpod-text);
+  outline: none;
+}
+
+/* The wash. Transform-only animation, so it composites. */
+.pilpod-wpanel__footer-glow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    0deg,
+    rgb(255 255 255 / 0.16) 0%,
+    rgb(255 255 255 / 0.06) 55%,
+    rgb(255 255 255 / 0) 100%
+  );
+  opacity: 0;
+  transform: translateY(60%);
+  transition: opacity 200ms ease, transform 260ms cubic-bezier(0.2, 0, 0, 1);
+  pointer-events: none;
+}
+
+.pilpod-wpanel__footer:hover .pilpod-wpanel__footer-glow,
+.pilpod-wpanel__footer:focus-visible .pilpod-wpanel__footer-glow {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pilpod-wpanel__footer:active .pilpod-wpanel__footer-glow {
+  opacity: 0.7;
+}
+
+.pilpod-wpanel__footer-icon {
+  position: relative;
+  flex-shrink: 0;
+  transition: transform 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.pilpod-wpanel__footer:hover .pilpod-wpanel__footer-icon {
+  transform: translateY(1px);
+}
+
+/* Open: the chevron points back up, and hover nudges it that way instead. */
+.pilpod-wpanel__footer[data-open] .pilpod-wpanel__footer-icon {
+  transform: rotate(180deg);
+}
+
+.pilpod-wpanel__footer[data-open]:hover .pilpod-wpanel__footer-icon {
+  transform: rotate(180deg) translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pilpod-wpanel__footer,
+  .pilpod-wpanel__footer-glow,
+  .pilpod-wpanel__footer-icon,
+  .pilpod-wpanel__grip-bar {
+    transition: none;
+  }
+}

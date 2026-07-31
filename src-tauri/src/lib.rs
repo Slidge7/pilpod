@@ -1,6 +1,11 @@
 mod app;
 mod premium;
 mod vault;
+// Every window that is not `main` resolves its own document. One module owns
+// that decision so the dev-server-vs-bundled-asset branch cannot be written
+// wrong twice — see the module docs for the release-only blank-window bug it
+// was extracted to fix.
+mod frontend;
 // Platform-neutral: pure file I/O + a state machine. The Windows-only pieces
 // (browser launching, registry paths) live behind cfg gates inside the module.
 //
