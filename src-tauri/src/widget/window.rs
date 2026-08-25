@@ -203,6 +203,10 @@ pub fn show(app: &AppHandle) -> Result<(), String> {
         builder = builder.additional_browser_args(crate::inapp_player::agent::BROWSER_ARGS);
     }
 
+    // No `window_corners::apply` here, deliberately: the widget is a triangle
+    // (corner mode) or a circle (free mode) drawn entirely in CSS on a fully
+    // transparent window. Opting it into DWM's rounded frame would impose a
+    // rounded rectangle and a drop shadow on a shape that is neither.
     let window = builder.build().map_err(|e| e.to_string())?;
     attach_event_handlers(app, &window);
 

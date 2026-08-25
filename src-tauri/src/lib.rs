@@ -50,7 +50,8 @@ mod wallpaper;
 // Tauri does. Supersedes the old `window_widget` module, which implemented
 // "widget mode" by shrinking the main window.
 mod widget;
-#[cfg(not(windows))]
+// Platform shims. The module itself is cross-platform; its contents are gated
+// per-OS (`stub_commands` off-Windows, `window_corners` on Windows).
 mod platform;
 
 pub use app::run;

@@ -88,6 +88,9 @@ fn create_or_focus_dev_lab_window(app: &AppHandle) -> Result<(), String> {
 
     let window = builder.build().map_err(|e| e.to_string())?;
 
+    #[cfg(windows)]
+    crate::platform::window_corners::apply(&window);
+
     if let Err(e) = window.set_icon(tauri::include_image!("icons/icon.ico")) {
         eprintln!("[dev-lab] window icon: {e}");
     }

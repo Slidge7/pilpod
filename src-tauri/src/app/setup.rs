@@ -14,6 +14,14 @@ pub fn init(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(windows)]
     apply_main_window_icon(&handle);
 
+    // The main window is undecorated + transparent and paints its own rounded
+    // rim; without an OS-side clip the corner area composites opaque black in
+    // bundled builds. See `platform::window_corners`.
+    #[cfg(windows)]
+    if let Some(window) = handle.get_webview_window("main") {
+        crate::platform::window_corners::apply(&window);
+    }
+
     // Bundled browser icons: resource dir in production, source dir in dev.
     {
         let mut candidates: Vec<std::path::PathBuf> = Vec::new();
