@@ -29,6 +29,7 @@ pub fn with_invoke_handler(builder: tauri::Builder<Wry>) -> tauri::Builder<Wry> 
         crate::dev_lab::dev_gc_slots_now,
         crate::dev_lab::dev_simulate_resume,
         crate::extension_setup::commands::extension_setup_overview,
+        crate::extension_setup::commands::extension_setup_gate_state,
         crate::extension_setup::commands::extension_setup_open_listing,
         crate::extension_setup::commands::extension_setup_open_extensions_page,
         crate::extension_setup::commands::extension_setup_skip,

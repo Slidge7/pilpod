@@ -13,8 +13,9 @@ import { PremiumGate } from "../premium";
 import {
   ExtensionSetupPanel,
   OnboardingGate,
+  gateDecisionFrom,
   isBrowserLocked,
-  setupBadgeCount,
+  useExtensionGate,
   useExtensionSetup,
 } from "../extension-setup";
 import type { BrowserTab } from "../../types/media";
@@ -105,10 +106,25 @@ export function MediaDashboard() {
     });
   }, [browsers, playlistPlayer.player]);
 
-  // Extension setup — lifted so the first-run gate, the menu badge and the
-  // setup section all read one snapshot (single event listener).
-  const extensionSetup = useExtensionSetup();
-  const setupBadge = setupBadgeCount(extensionSetup.overview.browsers);
+  // Extension setup, split in two on purpose.
+  //
+  // `useExtensionGate` is the always-on half: a cheap store read that tells us
+  // whether the first-run gate belongs on screen and what the menu badge says.
+  // `useExtensionSetup` is the expensive half — process scan, on-disk profile
+  // probe, a base64 icon per browser — and it is switched on only while the
+  // setup UI is actually visible.
+  //
+  // They used to be one always-on hook subscribed to `browsers://update`. That
+  // event is the media feed (5 Hz while anything plays), so the overview
+  // command ran five times a second for a screen nobody had open.
+  const extensionGate = useExtensionGate();
+  const gateOpen = gateDecisionFrom(extensionGate.state, extensionGate.loading).show;
+  const setupBadge = extensionGate.state.attentionCount;
+
+  const extensionSetup = useExtensionSetup({
+    active: activeTab === "setup" || gateOpen,
+    onChanged: extensionGate.refresh,
+  });
 
   const openSetupSection = useCallback(() => {
     setActiveTab("setup");
@@ -350,7 +366,9 @@ export function MediaDashboard() {
 
         <div className="pilpod-dashboard-glass-edge" aria-hidden="true" />
 
-        <OnboardingGate api={extensionSetup}>{null}</OnboardingGate>
+        <OnboardingGate api={extensionSetup} show={gateOpen}>
+          {null}
+        </OnboardingGate>
       </div>
     </div>
   );

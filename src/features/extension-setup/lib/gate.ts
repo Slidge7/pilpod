@@ -7,7 +7,7 @@
  * gate is a first-run prompt the user can always dismiss, not a wall.
  */
 
-import type { BrowserSetupInfo, SetupOverview } from "../types";
+import type { BrowserSetupInfo, SetupGateState, SetupOverview } from "../types";
 import { browsersNeedingAttention } from "./status";
 
 export type GateDecision = {
@@ -40,12 +40,32 @@ export function gateDecision(
   overview: SetupOverview,
   loading: boolean,
 ): GateDecision {
-  if (loading) return { show: false, reason: "loading" };
-  if (overview.onboardingDismissed) return { show: false, reason: "dismissed" };
-  if (overview.anyActive) return { show: false, reason: "alreadyActive" };
+  return gateDecisionFrom(
+    {
+      onboardingDismissed: overview.onboardingDismissed,
+      anyActive: overview.anyActive,
+      needsAttention: overview.needsAttention,
+      attentionCount: browsersNeedingAttention(overview.browsers).length,
+    },
+    loading,
+  );
+}
 
-  const actionable = browsersNeedingAttention(overview.browsers);
-  if (actionable.length === 0) {
+/**
+ * The same decision, from the cheap [`SetupGateState`] instead of the full
+ * overview — this is the one the app actually runs on.
+ *
+ * `gateDecision` delegates here rather than duplicating the rules, so the
+ * expensive path and the cheap path cannot answer differently.
+ */
+export function gateDecisionFrom(
+  state: SetupGateState,
+  loading: boolean,
+): GateDecision {
+  if (loading) return { show: false, reason: "loading" };
+  if (state.onboardingDismissed) return { show: false, reason: "dismissed" };
+  if (state.anyActive) return { show: false, reason: "alreadyActive" };
+  if (state.attentionCount === 0) {
     return { show: false, reason: "nothingToSetUp" };
   }
   return { show: true, reason: "needsSetup" };

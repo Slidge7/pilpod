@@ -9,13 +9,24 @@
 export { ExtensionSetupPanel } from "./ExtensionSetupPanel";
 export { OnboardingGate } from "./OnboardingGate";
 export { useExtensionSetup } from "./hooks/useExtensionSetup";
-export type { ExtensionSetupApi } from "./hooks/useExtensionSetup";
+export type {
+  ExtensionSetupApi,
+  UseExtensionSetupOptions,
+} from "./hooks/useExtensionSetup";
+export { useExtensionGate } from "./hooks/useExtensionGate";
+export type { ExtensionGateApi } from "./hooks/useExtensionGate";
 export { isUnlocked, browsersNeedingAttention } from "./lib/status";
-export { isBrowserLocked, setupBadgeCount, shouldShowGate } from "./lib/gate";
+export {
+  isBrowserLocked,
+  setupBadgeCount,
+  shouldShowGate,
+  gateDecisionFrom,
+} from "./lib/gate";
 export type {
   ActivationState,
   BrowserSetupInfo,
   EngineFamily,
+  SetupGateState,
   SetupOverview,
   StoreSupport,
 } from "./types";

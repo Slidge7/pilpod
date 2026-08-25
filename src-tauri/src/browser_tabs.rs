@@ -97,16 +97,38 @@ fn hash_str(h: &mut DefaultHasher, s: &str) {
     s.hash(h);
 }
 
+/// Idle time is bucketed before hashing. The UI renders it rounded to whole
+/// minutes and only reacts at the 5-minute mark, so millisecond precision here
+/// buys nothing and costs an emit on every frame.
+const IDLE_BUCKET_MS: u64 = 30_000;
+
+/// Whole-second bucket for a float time value.
+///
+/// Hashing the raw `f64` bits made the tab hash change on *every* progress
+/// frame the extension sends (5 Hz, per the protocol's `progressHz`). That
+/// defeated the diff-before-emit guard in `apply_ingest`, so `browsers://update`
+/// fired five times a second for the entire time any media was playing.
+/// One bucket per second is all the UI can display.
+///
+/// NaN and negatives collapse to `0` rather than hashing as distinct values.
+fn secs_bucket(v: f64) -> i64 {
+    if v.is_finite() && v > 0.0 {
+        v as i64
+    } else {
+        0
+    }
+}
+
 fn hash_media(h: &mut DefaultHasher, media: &TabMedia) {
     hash_str(h, &media.playback_state);
     hash_str(h, &media.title);
     hash_str(h, &media.artist);
     hash_str(h, &media.album);
     hash_str(h, &media.artwork_url);
-    media.duration.to_bits().hash(h);
-    media.current_time.to_bits().hash(h);
+    secs_bucket(media.duration).hash(h);
+    secs_bucket(media.current_time).hash(h);
     media.page_visible.hash(h);
-    media.user_idle_ms.hash(h);
+    (media.user_idle_ms / IDLE_BUCKET_MS).hash(h);
     hash_str(h, &media.document_state);
     media.tab_volume.to_bits().hash(h);
     media.tab_muted.hash(h);
@@ -197,5 +219,59 @@ mod tests {
         let a = vec![sample_tab("Hello")];
         let b = vec![sample_tab("World")];
         assert_ne!(hash_tabs(&a), hash_tabs(&b));
+    }
+
+    /// All `TabMedia` fields carry serde defaults, so this is the cheapest way
+    /// to build one without a `Default` impl the production code never needs.
+    fn tab_with_media(current_time: f64, user_idle_ms: u64) -> BrowserTab {
+        let mut tab = sample_tab("Playing");
+        let mut media: TabMedia = serde_json::from_str("{}").expect("default media");
+        media.playback_state = "playing".into();
+        media.duration = 240.0;
+        media.current_time = current_time;
+        media.user_idle_ms = user_idle_ms;
+        tab.media = Some(media);
+        tab
+    }
+
+    #[test]
+    fn hash_ignores_sub_second_progress() {
+        // The extension streams progress at 5 Hz. Two frames inside the same
+        // second must hash identically, or `apply_ingest` emits on every one.
+        let a = vec![tab_with_media(12.0, 0)];
+        let b = vec![tab_with_media(12.8, 0)];
+        assert_eq!(hash_tabs(&a), hash_tabs(&b));
+    }
+
+    #[test]
+    fn hash_still_tracks_whole_seconds() {
+        let a = vec![tab_with_media(12.0, 0)];
+        let b = vec![tab_with_media(13.0, 0)];
+        assert_ne!(hash_tabs(&a), hash_tabs(&b));
+    }
+
+    #[test]
+    fn hash_ignores_idle_jitter_below_bucket() {
+        // Idle ticks up continuously; the UI shows whole minutes and only reacts
+        // at 5 minutes, so anything under the bucket must not force an emit.
+        let a = vec![tab_with_media(12.0, 1_000)];
+        let b = vec![tab_with_media(12.0, 20_000)];
+        assert_eq!(hash_tabs(&a), hash_tabs(&b));
+    }
+
+    #[test]
+    fn hash_tracks_idle_across_buckets() {
+        let a = vec![tab_with_media(12.0, 10_000)];
+        let b = vec![tab_with_media(12.0, 90_000)];
+        assert_ne!(hash_tabs(&a), hash_tabs(&b));
+    }
+
+    #[test]
+    fn secs_bucket_collapses_nan_and_negatives() {
+        assert_eq!(secs_bucket(f64::NAN), 0);
+        assert_eq!(secs_bucket(f64::INFINITY), 0);
+        assert_eq!(secs_bucket(-5.0), 0);
+        assert_eq!(secs_bucket(0.0), 0);
+        assert_eq!(secs_bucket(7.9), 7);
     }
 }

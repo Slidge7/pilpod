@@ -103,6 +103,28 @@ pub struct SetupOverview {
     pub any_active: bool,
 }
 
+/// The slice of setup state the app needs when *nobody is looking at the setup
+/// screen*: enough to decide whether the first-run gate appears and whether the
+/// menu entry gets a dot, and nothing more.
+///
+/// This exists because [`SetupOverview`] is expensive — it walks every running
+/// process, scans every Chromium profile on disk for the companion, and carries
+/// a base64 PNG per browser. The gate and the badge need none of that, and they
+/// are live for the whole session, so asking them to pay overview prices was
+/// what turned a one-time onboarding feature into a permanent background load.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetupGateState {
+    pub onboarding_dismissed: bool,
+    /// Mirrors [`SetupOverview::needs_attention`].
+    pub needs_attention: bool,
+    /// Mirrors [`SetupOverview::any_active`].
+    pub any_active: bool,
+    /// How many supported browsers the user could act on right now — the badge
+    /// count, computed here so Rust and the frontend cannot disagree about it.
+    pub attention_count: u32,
+}
+
 // ── Overview ────────────────────────────────────────────────────────────────
 
 /// Join detected browsers with their engine capabilities and activation state.
@@ -150,6 +172,33 @@ pub fn build_overview(
         onboarding_dismissed: store.onboarding_dismissed(),
         needs_attention,
         any_active,
+    }
+}
+
+/// Gate/badge state from browser ids alone — no process scan, no disk scan, no
+/// icons. Deliberately mirrors the `needs_attention` / `any_active` rules in
+/// [`build_overview`]; the shared tests below pin the two together.
+pub fn build_gate_state(browser_ids: &[String], store: &ActivationStore) -> SetupGateState {
+    let mut attention_count: u32 = 0;
+    let mut any_active = false;
+
+    for id in browser_ids {
+        let info = engine::engine_or_unknown(id);
+        let state = store.record_of(id).map(|r| r.state).unwrap_or_default();
+
+        if state.is_active() {
+            any_active = true;
+        }
+        if info.store_support != StoreSupport::Unsupported && state.needs_attention() {
+            attention_count += 1;
+        }
+    }
+
+    SetupGateState {
+        onboarding_dismissed: store.onboarding_dismissed(),
+        needs_attention: attention_count > 0,
+        any_active,
+        attention_count,
     }
 }
 
@@ -495,6 +544,88 @@ mod tests {
         assert!(!ov.needs_attention);
         assert!(!ov.any_active);
         assert_eq!(ov.store_url, STORE_URL);
+    }
+
+    // ── build_gate_state ────────────────────────────────────────────────────
+    //
+    // These pin the cheap path to the expensive one. `build_gate_state` exists
+    // so the always-on gate and badge never call `build_overview`; the moment
+    // the two disagree, the gate is lying about state the user can see.
+
+    fn ids(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn gate_state_agrees_with_overview_on_a_fresh_machine() {
+        let ops = MockOps::with_installed(&["chrome"]);
+        let st = store();
+
+        let ov = build_overview(&[facts("chrome", "Google Chrome")], &st, &ops);
+        let gate = build_gate_state(&ids(&["chrome"]), &st);
+
+        assert_eq!(gate.needs_attention, ov.needs_attention);
+        assert_eq!(gate.any_active, ov.any_active);
+        assert_eq!(gate.onboarding_dismissed, ov.onboarding_dismissed);
+        assert_eq!(gate.attention_count, 1);
+    }
+
+    #[test]
+    fn gate_state_agrees_with_overview_once_a_browser_is_verified() {
+        let ops = MockOps::with_installed(&["chrome"]);
+        let mut st = store();
+        st.apply("chrome", ActivationEvent::HandshakeVerified, 555);
+
+        let ov = build_overview(&[facts("chrome", "Google Chrome")], &st, &ops);
+        let gate = build_gate_state(&ids(&["chrome"]), &st);
+
+        assert_eq!(gate.needs_attention, ov.needs_attention);
+        assert_eq!(gate.any_active, ov.any_active);
+        assert!(gate.any_active);
+        assert_eq!(gate.attention_count, 0);
+    }
+
+    #[test]
+    fn gate_state_ignores_browsers_that_cannot_install_from_the_store() {
+        let st = store();
+        // Firefox is Gecko: `Unsupported`, so it must never raise the badge.
+        let gate = build_gate_state(&ids(&["firefox"]), &st);
+        assert_eq!(gate.attention_count, 0);
+        assert!(!gate.needs_attention);
+    }
+
+    #[test]
+    fn gate_state_counts_every_actionable_browser() {
+        let mut st = store();
+        st.apply("chrome", ActivationEvent::HandshakeVerified, 1);
+        let gate = build_gate_state(&ids(&["chrome", "msedge", "brave", "firefox"]), &st);
+
+        // chrome is active, firefox is unsupported → edge + brave remain.
+        assert_eq!(gate.attention_count, 2);
+        assert!(gate.any_active);
+        assert!(gate.needs_attention);
+    }
+
+    #[test]
+    fn gate_state_tracks_dismissal() {
+        let mut st = store();
+        assert!(!build_gate_state(&ids(&["chrome"]), &st).onboarding_dismissed);
+        st.set_onboarding_dismissed(true);
+        assert!(build_gate_state(&ids(&["chrome"]), &st).onboarding_dismissed);
+    }
+
+    #[test]
+    fn gate_state_serializes_camel_case_for_the_frontend() {
+        let st = store();
+        let json = serde_json::to_string(&build_gate_state(&ids(&["chrome"]), &st)).unwrap();
+        for key in [
+            "\"onboardingDismissed\"",
+            "\"needsAttention\"",
+            "\"anyActive\"",
+            "\"attentionCount\"",
+        ] {
+            assert!(json.contains(key), "missing {key} in {json}");
+        }
     }
 
     // ── state-only actions ──────────────────────────────────────────────────

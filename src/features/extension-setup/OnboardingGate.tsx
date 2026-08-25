@@ -1,6 +1,5 @@
 import "./ExtensionSetup.css";
 import { ExtensionSetupPanel } from "./ExtensionSetupPanel";
-import { gateDecision } from "./lib/gate";
 import type { ExtensionSetupApi } from "./hooks/useExtensionSetup";
 
 /**
@@ -16,12 +15,21 @@ import type { ExtensionSetupApi } from "./hooks/useExtensionSetup";
  */
 export function OnboardingGate({
   api,
+  show,
   children,
 }: {
   api: ExtensionSetupApi;
+  /**
+   * Decided by the caller from `useExtensionGate`, not from `api.overview`.
+   *
+   * The gate is live for the whole session, so it must not be the reason the
+   * expensive overview command runs; it asks the cheap `gateState` command
+   * instead. The caller then switches `api` on for exactly as long as this is
+   * true, which is what gives the panel below its data.
+   */
+  show: boolean;
   children: React.ReactNode;
 }) {
-  const decision = gateDecision(api.overview, api.loading);
 
   // The dashboard stays mounted underneath rather than being swapped out:
   // dismissing the gate then reveals a live app instead of remounting one, and
@@ -29,7 +37,7 @@ export function OnboardingGate({
   return (
     <>
       {children}
-      {decision.show && (
+      {show && !api.loading && (
         <div className="xs-gate" role="dialog" aria-modal="false" aria-label="Set up PilPod">
           <div className="xs-gate__inner">
             <ExtensionSetupPanel
