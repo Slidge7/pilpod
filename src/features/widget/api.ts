@@ -9,8 +9,9 @@ import {
 } from "./types";
 
 /**
- * React binding over {@link widgetApi} — used by the dashboard menu and by the
- * widget's expanded panel.
+ * React binding over {@link widgetApi} — used by the dashboard's menu and
+ * header. (The widget window itself never touches this file; it is plain DOM
+ * and talks to `ipc.ts` directly.)
  *
  * Setters are fire-and-forget. Rust holds the state, every mutation comes back
  * through the `widget://state` broadcast, and the UI renders from that. There
@@ -113,15 +114,25 @@ export function useWidgetState() {
     [run],
   );
 
-  const setExpanded = useCallback(
-    (expanded: boolean) => void run(() => widgetApi.setExpanded(expanded)),
+  /**
+   * Keep the chip visible while the user is editing it.
+   *
+   * Stable across renders, so callers can drive it straight from an effect
+   * without the effect re-firing every time the widget state changes.
+   */
+  const setPreview = useCallback(
+    (preview: boolean) => void run(() => widgetApi.setPreview(preview)),
     [run],
   );
 
-  const setBrowsersOpen = useCallback(
-    (open: boolean) => void run(() => widgetApi.setBrowsersOpen(open)),
-    [run],
-  );
+  /**
+   * Put the dashboard away, chip in its place.
+   *
+   * Only meaningful while the widget is on — with it off there would be
+   * nothing left on screen, so the caller (the header's minimize button)
+   * checks first and minimizes normally otherwise.
+   */
+  const hideMain = useCallback(() => void run(() => widgetApi.hideMain()), [run]);
 
   return {
     ...state,
@@ -133,8 +144,8 @@ export function useWidgetState() {
     setFree,
     setAccent,
     setSize,
-    setExpanded,
-    setBrowsersOpen,
+    setPreview,
+    hideMain,
   };
 }
 

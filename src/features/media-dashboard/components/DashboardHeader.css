@@ -54,6 +54,22 @@
   transform: rotate(135deg);
 }
 
+/*
+  The widget switch borrows the pin's shape and its active colour, but not its
+  rotation: a tilted pin reads as "pinned", whereas the widget glyph is a
+  picture of a window shrinking into a corner and only reads right upright.
+  Two classes beat the one-class rule above.
+*/
+.pilpod-dash-header__widget {
+  /* The left group's gap is sized for a lone control; pull the pair together
+     so they read as one switch block rather than two unrelated buttons. */
+  margin-left: -0.35rem;
+}
+
+.pilpod-dash-header__widget.pilpod-dash-header__pin--active svg {
+  transform: none;
+}
+
 .pilpod-dash-header__center {
   position: relative;
   display: flex;

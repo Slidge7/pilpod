@@ -23,6 +23,11 @@ pub fn run() {
         // for `Ready` so the main window exists first — the widget resolves
         // its monitor from the screen the app is already on.
         crate::widget::init(&app.handle().clone())?;
+        // The tray icon and the close-means-hide rule. Set up here, after the
+        // widget store exists and while `main` is guaranteed to be alive.
+        if let Err(e) = crate::background::init(&app.handle().clone()) {
+            log::warn!("[pilpod] background mode unavailable: {e}");
+        }
         #[cfg(windows)]
         {
             crate::downloader::init(app)?;
@@ -43,16 +48,21 @@ pub fn run() {
         app.run(|app_handle, event| match event {
             tauri::RunEvent::Ready => {
                 setup::apply_main_window_icon(app_handle);
-                // Bring the widget back if the user left it on last session.
-                crate::widget::restore(app_handle);
+                // Settle the app into the shape the user left it in: an
+                // ordinary window, or the dashboard as a flyout anchored to
+                // the chip's corner.
+                crate::background::restore(app_handle);
             }
-            // Closing the dashboard quits PilPod, as it always has.
+            // The dashboard being *destroyed* still ends PilPod.
             //
-            // This needs saying explicitly now: the floating widget is a real
-            // second window, so Tauri's "exit when the last window closes"
-            // rule no longer fires while the widget is on — the app would sit
-            // in the background with nothing but a chip on screen. The main
-            // window is the app; when it goes, so do we.
+            // Tauri's "exit when the last window closes" rule cannot be relied
+            // on here: the widget is a real second window, so with it on the
+            // app would sit around showing nothing but a chip. When the main
+            // window is genuinely gone, so are we.
+            //
+            // Reaching this at all means the close was allowed through — with
+            // the widget on, `background::init` intercepts it and hides the
+            // window instead, and nothing is destroyed.
             tauri::RunEvent::WindowEvent {
                 label,
                 event: tauri::WindowEvent::Destroyed,

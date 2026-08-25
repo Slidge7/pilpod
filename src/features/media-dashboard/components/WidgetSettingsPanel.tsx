@@ -38,8 +38,11 @@ const CORNER_GRID: readonly WidgetCorner[] = [
  * *is* the preview, because the widget on screen and this panel are rendering
  * the same value.
  *
- * Turning the widget on shows it immediately, whatever the main window is
- * doing. The widget is no longer something you get by minimizing the app.
+ * Turning the widget on does more than the other controls here: it changes what
+ * the dashboard *is*. The window stays put, but it stops being a window — from
+ * then on it leaves when you click elsewhere, the chip takes its place, and the
+ * app keeps running behind the tray icon. The toggle is worded as the move it
+ * is, not as a visibility checkbox.
  */
 export function WidgetSettingsPanel({ widget, tabIndex }: Props) {
   const {
@@ -119,8 +122,8 @@ export function WidgetSettingsPanel({ widget, tabIndex }: Props) {
           aria-pressed={enabled}
           title={
             enabled
-              ? "Hide the floating widget"
-              : "Show the floating widget — it stays on screen whether PilPod is open or minimized"
+              ? "Turn the widget off — PilPod goes back to being an ordinary window"
+              : "Turn the widget on — this window stays until you click away, then PilPod lives as a chip in the corner"
           }
           tabIndex={tabIndex}
         >

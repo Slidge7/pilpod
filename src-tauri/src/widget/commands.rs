@@ -13,7 +13,7 @@
 
 use tauri::{AppHandle, Manager, State};
 
-use super::model::{self, WidgetAccent, WidgetPlacement, WidgetState};
+use super::model::{WidgetAccent, WidgetPlacement, WidgetState};
 use super::state::{self, WidgetStore};
 use super::window;
 
@@ -34,29 +34,38 @@ pub fn widget_get_state(store: State<'_, WidgetStore>) -> WidgetState {
     store.state()
 }
 
-/// Turn the floating widget on or off.
+/// Turn the floating widget on or off — which is also what decides whether the
+/// dashboard is a window or a flyout.
 ///
-/// On is immediate and unconditional — the widget appears now, whether or not
-/// the dashboard is open, focused or minimized. That independence is the whole
-/// point of the widget living in its own window.
+/// Turning it **on** does not put PilPod away. It converts the dashboard in
+/// place: out of the taskbar, and from now on dismissed by clicking elsewhere
+/// rather than only by closing. The window itself stays exactly where it is
+/// until the user's attention moves, at which point the chip takes over. Hiding
+/// it here — which is what this used to do — made pressing a settings toggle
+/// look like the app quitting.
+///
+/// Turning it **off** is the reverse, and can only really be asked for from the
+/// dashboard, which is by definition already on screen. Showing it anyway keeps
+/// the invariant true from every caller: with the widget off, the dashboard is
+/// the app, so it must be visible — and `show_main` is also what hands back the
+/// taskbar button.
 #[tauri::command]
 pub async fn widget_set_enabled(app: AppHandle, enabled: bool) -> Result<(), String> {
-    let next = {
-        let store = app.state::<WidgetStore>();
-        let changed = store.mutate(|s| s.enabled = enabled);
-        // Collapse on the way out so the next toggle-on shows a chip, not a
-        // stale panel. The broadcast below carries the collapsed flag, so the
-        // returned state here is deliberately dropped.
-        if !enabled {
-            let _ = store.set_expanded(false);
+    let next = app.state::<WidgetStore>().mutate(|s| s.enabled = enabled);
+
+    off_webview_thread(app.clone(), move |app: &AppHandle| {
+        if enabled {
+            crate::background::enter_flyout_mode(app)
+        } else {
+            // `show_main` reconciles the chip on its way out, and by now the
+            // widget reads as disabled — so that same call is what tears the
+            // chip's window down for good.
+            crate::background::show_main(app)
         }
-        changed
-    };
+    })
+    .await?;
 
-    off_webview_thread(app.clone(), window::sync).await?;
-
-    if let Some(mut s) = next {
-        s.expanded = app.state::<WidgetStore>().is_expanded();
+    if let Some(s) = next {
         state::commit(&app, &app.state::<WidgetStore>(), s);
     }
     Ok(())
@@ -121,15 +130,20 @@ pub fn widget_set_accent(app: AppHandle, accent: WidgetAccent) -> Result<(), Str
     Ok(())
 }
 
-/// Resize the triangle.
+/// Resize the chip.
 ///
-/// The window *is* the triangle, so this resizes the window too — which is why
-/// it has to relayout: a corner-pinned widget must stay flush as it grows, and
+/// The window *is* the chip, so this resizes the window too — which is why it
+/// has to relayout: a corner-pinned widget must stay flush as it grows, and
 /// growing a bottom-right chip without re-placing it would push it off screen.
+///
+/// Writes to whichever of the two sizes the current placement uses (see
+/// [`super::model::WidgetSettings::set_active_size`]), so the one slider on screen
+/// always edits the shape on screen.
 #[tauri::command]
 pub async fn widget_set_size(app: AppHandle, size: f64) -> Result<(), String> {
-    let clamped = model::clamp_size(size);
-    let next = app.state::<WidgetStore>().mutate(|s| s.size = clamped);
+    let next = app
+        .state::<WidgetStore>()
+        .mutate(|s| s.set_active_size(size));
     if next.is_none() {
         return Ok(());
     }
@@ -142,64 +156,44 @@ pub async fn widget_set_size(app: AppHandle, size: f64) -> Result<(), String> {
     Ok(())
 }
 
-/// Expand the widget into the media panel, or collapse it back to the chip.
+/// Bring the dashboard back — the chip's one job.
 ///
-/// The window resizes around the corner it is anchored to, so the panel
-/// unfolds from the chip instead of jumping.
-#[tauri::command]
-pub async fn widget_set_expanded(app: AppHandle, expanded: bool) -> Result<(), String> {
-    let next = app.state::<WidgetStore>().set_expanded(expanded);
-    if next.is_none() {
-        return Ok(());
-    }
-
-    off_webview_thread(app.clone(), window::relayout).await?;
-
-    if let Some(s) = next {
-        // Live-only flag: broadcast, but nothing to persist.
-        state::emit_state(&app, s);
-    }
-    Ok(())
-}
-
-/// Show or hide the full browser list beneath the now-playing section.
-///
-/// Grows the panel rather than opening anything new, anchored on the same
-/// corner so it unfolds in place.
-#[tauri::command]
-pub async fn widget_set_browsers_open(app: AppHandle, open: bool) -> Result<(), String> {
-    let next = app.state::<WidgetStore>().set_browsers_open(open);
-    if next.is_none() {
-        return Ok(());
-    }
-
-    off_webview_thread(app.clone(), window::relayout).await?;
-
-    if let Some(s) = next {
-        state::emit_state(&app, s);
-    }
-    Ok(())
-}
-
-/// Bring the dashboard back to the front from the widget.
-///
-/// Restores first: the main window may be minimized, and `set_focus` alone
-/// does not un-minimize on Windows. The widget is untouched — going back to
-/// the full window does not dismiss it.
+/// The widget stays *enabled* throughout; it is only taken off screen, so
+/// closing the dashboard again brings it straight back. Nothing here changes a
+/// setting, which is why it emits no state: from the frontend's point of view
+/// the widget is still on.
 #[tauri::command]
 pub async fn widget_open_main(app: AppHandle) -> Result<(), String> {
-    off_webview_thread(app, |app: &AppHandle| {
-        let Some(main) = app.get_webview_window("main") else {
-            return Err("main window not found".to_string());
-        };
-        if main.is_minimized().unwrap_or(false) {
-            main.unminimize().map_err(|e| e.to_string())?;
-        }
-        main.show().map_err(|e| e.to_string())?;
-        main.set_focus().map_err(|e| e.to_string())?;
-        Ok(())
-    })
-    .await
+    off_webview_thread(app, crate::background::show_main).await
+}
+
+/// Hold the chip on screen while its settings panel is open, then let it go.
+///
+/// Normally the chip yields to the dashboard — one surface at a time. This is
+/// the one exception, and it exists because a corner picker, a colour picker
+/// and a size slider are all describing something the user would otherwise not
+/// be able to see while they used them.
+///
+/// Live-only and deliberately silent: nothing in either webview renders
+/// differently, so there is no state to broadcast. Only the native side cares.
+#[tauri::command]
+pub async fn widget_set_preview(app: AppHandle, preview: bool) -> Result<(), String> {
+    if !app.state::<WidgetStore>().set_preview(preview) {
+        return Ok(());
+    }
+    off_webview_thread(app, window::sync).await
+}
+
+/// Send the dashboard away without turning anything off.
+///
+/// This is what the header's minimize button means once the widget is on: the
+/// tooltip has always said "minimize to floating widget", and now it does that
+/// instead of leaving a taskbar button for a window the chip already stands in
+/// for. With the widget off the frontend minimizes normally and never calls
+/// this.
+#[tauri::command]
+pub async fn widget_hide_main(app: AppHandle) -> Result<(), String> {
+    off_webview_thread(app, crate::background::hide_main).await
 }
 
 /// Re-run placement. Cheap escape hatch for the widget window to call once its

@@ -40,12 +40,14 @@ const SAVE_DEBOUNCE: Duration = Duration::from_millis(700);
 #[derive(Default)]
 struct Inner {
     settings: WidgetSettings,
-    /// Live-only: whether the widget window is showing the expanded panel.
-    /// Deliberately not persisted — see [`WidgetSettings`].
-    expanded: bool,
-    /// Live-only: whether the expanded panel also shows the full browser list.
-    /// Resets with every collapse, so the panel always opens on what matters.
-    browsers_open: bool,
+    /// Live-only: the widget's own settings panel is open, so the chip should
+    /// be on screen *next to* the dashboard rather than yielding to it.
+    ///
+    /// Not persisted, and not part of [`WidgetState`] — nothing in either
+    /// webview renders differently because of it. It only changes which window
+    /// the native side shows, which is exactly the kind of thing that should
+    /// not survive a restart.
+    preview: bool,
     /// Resolved once at init; `None` before that (and in tests).
     path: Option<PathBuf>,
 }
@@ -56,9 +58,7 @@ impl Inner {
             enabled: self.settings.enabled,
             placement: self.settings.placement,
             accent: self.settings.accent,
-            size: self.settings.size,
-            expanded: self.expanded,
-            browsers_open: self.browsers_open,
+            size: self.settings.active_size(),
         }
     }
 }
@@ -82,8 +82,9 @@ impl WidgetStore {
             }
         };
         let mut loaded = store::load_from(&path);
-        // A size read from disk has never been through the setter.
+        // Sizes read from disk have never been through the setter.
         loaded.size = model::clamp_size(loaded.size);
+        loaded.free_size = model::clamp_size(loaded.free_size);
         if let Ok(mut inner) = self.inner.lock() {
             inner.settings = loaded;
             inner.path = Some(path);
@@ -108,13 +109,28 @@ impl WidgetStore {
         self.state().enabled
     }
 
-    /// Chip edge length in logical pixels, already clamped.
+    /// Chip edge length in logical pixels, already clamped, for whichever shape
+    /// the current placement implies.
     pub fn chip_size(&self) -> f64 {
-        model::clamp_size(self.state().size)
+        self.state().size
     }
 
-    pub fn browsers_open(&self) -> bool {
-        self.state().browsers_open
+    /// Hold the chip on screen while its settings panel is open.
+    ///
+    /// Returns whether this changed anything, so the caller can skip a window
+    /// round-trip for a repeated value.
+    pub fn set_preview(&self, preview: bool) -> bool {
+        match self.inner.lock() {
+            Ok(mut inner) if inner.preview != preview => {
+                inner.preview = preview;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    pub fn is_preview(&self) -> bool {
+        self.inner.lock().map(|i| i.preview).unwrap_or(false)
     }
 
     /// Mutate the persisted settings and return the resulting state.
@@ -133,37 +149,6 @@ impl WidgetStore {
         Some(inner.snapshot())
     }
 
-    /// Set the live expanded flag. Not persisted, so no save is scheduled.
-    ///
-    /// Collapsing also closes the browser list: the panel should always open
-    /// on what is playing, and re-opening into a 600px list the user expanded
-    /// once, days ago, is not what they meant.
-    pub fn set_expanded(&self, expanded: bool) -> Option<WidgetState> {
-        let mut inner = self.inner.lock().ok()?;
-        if inner.expanded == expanded {
-            return None;
-        }
-        inner.expanded = expanded;
-        if !expanded {
-            inner.browsers_open = false;
-        }
-        Some(inner.snapshot())
-    }
-
-    /// Show or hide the full browser list inside the expanded panel.
-    pub fn set_browsers_open(&self, open: bool) -> Option<WidgetState> {
-        let mut inner = self.inner.lock().ok()?;
-        if inner.browsers_open == open {
-            return None;
-        }
-        inner.browsers_open = open;
-        Some(inner.snapshot())
-    }
-
-    pub fn is_expanded(&self) -> bool {
-        self.inner.lock().map(|i| i.expanded).unwrap_or(false)
-    }
-
     /// Record the physical position we just moved the window to.
     pub fn note_applied_position(&self, x: i32, y: i32) {
         if let Ok(mut applied) = self.applied_position.lock() {
@@ -177,9 +162,9 @@ impl WidgetStore {
     /// This is a value check rather than a "we're busy" flag on purpose.
     /// Windows delivers `WM_MOVE` through the message queue, so the event for
     /// a `SetWindowPos` we made arrives *after* the call that caused it has
-    /// returned. Any time-scoped guard would already be closed by then, and
-    /// expanding the panel would quietly overwrite the chip's saved position
-    /// with the panel's. Comparing coordinates is immune to that ordering.
+    /// returned. Any time-scoped guard would already be closed by then, and a
+    /// corner snap or a resize would quietly re-record its own landing spot as
+    /// a user drag. Comparing coordinates is immune to that ordering.
     pub fn is_user_move(&self, x: i32, y: i32) -> bool {
         match self.applied_position.lock() {
             Ok(applied) => *applied != Some((x, y)),
@@ -262,30 +247,6 @@ mod tests {
                 corner: WidgetCorner::TopLeft
             }
         );
-        assert!(!state.expanded);
-    }
-
-    #[test]
-    fn expanded_is_live_only_and_deduped() {
-        let store = WidgetStore::default();
-        assert!(store.set_expanded(false).is_none());
-        assert!(store.set_expanded(true).expect("changed").expanded);
-        assert!(store.set_expanded(true).is_none());
-        assert!(store.is_expanded());
-    }
-
-    #[test]
-    fn collapsing_also_closes_the_browser_list() {
-        let store = WidgetStore::default();
-        store.set_expanded(true);
-        assert!(store.set_browsers_open(true).expect("changed").browsers_open);
-
-        let collapsed = store.set_expanded(false).expect("changed");
-        assert!(!collapsed.expanded);
-        assert!(!collapsed.browsers_open);
-
-        // Re-opening starts on the now-playing view again.
-        assert!(!store.set_expanded(true).expect("changed").browsers_open);
     }
 
     #[test]
@@ -293,6 +254,28 @@ mod tests {
         let store = WidgetStore::default();
         store.mutate(|s| s.size = 5_000.0);
         assert_eq!(store.chip_size(), crate::widget::model::CHIP_MAX_PX);
+    }
+
+    #[test]
+    fn the_reported_size_follows_the_placement() {
+        let store = WidgetStore::default();
+        assert_eq!(store.chip_size(), crate::widget::model::CHIP_DEFAULT_PX);
+
+        let free = store
+            .mutate(|s| s.placement = WidgetPlacement::Free { x: 0.0, y: 0.0 })
+            .expect("changed");
+        assert_eq!(free.size, crate::widget::model::CHIP_FREE_DEFAULT_PX);
+        assert_eq!(store.chip_size(), crate::widget::model::CHIP_FREE_DEFAULT_PX);
+    }
+
+    #[test]
+    fn preview_is_live_only_and_deduped() {
+        let store = WidgetStore::default();
+        assert!(!store.is_preview());
+        assert!(store.set_preview(true));
+        assert!(!store.set_preview(true));
+        assert!(store.is_preview());
+        assert!(store.set_preview(false));
     }
 
     #[test]
@@ -308,7 +291,7 @@ mod tests {
         // A real drag away from where we put it.
         assert!(store.is_user_move(11, 20));
 
-        // Expanding moves the window again; the new position becomes the
+        // A corner snap moves the window again; the new position becomes the
         // reference, so the *old* one is no longer treated as ours.
         store.note_applied_position(300, 400);
         assert!(!store.is_user_move(300, 400));

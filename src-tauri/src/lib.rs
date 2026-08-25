@@ -50,6 +50,10 @@ mod wallpaper;
 // Tauri does. Supersedes the old `window_widget` module, which implemented
 // "widget mode" by shrinking the main window.
 mod widget;
+// Running with no dashboard on screen: the tray icon, and the rule that
+// decides which of the two PilPod surfaces is showing. Cross-platform — the
+// tray and window calls it makes are all Tauri-level.
+mod background;
 // Platform shims. The module itself is cross-platform; its contents are gated
 // per-OS (`stub_commands` off-Windows, `window_corners` on Windows).
 mod platform;

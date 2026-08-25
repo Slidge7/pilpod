@@ -9,17 +9,22 @@ import {
 } from "../types";
 
 /**
- * The collapsed widget, as plain DOM.
+ * The widget, as plain DOM.
  *
  * ## Why there is no React here
  *
  * The widget window is on screen for as long as the user leaves it on, and it
  * is idle for almost all of that time. A React runtime resident in that window
- * buys nothing: the collapsed state is one element, a few attributes and a
- * click handler. Keeping it vanilla means the widget entry chunk is a few
- * kilobytes and the React graph is never parsed, never instantiated and never
- * holds a fiber tree — it loads on the first expand and is torn down again on
- * collapse (see `panel/mountPanel.ts`).
+ * buys nothing: this is one element, a few attributes and a click handler.
+ * Keeping it vanilla means the widget entry chunk is a few kilobytes and the
+ * React graph is never parsed, never instantiated and never holds a fiber tree.
+ *
+ * ## What clicking does
+ *
+ * It opens the dashboard — the real PilPod window — and Rust takes the chip off
+ * screen on the way. The chip is a door, not a miniature app: it used to unfold
+ * into a media panel of its own, which meant two versions of the same controls
+ * to build, style and keep in sync.
  *
  * ## Rendering
  *
@@ -95,7 +100,7 @@ export function mountChip(host: HTMLElement): ChipHandle {
   host.append(ping, body, icon);
 
   // Press bookkeeping. A press only becomes a window drag once the pointer
-  // clears the threshold, so a slightly shaky click still opens the panel
+  // clears the threshold, so a slightly shaky click still opens the dashboard
   // instead of nudging the widget.
   let press: { id: number; x: number; y: number; dragged: boolean } | null = null;
   let draggable = false;
@@ -137,7 +142,7 @@ export function mountChip(host: HTMLElement): ChipHandle {
     }
     const dragged = press.dragged;
     press = null;
-    if (!cancelled && !dragged && e.button === 0) void widgetApi.setExpanded(true);
+    if (!cancelled && !dragged && e.button === 0) void widgetApi.openMain();
   };
 
   const onPointerUp = (e: PointerEvent) => endPress(e, false);
@@ -146,7 +151,7 @@ export function mountChip(host: HTMLElement): ChipHandle {
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key !== "Enter" && e.key !== " ") return;
     e.preventDefault();
-    void widgetApi.setExpanded(true);
+    void widgetApi.openMain();
   };
 
   host.addEventListener("pointerdown", onPointerDown);
@@ -201,8 +206,8 @@ export function mountChip(host: HTMLElement): ChipHandle {
     host.dataset.placement = state.placement.mode;
 
     const hint = draggable
-      ? "Open PilPod media — drag to move"
-      : "Open PilPod media — placement is pinned (change it in the PilPod menu)";
+      ? "Open PilPod — drag to move"
+      : "Open PilPod — placement is pinned (change it in the PilPod menu)";
     host.setAttribute("aria-label", hint);
     host.title = hint;
 

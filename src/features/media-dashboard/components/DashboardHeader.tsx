@@ -4,6 +4,7 @@ import {
   IconMenu,
   IconMinimize,
   IconStayOnTop,
+  IconWidgetMinimize,
 } from "../../../shared/ui/icons";
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
   alwaysOnTop: boolean;
   onToggleMenu: () => void;
   onToggleAlwaysOnTop: () => void;
+  onToggleWidget: () => void;
   onPrevWallpaper: () => void;
   onNextWallpaper: () => void;
   onMinimize: () => void;
@@ -24,6 +26,7 @@ export function DashboardHeader({
   alwaysOnTop,
   onToggleMenu,
   onToggleAlwaysOnTop,
+  onToggleWidget,
   onPrevWallpaper,
   onNextWallpaper,
   onMinimize,
@@ -32,6 +35,13 @@ export function DashboardHeader({
   const minimizeTitle = widgetEnabled
     ? "Minimize to floating widget"
     : "Minimize to taskbar";
+
+  // Pressing this while the widget is off is a bigger move than it looks: the
+  // window becomes a flyout and PilPod starts living in the corner. Say that,
+  // rather than labelling it "widget" and letting the user find out.
+  const widgetTitle = widgetEnabled
+    ? "Turn the widget off — PilPod goes back to being an ordinary window"
+    : "Turn the widget on — this window stays until you click away, then PilPod lives as a chip in the corner";
 
   const menuBtnClass = [
     "pilpod-dash-header__menu-toggle",
@@ -43,6 +53,16 @@ export function DashboardHeader({
   const pinClass = [
     "pilpod-dash-header__pin",
     alwaysOnTop ? "pilpod-dash-header__pin--active" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  // Same shape as the pin — the two are a pair of window-behaviour switches,
+  // and sit together at the left end of the header for that reason.
+  const widgetClass = [
+    "pilpod-dash-header__pin",
+    "pilpod-dash-header__widget",
+    widgetEnabled ? "pilpod-dash-header__pin--active" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -59,6 +79,16 @@ export function DashboardHeader({
           aria-pressed={alwaysOnTop}
         >
           <IconStayOnTop />
+        </button>
+        <button
+          type="button"
+          onClick={onToggleWidget}
+          className={widgetClass}
+          title={widgetTitle}
+          aria-label={widgetEnabled ? "Turn the widget off" : "Turn the widget on"}
+          aria-pressed={widgetEnabled}
+        >
+          <IconWidgetMinimize />
         </button>
       </div>
       <div className="pilpod-dash-header__center">

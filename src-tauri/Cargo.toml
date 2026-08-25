@@ -17,7 +17,10 @@ tauri-build = { version = "2", features = [] }
 # `unstable` unlocks multi-webview windows: the in-app player tiles the site's
 # page (video stage) and PilPod's own playlist UI inside ONE window. See
 # `plans/INAPP_PLAYER_PLAN.md` §1.
-tauri = { version = "2", features = ["unstable"] }
+# `unstable` unlocks multi-webview windows (above). `tray-icon` + `image-ico`
+# give PilPod its notification-area presence, which is what keeps the app
+# reachable — and quittable — while it runs with the dashboard hidden.
+tauri = { version = "2", features = ["unstable", "tray-icon", "image-ico"] }
 tauri-plugin-dialog = "2"
 base64 = "0.22"
 serde = { version = "1", features = ["derive"] }

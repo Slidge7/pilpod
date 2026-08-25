@@ -79,9 +79,24 @@ export function MediaDashboard() {
   } = useMediaDashboard();
 
   // The floating widget lives in its own window; the dashboard only reads and
-  // edits its settings. Nothing here can show or hide it as a side effect —
-  // the user turns it on and off from the menu, explicitly.
+  // edits its settings. Turning it on does not send this window away — it turns
+  // it into a flyout (see `widget_set_enabled`), and clicking elsewhere is what
+  // hands the screen over to the chip.
   const widget = useWidgetState();
+
+  /**
+   * Minimize means one of two things, and the button has always said so.
+   *
+   * With the widget on, "minimize to floating widget" now actually does that:
+   * the window hides, PilPod stays in the tray and the chip is the way back.
+   * With it off there is nothing to minimize *into*, so this is an ordinary
+   * taskbar minimize.
+   */
+  const { enabled: widgetEnabled, hideMain: hideToWidget } = widget;
+  const minimize = useCallback(() => {
+    if (widgetEnabled) hideToWidget();
+    else minimizeApp();
+  }, [widgetEnabled, hideToWidget, minimizeApp]);
 
   // Vault state (source of truth in Rust); mounted once, shared across views.
   const vault = useVault();
@@ -250,9 +265,10 @@ export function MediaDashboard() {
           alwaysOnTop={alwaysOnTop}
           onToggleMenu={() => setMenuOpen((o) => !o)}
           onToggleAlwaysOnTop={toggleAlwaysOnTop}
+          onToggleWidget={widget.toggleEnabled}
           onPrevWallpaper={wallpaper.prev}
           onNextWallpaper={wallpaper.next}
-          onMinimize={minimizeApp}
+          onMinimize={minimize}
           onClose={closeApp}
         />
 

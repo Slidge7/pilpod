@@ -87,6 +87,24 @@ export function SlideMenu({
     }
   }, [open]);
 
+  /**
+   * Hold the real chip on screen for as long as its settings are open.
+   *
+   * Every control in that section describes something the user cannot see:
+   * which corner it sits in, what colour it is, how big. Swatches and a
+   * miniature corner grid can only approximate it. Asking the native side to
+   * keep the actual widget up means the controls stop being a preview of the
+   * thing and start being the thing — pick a corner and watch it move.
+   *
+   * The cleanup runs on collapse *and* on unmount, so the chip can never be
+   * left pinned on screen by a menu that went away.
+   */
+  const { setPreview } = widget;
+  useEffect(() => {
+    setPreview(widgetExpanded);
+    return () => setPreview(false);
+  }, [widgetExpanded, setPreview]);
+
   /** The menu shows one expandable section at a time. */
   const openSection = (
     section: "wallpaper" | "idle" | "widget",

@@ -24,15 +24,16 @@ pub const CHIP_MIN_PX: f64 = 16.0;
 pub const CHIP_MAX_PX: f64 = 96.0;
 pub const CHIP_DEFAULT_PX: f64 = 40.0;
 
-/// Logical size of the expanded panel.
+/// Default edge length for the *free* chip.
 ///
-/// Two heights, not two windows: the panel opens showing only what is playing,
-/// and grows downward-into-the-screen when the user asks for the full browser
-/// list. Anchoring both on the same corner means the growth reads as the panel
-/// unfolding rather than a new surface appearing.
-pub const PANEL_LOGICAL_W: f64 = 360.0;
-pub const PANEL_LOGICAL_H: f64 = 400.0;
-pub const PANEL_LOGICAL_H_WITH_BROWSERS: f64 = 600.0;
+/// Larger than the corner default because the two shapes are not the same
+/// object at the same size. The corner form is a triangle wedged into a screen
+/// corner, where half its bounding box is empty and the screen edges frame it;
+/// the free form is a sphere floating in the middle of a desktop with nothing
+/// around it, carrying the PilPod mark. At 40 it reads as a stray dot. 47 is
+/// where it becomes a deliberate object again — and it is a starting point, not
+/// a lock: the slider still spans the full range.
+pub const CHIP_FREE_DEFAULT_PX: f64 = 47.0;
 
 /// Accent for the glass chip.
 ///
@@ -119,8 +120,10 @@ impl Default for WidgetPlacement {
 
 /// The persisted widget configuration.
 ///
-/// `expanded` deliberately is **not** stored: the panel is a transient
-/// interaction, and restoring a 360×450 panel on launch would be surprising.
+/// All four fields are settings the user chose, so all four are stored. There
+/// is no transient runtime state to keep out of the file: whether the chip is
+/// on screen at a given moment is not remembered, it is derived from `enabled`
+/// and where the app currently is (see `window::sync`).
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetSettings {
@@ -132,8 +135,18 @@ pub struct WidgetSettings {
     pub placement: WidgetPlacement,
     #[serde(default)]
     pub accent: WidgetAccent,
+    /// Edge length of the corner triangle.
     #[serde(default = "default_size")]
     pub size: f64,
+    /// Diameter of the free-floating sphere.
+    ///
+    /// A second size rather than one shared value, because the two forms want
+    /// different ones (see [`CHIP_FREE_DEFAULT_PX`]) and because a user who
+    /// tunes the bubble to 60 and then pins it to a corner should find their
+    /// triangle exactly as they left it. Switching modes recalls a size; it
+    /// never overwrites one.
+    #[serde(default = "default_free_size")]
+    pub free_size: f64,
 }
 
 const fn default_version() -> u32 {
@@ -142,6 +155,34 @@ const fn default_version() -> u32 {
 
 const fn default_size() -> f64 {
     CHIP_DEFAULT_PX
+}
+
+const fn default_free_size() -> f64 {
+    CHIP_FREE_DEFAULT_PX
+}
+
+impl WidgetSettings {
+    /// The size that applies to the shape currently on screen.
+    ///
+    /// Everything outside this file — the geometry, the slider, the window —
+    /// deals in "the chip's size" and never has to know there are two.
+    pub fn active_size(&self) -> f64 {
+        clamp_size(if self.placement.is_free() {
+            self.free_size
+        } else {
+            self.size
+        })
+    }
+
+    /// Write the size of the shape currently on screen.
+    pub fn set_active_size(&mut self, size: f64) {
+        let clamped = clamp_size(size);
+        if self.placement.is_free() {
+            self.free_size = clamped;
+        } else {
+            self.size = clamped;
+        }
+    }
 }
 
 /// Bring a size into range.
@@ -165,23 +206,30 @@ impl Default for WidgetSettings {
             placement: WidgetPlacement::default(),
             accent: WidgetAccent::default(),
             size: CHIP_DEFAULT_PX,
+            free_size: CHIP_FREE_DEFAULT_PX,
         }
     }
 }
 
 /// What the frontend receives from `widget_get_state` and the `widget://state`
-/// event. Adds the live, non-persisted bits to the stored settings.
+/// event.
+///
+/// Currently identical in content to [`WidgetSettings`] minus the schema
+/// version — kept as its own type because the two answer different questions
+/// ("what is on disk" vs "what should the UI draw") and the on-disk shape must
+/// be free to gain a field without that field becoming part of the IPC
+/// contract.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetState {
     pub enabled: bool,
     pub placement: WidgetPlacement,
     pub accent: WidgetAccent,
+    /// The size of the shape currently on screen — the corner triangle's edge
+    /// or the free sphere's diameter, whichever the placement implies. The
+    /// frontend has one slider and this is what it binds to; switching
+    /// placement swaps the value under it.
     pub size: f64,
-    /// True while the widget window is showing the expanded media panel.
-    pub expanded: bool,
-    /// True while the expanded panel is also showing the full browser list.
-    pub browsers_open: bool,
 }
 
 #[cfg(test)]
@@ -218,6 +266,39 @@ mod tests {
         );
         assert_eq!(s.accent, WidgetAccent::Blue);
         assert_eq!(s.size, CHIP_DEFAULT_PX);
+        assert_eq!(s.free_size, CHIP_FREE_DEFAULT_PX);
+    }
+
+    #[test]
+    fn each_shape_keeps_its_own_size() {
+        let mut s = WidgetSettings::default();
+        // Pinned: the slider drives the triangle.
+        assert_eq!(s.active_size(), CHIP_DEFAULT_PX);
+        s.set_active_size(72.0);
+        assert_eq!(s.size, 72.0);
+        assert_eq!(s.free_size, CHIP_FREE_DEFAULT_PX);
+
+        // Unpinned: the bubble starts at its own default, untouched by the
+        // triangle's 72.
+        s.placement = WidgetPlacement::Free { x: 10.0, y: 10.0 };
+        assert_eq!(s.active_size(), CHIP_FREE_DEFAULT_PX);
+        s.set_active_size(30.0);
+        assert_eq!(s.free_size, 30.0);
+
+        // Pinning again recalls the triangle exactly as it was left.
+        s.placement = WidgetPlacement::default();
+        assert_eq!(s.active_size(), 72.0);
+    }
+
+    #[test]
+    fn active_size_is_clamped_on_the_way_in_and_out() {
+        let mut s = WidgetSettings::default();
+        s.set_active_size(5_000.0);
+        assert_eq!(s.active_size(), CHIP_MAX_PX);
+
+        // A hand-edited file can carry anything; reading is clamped too.
+        s.size = f64::NAN;
+        assert_eq!(s.active_size(), CHIP_DEFAULT_PX);
     }
 
     #[test]

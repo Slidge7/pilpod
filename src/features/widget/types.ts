@@ -56,18 +56,27 @@ export type WidgetPlacement =
   | { mode: "corner"; corner: WidgetCorner };
 
 export type WidgetState = {
+  /**
+   * On means two things at once: the chip exists, *and* PilPod is willing to
+   * run with its dashboard hidden. Turning it on puts the app in the
+   * background; turning it off brings the window back for good.
+   */
   enabled: boolean;
   placement: WidgetPlacement;
   accent: WidgetAccent;
   /** Triangle edge length in logical pixels. */
   size: number;
-  /** Live only — the widget is showing its media panel rather than the chip. */
-  expanded: boolean;
-  /** Live only — the panel is also showing the full browser list. */
-  browsersOpen: boolean;
 };
 
-/** Size bounds, mirrored from `model.rs`. */
+/**
+ * Size bounds, mirrored from `model.rs`.
+ *
+ * `WIDGET_SIZE_DEFAULT` seeds the slider before the first state arrives; it is
+ * the *corner* triangle's default. The free-floating sphere has a larger one of
+ * its own (47), and which of the two `WidgetState.size` reports is decided in
+ * Rust by the current placement — so the single slider here always edits the
+ * shape that is actually on screen.
+ */
 export const WIDGET_SIZE_MIN = 16;
 export const WIDGET_SIZE_MAX = 96;
 export const WIDGET_SIZE_DEFAULT = 40;
@@ -77,8 +86,6 @@ export const DEFAULT_WIDGET_STATE: WidgetState = {
   placement: { mode: "corner", corner: "bottomRight" },
   accent: "blue",
   size: WIDGET_SIZE_DEFAULT,
-  expanded: false,
-  browsersOpen: false,
 };
 
 /** Human labels for the corner buttons, in reading order. */

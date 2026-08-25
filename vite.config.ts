@@ -14,8 +14,8 @@ export default defineConfig(async () => ({
       // Two documents, two entries. The floating widget runs in its own OS
       // window and may stay open all day, so it gets its own bundle rather
       // than paying for the dashboard, vault, downloader and wallpaper code it
-      // will never render. Shared modules (React, the theme, the browser
-      // hooks) are still emitted once and shared between the two.
+      // will never render — it is a few kilobytes of plain DOM and does not
+      // pull React in at all.
       input: {
         main: fileURLToPath(new URL("./index.html", import.meta.url)),
         widget: fileURLToPath(new URL("./widget.html", import.meta.url)),

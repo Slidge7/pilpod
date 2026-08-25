@@ -29,9 +29,7 @@ use tauri::{
 };
 
 use super::geometry::{self, Rect};
-use super::model::{
-    WidgetPlacement, PANEL_LOGICAL_H, PANEL_LOGICAL_H_WITH_BROWSERS, PANEL_LOGICAL_W,
-};
+use super::model::WidgetPlacement;
 use super::state::WidgetStore;
 
 pub const WIDGET_LABEL: &str = "widget";
@@ -84,25 +82,18 @@ fn corner_work_area(window: &WebviewWindow) -> Option<Rect> {
 
 /// Size the widget window for its current mode and move it to the position its
 /// placement implies. This is the one function that puts the widget somewhere;
-/// creation, placement changes, expand/collapse and DPI changes all funnel
-/// through it so there is exactly one geometry code path to reason about.
+/// creation, placement changes, resizes and DPI changes all funnel through it
+/// so there is exactly one geometry code path to reason about.
 pub fn apply_layout(app: &AppHandle, window: &WebviewWindow) -> Result<(), String> {
     let store = app.state::<WidgetStore>();
 
+    // The window *is* the chip: one square, sized from the setting. There is no
+    // second, larger layout any more — the chip opens the dashboard rather than
+    // unfolding a panel of its own.
     let chip = store.chip_size();
-    let (logical_w, logical_h) = if store.is_expanded() {
-        let h = if store.browsers_open() {
-            PANEL_LOGICAL_H_WITH_BROWSERS
-        } else {
-            PANEL_LOGICAL_H
-        };
-        (PANEL_LOGICAL_W, h)
-    } else {
-        (chip, chip)
-    };
 
     window
-        .set_size(LogicalSize::new(logical_w, logical_h))
+        .set_size(LogicalSize::new(chip, chip))
         .map_err(|e| e.to_string())?;
 
     let scale = window.scale_factor().map_err(|e| e.to_string())?;
@@ -117,10 +108,9 @@ pub fn apply_layout(app: &AppHandle, window: &WebviewWindow) -> Result<(), Strin
             geometry::corner_position(area, win_w, win_h, corner)
         }
         WidgetPlacement::Free { x, y } => {
-            // `x`/`y` are always the *chip's* logical top-left, never the
-            // panel's. Expanding therefore grows inward from the screen corner
-            // the chip is nearest to, and collapsing lands the chip back
-            // exactly where the user left it.
+            // `x`/`y` are the chip's logical top-left. Resizing it from the
+            // menu grows it inward from whichever screen corner it is nearest,
+            // rather than pushing it off the edge it is sitting against.
             let chip_x = (x * scale).round() as i32;
             let chip_y = (y * scale).round() as i32;
             let chip_w = (chip * scale).round() as i32;
@@ -151,6 +141,38 @@ pub fn apply_layout(app: &AppHandle, window: &WebviewWindow) -> Result<(), Strin
     Ok(())
 }
 
+/// Where to put a `win_w × win_h` window so it unfolds *from* the chip.
+///
+/// This is the anchoring math the removed panel used, now pointed at the
+/// dashboard itself: with the widget on, opening PilPod is not "restore a
+/// window", it is "expand this chip". The corner the chip is nearest to stays
+/// fixed and the window grows inward from it, so the dashboard appears to come
+/// out of the thing the user just clicked instead of arriving from wherever it
+/// happened to be left.
+///
+/// Reads the chip window's real rect rather than the stored placement: in
+/// corner mode the stored value is a corner name, not a position, and after a
+/// drag the two are only equal until the next frame.
+///
+/// `None` when there is no chip to anchor to — the caller then leaves the
+/// window where it is rather than guessing.
+pub fn anchor_from_chip(app: &AppHandle, win_w: i32, win_h: i32) -> Option<(i32, i32)> {
+    let window = find(app)?;
+    let pos = window.outer_position().ok()?;
+    let size = window.outer_size().ok()?;
+    let (chip_x, chip_y) = (pos.x, pos.y);
+    let (chip_w, chip_h) = (size.width as i32, size.height as i32);
+
+    let areas = work_areas(&window);
+    let area = geometry::work_area_for(&areas, chip_x, chip_y, chip_w, chip_h)
+        .copied()
+        .or_else(|| corner_work_area(&window))?;
+
+    let corner = geometry::nearest_corner(area, chip_x, chip_y, chip_w, chip_h);
+    let (x, y) = geometry::anchored_resize(chip_x, chip_y, chip_w, chip_h, win_w, win_h, corner);
+    Some(geometry::clamp_into(area, x, y, win_w, win_h))
+}
+
 /// The widget's current logical top-left, if it is on screen.
 ///
 /// Used to seed free placement so "Free" releases the widget exactly where it
@@ -163,15 +185,20 @@ pub fn current_logical_position(app: &AppHandle) -> Option<(f64, f64)> {
     Some((f64::from(pos.x) / scale, f64::from(pos.y) / scale))
 }
 
-/// Create the widget window if it does not exist, position it, and show it.
+/// Create the widget window if it does not exist, and put it in its place —
+/// without showing it.
 ///
-/// Built hidden and revealed only after placement lands, so the widget never
-/// flashes at the OS default position before snapping to its corner.
-pub fn show(app: &AppHandle) -> Result<(), String> {
+/// Split out from [`show`] because the chip has a second job beyond being
+/// looked at: it is the anchor the dashboard opens from. At startup the
+/// dashboard is already on screen, so the chip must not be *seen* — but it must
+/// exist and be correctly placed, or the first flyout has nothing to unfold
+/// from.
+///
+/// Built hidden either way, so the widget never flashes at the OS default
+/// position before snapping to its corner.
+pub fn ensure_placed(app: &AppHandle) -> Result<(), String> {
     if let Some(window) = find(app) {
-        apply_layout(app, &window)?;
-        window.show().map_err(|e| e.to_string())?;
-        return Ok(());
+        return apply_layout(app, &window);
     }
 
     let chip = app.state::<WidgetStore>().chip_size();
@@ -210,8 +237,20 @@ pub fn show(app: &AppHandle) -> Result<(), String> {
     let window = builder.build().map_err(|e| e.to_string())?;
     attach_event_handlers(app, &window);
 
-    apply_layout(app, &window)?;
+    apply_layout(app, &window)
+}
+
+/// Put the chip on screen, building it first if this is its first appearance.
+pub fn show(app: &AppHandle) -> Result<(), String> {
+    ensure_placed(app)?;
+    let Some(window) = find(app) else { return Ok(()) };
     window.show().map_err(|e| e.to_string())?;
+    // Re-assert topmost rather than trusting the flag set at build time.
+    // `show` does not reorder, and the one moment the chip shares the screen
+    // with the dashboard — previewing its own settings — is also the moment the
+    // dashboard may be pinned always-on-top and freshly focused, which would
+    // otherwise leave the chip stranded underneath the panel describing it.
+    let _ = window.set_always_on_top(true);
     Ok(())
 }
 
@@ -232,18 +271,45 @@ pub fn destroy(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Reconcile the OS window with `enabled`, then re-place it.
-pub fn sync(app: &AppHandle) -> Result<(), String> {
-    let enabled = app.state::<WidgetStore>().is_enabled();
-    if enabled {
-        show(app)
-    } else {
-        destroy(app)
+/// Take the chip off screen, keeping the window (and its renderer) alive.
+///
+/// The counterpart to `destroy`: this is the *suppressed* state — the widget is
+/// still on, the dashboard is simply in front of it. Hiding rather than
+/// destroying is what makes closing and reopening the dashboard instant.
+pub fn hide(app: &AppHandle) -> Result<(), String> {
+    if let Some(window) = find(app) {
+        window.hide().map_err(|e| e.to_string())?;
     }
+    Ok(())
 }
 
-/// Re-place an already-visible widget (placement change, expand/collapse, DPI
-/// change). No-op when the widget is off.
+/// Reconcile the OS window with the facts that decide it: is the widget turned
+/// on, is the dashboard on screen, and is the user currently *editing* the
+/// widget?
+///
+/// The third is the exception to "one PilPod surface at a time", and it earns
+/// it: the widget's settings panel is a corner picker, a colour picker and a
+/// size slider, all of which describe a thing the user cannot see while the
+/// dashboard is covering it. Previewing them on swatches was always a
+/// second-best — with the real chip held on screen, the controls *are* the
+/// preview.
+///
+/// Dashboard visibility is asked of the main window rather than tracked in a
+/// flag here, so this can be called from anywhere — a placement change, a
+/// resize, startup, a close — and always lands on the right answer.
+pub fn sync(app: &AppHandle) -> Result<(), String> {
+    let store = app.state::<WidgetStore>();
+    if !store.is_enabled() {
+        return destroy(app);
+    }
+    if crate::background::main_is_visible(app) && !store.is_preview() {
+        return hide(app);
+    }
+    show(app)
+}
+
+/// Re-place an existing widget window (placement change, resize, DPI change).
+/// No-op when the widget window does not exist.
 pub fn relayout(app: &AppHandle) -> Result<(), String> {
     match find(app) {
         Some(window) => apply_layout(app, &window),
@@ -256,18 +322,13 @@ fn attach_event_handlers(app: &AppHandle, window: &WebviewWindow) {
     window.on_window_event(move |event| match event {
         // Record where the user dragged the widget to.
         //
-        // Three things are deliberately not recorded:
+        // Two things are deliberately not recorded:
         //   * corner mode — a pinned widget has no free position to remember,
         //     and storing one would silently convert the mode on relayout;
-        //   * while expanded — the reported position is the *panel's*, and the
-        //     stored value must always describe the chip;
         //   * our own moves — see `WidgetStore::is_user_move`.
         WindowEvent::Moved(position) => {
             let store = handle.state::<WidgetStore>();
-            if store.is_expanded()
-                || !store.placement().is_free()
-                || !store.is_user_move(position.x, position.y)
-            {
+            if !store.placement().is_free() || !store.is_user_move(position.x, position.y) {
                 return;
             }
             let Some(window) = find(&handle) else { return };

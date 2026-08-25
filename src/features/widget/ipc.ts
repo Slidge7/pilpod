@@ -10,11 +10,11 @@ import {
 /**
  * The widget's IPC surface — commands and the state subscription.
  *
- * Deliberately React-free. The collapsed widget is plain DOM (see
- * `chip/mountChip.ts`), and the whole point of that is not to have a UI
- * runtime resident in a window that sits on screen all day. Importing React
- * from here, even indirectly, would undo it. The React binding lives one file
- * over in `api.ts`, which the dashboard uses.
+ * Deliberately React-free. The widget window is plain DOM (see
+ * `chip/mountChip.ts`), and the whole point of that is not to have a UI runtime
+ * resident in a window that sits on screen all day. Importing React from here,
+ * even indirectly, would undo it. The React binding lives one file over in
+ * `api.ts`, which the dashboard uses.
  */
 
 export const widgetApi = {
@@ -26,11 +26,16 @@ export const widgetApi = {
   useFreePlacement: () => invoke<void>("widget_use_free_placement"),
   setAccent: (accent: WidgetAccent) => invoke<void>("widget_set_accent", { accent }),
   setSize: (size: number) => invoke<void>("widget_set_size", { size }),
-  setExpanded: (expanded: boolean) =>
-    invoke<void>("widget_set_expanded", { expanded }),
-  setBrowsersOpen: (open: boolean) =>
-    invoke<void>("widget_set_browsers_open", { open }),
+  /**
+   * Hold the chip on screen alongside the dashboard while its settings panel
+   * is open, so the corner, colour and size controls preview themselves on the
+   * real thing. Broadcasts nothing — it only moves a native window.
+   */
+  setPreview: (preview: boolean) => invoke<void>("widget_set_preview", { preview }),
+  /** Bring the dashboard back. The widget stays on, just off screen. */
   openMain: () => invoke<void>("widget_open_main"),
+  /** Send the dashboard away again, leaving the chip in its place. */
+  hideMain: () => invoke<void>("widget_hide_main"),
   relayout: () => invoke<void>("widget_relayout"),
 };
 
