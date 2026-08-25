@@ -1,5 +1,5 @@
 /**
- * Compile-time feature flags for the vault, mirroring DOWNLOADER_UI_ENABLED.
+ * Compile-time feature flags for the vault.
  * Set VITE_FEATURE_VAULT=false to hide the vault UI entirely.
  */
 export const VAULT_UI_ENABLED =

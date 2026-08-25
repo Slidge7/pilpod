@@ -32,7 +32,7 @@ if (!email) {
   process.exit(1);
 }
 const plan = arg("--plan", "premium");
-const features = arg("--features", "downloader").split(",").map((s) => s.trim()).filter(Boolean);
+const features = arg("--features", "premium").split(",").map((s) => s.trim()).filter(Boolean);
 const days = arg("--days", null);
 const now = Math.floor(Date.now() / 1000);
 

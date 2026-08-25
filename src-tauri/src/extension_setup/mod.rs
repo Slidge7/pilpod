@@ -1,7 +1,7 @@
 //! Extension Setup — detect browsers, guide the user through installing the
 //! PilPod Companion from the Chrome Web Store, and verify the result.
 //!
-//! ISOLATION CONTRACT (mirrors `vault/mod.rs` and `downloader/mod.rs`): this
+//! ISOLATION CONTRACT (mirrors `vault/mod.rs`): this
 //! module is self-contained. Its integration points are exactly:
 //!
 //! * `lib.rs`            — mod declaration

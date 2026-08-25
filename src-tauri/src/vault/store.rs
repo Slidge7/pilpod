@@ -9,7 +9,7 @@
 //! Write discipline:
 //!   * **Atomic** — serialize to `vault_store.json.tmp`, then rename over the
 //!     original. A crash mid-write can never truncate the real file (an
-//!     improvement over the downloader's direct `fs::write`, because bookmarks
+//!     write approach; because bookmarks
 //!     are irreplaceable user data).
 //!   * **Corruption policy** — a corrupt or future-versioned file is *renamed*
 //!     to `vault_store.json.bak-<ms>` before the vault starts empty, so user

@@ -1,10 +1,10 @@
 //! Vault — local bookmarks & media playlists (FREE feature).
 //!
-//! ISOLATION CONTRACT (mirrors `downloader/mod.rs`): this module is strictly
+//! ISOLATION CONTRACT: this module is strictly
 //! self-contained. Its only integration points are exactly `lib.rs` (mod decl),
 //! `app/handlers.rs` (command registration) and `app/mod.rs` (init call + exit
 //! flush). The vault must NEVER import from `browser_bridge`, `browser_tabs`,
-//! `browser_commands`, `browser_detector`, `downloader`, or `audio_mixer`
+//! `browser_commands`, `browser_detector`, or `audio_mixer`
 //! internals — the frontend hands it plain provenance strings captured from
 //! `browsers://update`, and the backend never reaches back into browser state.
 //! The single deliberate exception is Phase 5's `open.rs` (`#[cfg(windows)]`),

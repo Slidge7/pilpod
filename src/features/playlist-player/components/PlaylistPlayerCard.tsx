@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
 import "../PlaylistPlayer.css";
 import type { BrowserTab, DetectedBrowser } from "../../../types/media";
 import type { Playlist } from "../../vault/types";
@@ -27,12 +27,6 @@ type Props = {
   onSeekTab?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
   onPip?: (tab: BrowserTab, browserId: string) => void;
-  renderTabAccessories?: (
-    tab: BrowserTab,
-    browserId: string,
-    browserDisplayName: string,
-    isMediaTab: boolean,
-  ) => { save?: ReactNode; download?: ReactNode };
 };
 
 /**
@@ -54,7 +48,6 @@ export function PlaylistPlayerCard({
   onSeekTab,
   onSetTabVolume,
   onPip,
-  renderTabAccessories,
 }: Props) {
   const { player } = api;
 
@@ -82,12 +75,6 @@ export function PlaylistPlayerCard({
   const displayName = located
     ? located.browser.profileLabel ?? located.browser.displayName
     : "";
-  // Playlist tab is a managed player surface: only the download accessory is
-  // meaningful here (no bookmark — the track is already saved in the playlist).
-  const accessories =
-    located && renderTabAccessories
-      ? renderTabAccessories(located.tab, located.browser.id, displayName, true)
-      : undefined;
 
   return (
     <section
@@ -168,7 +155,6 @@ export function PlaylistPlayerCard({
             onSeek={onSeekTab}
             onSetTabVolume={onSetTabVolume}
             onPip={onPip}
-            downloadButton={accessories?.download}
           />
         </ul>
       ) : (

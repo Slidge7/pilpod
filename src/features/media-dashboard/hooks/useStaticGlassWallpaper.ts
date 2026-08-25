@@ -18,7 +18,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
  * viewport-sized images.
  *
  * CSS custom properties produced (consumed by the `--glass-static` overrides
- * in glass-float-shell.css, BrowserSessionsPanel.css, DownloadDockCard.css):
+ * in glass-float-shell.css, BrowserSessionsPanel.css):
  *   --pilpod-wpb-float  wallpaper blurred at the float radius (4px · strength)
  *   --pilpod-wpb-panel  wallpaper blurred at the fixed panel radius (12px)
  *

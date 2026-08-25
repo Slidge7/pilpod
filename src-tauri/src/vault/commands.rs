@@ -1,7 +1,7 @@
 //! Vault Tauri commands. Thin by design: validate the frontend payload, call a
 //! single `VaultState` mutation, then emit `vault://update` (diff-before-emit)
 //! and let the debounced thread persist. The vault is a FREE feature, so there
-//! is no `require_premium` gate here (contrast the downloader).
+//! is no `require_premium` gate here.
 //!
 //! Capture payloads come *from the frontend*, which already holds `BrowserTab`
 //! + `DetectedBrowser` from `browsers://update`. The backend never looks tabs

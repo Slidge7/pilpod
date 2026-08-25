@@ -5,7 +5,7 @@ import type { PremiumStatus } from "./types";
 const premium = (overrides: Partial<PremiumStatus> = {}): PremiumStatus => ({
   active: true,
   plan: "premium",
-  features: ["downloader"],
+  features: ["test_feature"],
   email: "t@e.com",
   expiresAt: null,
   reason: null,
@@ -14,20 +14,20 @@ const premium = (overrides: Partial<PremiumStatus> = {}): PremiumStatus => ({
 
 describe("isEntitled", () => {
   it("passes for an active license containing the feature", () => {
-    expect(isEntitled(premium(), "downloader")).toBe(true);
+    expect(isEntitled(premium(), "test_feature")).toBe(true);
   });
 
   it("blocks null / undefined status (loading or stub build)", () => {
-    expect(isEntitled(null, "downloader")).toBe(false);
-    expect(isEntitled(undefined, "downloader")).toBe(false);
+    expect(isEntitled(null, "test_feature")).toBe(false);
+    expect(isEntitled(undefined, "test_feature")).toBe(false);
   });
 
   it("blocks inactive status even if features are listed", () => {
-    expect(isEntitled(premium({ active: false }), "downloader")).toBe(false);
+    expect(isEntitled(premium({ active: false }), "test_feature")).toBe(false);
   });
 
   it("blocks a feature not in the license", () => {
-    expect(isEntitled(premium({ features: ["other"] }), "downloader")).toBe(false);
+    expect(isEntitled(premium({ features: ["other"] }), "test_feature")).toBe(false);
   });
 });
 

@@ -14,8 +14,7 @@ mod frontend;
 // dev-lab activation panel lands.
 #[allow(dead_code)]
 mod extension_setup;
-#[cfg(windows)]
-mod downloader;
+
 mod browser_dto;
 mod browser_tabs;
 #[cfg(windows)]

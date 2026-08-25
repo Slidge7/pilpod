@@ -1,6 +1,6 @@
 /* Extension setup — browser list, guide, diagrams.
    Prefix `xs-` (eXtension Setup) so nothing here can collide with the
-   dashboard, vault or downloader stylesheets. */
+   dashboard or vault stylesheets. */
 
 .xs-panel {
   display: flex;

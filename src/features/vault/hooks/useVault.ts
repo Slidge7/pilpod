@@ -29,7 +29,7 @@ const EMPTY_VAULT: VaultData = {
 export type AddResult = { id: string } | { error: string };
 
 /**
- * The single stateful vault hook (pattern: `useDownloader`). Listens to
+ * The single stateful vault hook. Listens to
  * `vault://update`, hydrates from Rust via `vault_get_state`, and exposes O(1)
  * lookups ("is this tab saved? in which collections? in which playlists?")
  * plus every mutation callback. Rust is the source of truth; we hydrate then

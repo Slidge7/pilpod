@@ -139,7 +139,6 @@ function BrowserStatusIndicator({ browser }: { browser: DetectedBrowser }) {
 /** Return value from `renderTabAccessories`. */
 export type TabAccessories = {
   save?: ReactNode;
-  download?: ReactNode;
 };
 
 type Props = {
@@ -162,7 +161,7 @@ type Props = {
   onPauseAll?: () => void;
   onMuteAll?: () => void;
   onResetAllVolumes?: () => void;
-  /** Render save/download buttons for a tab. */
+  /** Render save buttons for a tab. */
   renderTabAccessories?: (
     tab: BrowserTab,
     browserId: string,
@@ -639,7 +638,6 @@ function BrowserBody({
           onSetTabVolume={onSetTabVolume}
           onPip={onPip}
           saveButton={accessories?.save}
-          downloadButton={accessories?.download}
         />
       );
     }

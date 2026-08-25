@@ -2,7 +2,7 @@
 //!
 //! Usage (from src-tauri/):
 //!   cargo run --bin license_tool -- keygen
-//!   cargo run --bin license_tool -- issue --priv <b64url_seed> --email a@b.c [--plan premium] [--features downloader] [--days 365]
+//!   cargo run --bin license_tool -- issue --priv <b64url_seed> --email a@b.c [--plan premium] [--features premium] [--days 365]
 //!
 //! `keygen` prints the Rust array to paste into premium/license.rs
 //! (LICENSE_PUBKEY). Keep the private seed OUT of git.
@@ -31,7 +31,7 @@ fn main() {
         Some("keygen") => keygen(),
         Some("issue") => issue(&args),
         _ => {
-            eprintln!("usage: license_tool keygen | issue --priv <seed> --email <email> [--plan premium] [--features downloader[,x]] [--days N]");
+            eprintln!("usage: license_tool keygen | issue --priv <seed> --email <email> [--plan premium] [--features premium[,x]] [--days N]");
             std::process::exit(2);
         }
     }
@@ -66,7 +66,7 @@ fn issue(args: &[String]) {
     });
     let plan = arg_value(args, "--plan").unwrap_or_else(|| "premium".into());
     let features: Vec<String> = arg_value(args, "--features")
-        .unwrap_or_else(|| "downloader".into())
+        .unwrap_or_else(|| "premium".into())
         .split(',')
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())

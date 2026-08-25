@@ -109,7 +109,7 @@ mod tests {
         serde_json::to_string(&LicensePayload {
             email: "test@example.com".into(),
             plan: "premium".into(),
-            features: vec!["downloader".into()],
+            features: vec!["test_feature".into()],
             issued_at: 1_700_000_000,
             expires_at,
         })
@@ -122,7 +122,7 @@ mod tests {
         let token = make_token(&signing, &payload_json(None));
         let p = parse_and_verify(&token, &pubkey).expect("should verify");
         assert_eq!(p.email, "test@example.com");
-        assert!(p.features.contains(&"downloader".to_string()));
+        assert!(p.features.contains(&"test_feature".to_string()));
     }
 
     #[test]

@@ -24,13 +24,13 @@ type Props = {
   onSeekTab?: (tab: BrowserTab, browserId: string, seekTo: number) => void;
   onSetTabVolume?: (tab: BrowserTab, browserId: string, volume: number) => void;
   onPip?: (tab: BrowserTab, browserId: string) => void;
-  /** Render save/download buttons for a tab (mirrors browser card accessories). */
+  /** Render save buttons for a tab (mirrors browser card accessories). */
   renderTabAccessories?: (
     tab: BrowserTab,
     browserId: string,
     browserDisplayName: string,
     isMediaTab: boolean,
-  ) => { save?: ReactNode; download?: ReactNode };
+  ) => { save?: ReactNode };
 };
 
 export function ActiveMediaStrip({
@@ -97,7 +97,6 @@ export function ActiveMediaStrip({
               onSetTabVolume={onSetTabVolume}
               onPip={onPip}
               saveButton={accessories?.save}
-              downloadButton={accessories?.download}
             />
           );
         })}

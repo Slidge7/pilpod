@@ -168,8 +168,8 @@ pub fn enter_flyout_mode(app: &AppHandle) -> Result<(), String> {
 /// Send the dashboard away. With the widget on, the chip takes its place.
 ///
 /// `hide` rather than `close`: closing destroys the webview and everything the
-/// dashboard is holding — the browser feed subscription, scroll positions, an
-/// in-flight download panel — and the user asked for the app to go to the
+/// dashboard is holding — the browser feed subscription, scroll positions —
+/// and the user asked for the app to go to the
 /// background, not to restart next time they click the chip.
 pub fn hide_main(app: &AppHandle) -> Result<(), String> {
     let Some(main) = app.get_webview_window(MAIN_LABEL) else {

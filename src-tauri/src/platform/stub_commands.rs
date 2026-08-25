@@ -97,65 +97,6 @@ pub fn dev_simulate_resume() -> usize {
     0
 }
 
-// ---- Downloader stubs (feature is Windows-only) ----
-
-const DL_WIN_ONLY: &str = "The downloader requires Windows";
-
-#[tauri::command]
-pub fn dl_fetch_info(_url: String) -> Result<serde_json::Value, String> {
-    Err(DL_WIN_ONLY.into())
-}
-
-#[tauri::command]
-pub fn dl_start(_args: serde_json::Value) -> Result<String, String> {
-    Err(DL_WIN_ONLY.into())
-}
-
-#[tauri::command]
-pub fn dl_cancel(_task_id: String) -> Result<(), String> {
-    Err(DL_WIN_ONLY.into())
-}
-
-#[tauri::command]
-pub fn dl_get_queue() -> Result<Vec<serde_json::Value>, String> {
-    Ok(Vec::new())
-}
-
-#[tauri::command]
-pub fn dl_clear_done() -> Result<(), String> {
-    Err(DL_WIN_ONLY.into())
-}
-
-#[tauri::command]
-pub fn dl_get_settings() -> Result<serde_json::Value, String> {
-    Err(DL_WIN_ONLY.into())
-}
-
-#[tauri::command]
-pub fn dl_set_settings(_new_settings: serde_json::Value) -> Result<(), String> {
-    Err(DL_WIN_ONLY.into())
-}
-
-#[tauri::command]
-pub fn dl_open_output_dir() -> Result<(), String> {
-    Err(DL_WIN_ONLY.into())
-}
-
-#[tauri::command]
-pub fn dl_check_binaries() -> Result<serde_json::Value, String> {
-    Err(DL_WIN_ONLY.into())
-}
-
-#[tauri::command]
-pub fn dl_update_ytdlp() -> Result<String, String> {
-    Err(DL_WIN_ONLY.into())
-}
-
-#[tauri::command]
-pub fn dl_retry(_task_id: String) -> Result<String, String> {
-    Err(DL_WIN_ONLY.into())
-}
-
 // ---- Vault smart-open stub (focus/launch is Windows-only) ----
 
 #[tauri::command]

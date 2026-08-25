@@ -95,6 +95,7 @@ mod tests {
             version: SETTINGS_VERSION,
             enabled: true,
             placement: WidgetPlacement::Free { x: 100.0, y: 250.5 },
+            ..WidgetSettings::default()
         };
         save_to(&p, &settings).unwrap();
         assert_eq!(load_from(&p), settings);

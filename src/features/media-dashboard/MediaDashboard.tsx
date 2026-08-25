@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrowserDockBar, type ViewType } from "./components/BrowserDockBar";
 import { invoke } from "@tauri-apps/api/core";
-import { DownloadPanel, DOWNLOADER_UI_ENABLED, useDownloader } from "../downloader";
-import { downloadStatusForUrl } from "../downloader/lib";
-import { TabDownloadButton } from "../downloader/components/TabDownloadButton";
 import { VaultPanel, useVault, VAULT_UI_ENABLED } from "../vault";
 import { PlaylistPlayerCard, usePlaylistPlayer } from "../playlist-player";
 import { INAPP_BROWSER_ID } from "../playlist-player/types";
 import { SaveTabMenuButton } from "../vault/components/SaveTabMenuButton";
-import { DownloadDockCard } from "../downloader/components/DownloadDockCard";
-import { PremiumGate } from "../premium";
 import {
   ExtensionSetupPanel,
   OnboardingGate,
@@ -146,12 +141,8 @@ export function MediaDashboard() {
     setMenuOpen(false);
   }, []);
 
-  // Downloader state — lifted so the floating card + in-tab buttons share one
-  // snapshot with the full Download panel (single event listener).
-  const dl = useDownloader();
 
-  // Seed URL for prefilling the Download panel from an in-tab download button.
-  const [downloadSeed, setDownloadSeed] = useState<string | null>(null);
+
 
   // Provenance lookup for anything the save menu creates. Built from the live
   // browser list so a bookmark records the real OS browser + profile rather
@@ -161,7 +152,7 @@ export function MediaDashboard() {
     [browsers],
   );
 
-  // Render accessory buttons (bookmark + download) for each tab row.
+  // Render accessory buttons (bookmark) for each tab row.
   const renderTabAccessories = useCallback(
     (
       tab: BrowserTab,
@@ -169,7 +160,6 @@ export function MediaDashboard() {
       browserDisplayName: string,
       isMediaTab: boolean,
     ): TabAccessories => {
-      const url = tab.url ?? "";
       const b = browserById.get(browserId);
       const save = (
         <SaveTabMenuButton
@@ -183,19 +173,9 @@ export function MediaDashboard() {
           }}
         />
       );
-      const download =
-        isMediaTab && DOWNLOADER_UI_ENABLED ? (
-          <TabDownloadButton
-            status={downloadStatusForUrl(dl.tasks, url)}
-            onClick={() => {
-              setDownloadSeed(url);
-              setActiveTab("download");
-            }}
-          />
-        ) : undefined;
-      return { save, download };
+      return { save };
     },
-    [vault, browserById, dl.tasks, setActiveTab],
+    [vault, browserById],
   );
 
   // Only verified browsers contribute: a locked row shows no tabs, so counting
@@ -296,19 +276,7 @@ export function MediaDashboard() {
             <div className="pilpod-alert-error">{error}</div>
           ) : null}
 
-          {activeTab === "download" && DOWNLOADER_UI_ENABLED ? (
-            <PremiumGate
-              feature="downloader"
-              featureTitle="Universal Downloader"
-              featureBlurb="Download video and audio from thousands of sites in the format and quality you choose — a PilPod Premium feature."
-            >
-              <DownloadPanel
-                dl={dl}
-                seedUrl={downloadSeed}
-                onSeedConsumed={() => setDownloadSeed(null)}
-              />
-            </PremiumGate>
-          ) : activeTab === "setup" ? (
+          {activeTab === "setup" ? (
             <ExtensionSetupPanel api={extensionSetup} />
           ) : activeTab === "vault" && VAULT_UI_ENABLED ? (
             <VaultPanel api={vault} browsers={browsers} forceSub="bookmarks" />
@@ -321,13 +289,6 @@ export function MediaDashboard() {
             />
           ) : (
             <>
-              <DownloadDockCard
-                tasks={dl.tasks}
-                onCancel={dl.cancelDownload}
-                onRetry={(id) => void dl.retryDownload(id)}
-                onOpenFolder={dl.openOutputDir}
-                onClear={dl.clearDone}
-              />
               <BrowserSessionsPanel
                 browsers={dashboardBrowsers}
                 pendingKeys={browserPendingKeys}
@@ -361,7 +322,6 @@ export function MediaDashboard() {
                     onSeekTab={seekBrowserTab}
                     onSetTabVolume={setTabVolumeBrowserTab}
                     onPip={pipBrowserTab}
-                    renderTabAccessories={renderTabAccessories}
                   />
                 }
               />
@@ -375,7 +335,6 @@ export function MediaDashboard() {
           onActiveBrowserChange={setActiveDockBrowserId}
           view={activeTab}
           onSelectView={setActiveTab}
-          downloaderEnabled={DOWNLOADER_UI_ENABLED}
           vaultEnabled={VAULT_UI_ENABLED}
           playlistEnabled={VAULT_UI_ENABLED}
         />

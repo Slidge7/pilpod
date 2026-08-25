@@ -87,8 +87,8 @@ pub fn evaluate_token(token: &str, now: u64) -> Entitlement {
     }
 }
 
-/// The gate. First line of every premium command (all `dl_*` commands in
-/// Phase 2+). Re-checks expiry against the wall clock on every call so a
+/// The gate. First line of every premium command.
+/// Re-checks expiry against the wall clock on every call so a
 /// license lapsing mid-session blocks new operations without a restart.
 pub fn require_premium(state: &EntitlementState, feature: &str) -> Result<(), String> {
     let ent = state
@@ -150,15 +150,15 @@ mod tests {
 
     #[test]
     fn require_premium_passes_for_entitled_feature() {
-        let state = entitled(vec!["downloader"], None);
-        assert!(require_premium(&state, "downloader").is_ok());
+        let state = entitled(vec!["test_feature"], None);
+        assert!(require_premium(&state, "test_feature").is_ok());
     }
 
     #[test]
     fn require_premium_blocks_free_tier() {
         let state: EntitlementState = Arc::new(RwLock::new(Entitlement::free(None)));
         assert_eq!(
-            require_premium(&state, "downloader").unwrap_err(),
+            require_premium(&state, "test_feature").unwrap_err(),
             ERR_PREMIUM_REQUIRED
         );
     }
@@ -166,15 +166,15 @@ mod tests {
     #[test]
     fn require_premium_blocks_missing_feature() {
         let state = entitled(vec!["some_other_feature"], None);
-        assert!(require_premium(&state, "downloader").is_err());
+        assert!(require_premium(&state, "test_feature").is_err());
     }
 
     #[test]
     fn require_premium_blocks_mid_session_expiry() {
         // Active flag still true, but expires_at (+grace) is in the past.
-        let state = entitled(vec!["downloader"], Some(1));
+        let state = entitled(vec!["test_feature"], Some(1));
         assert_eq!(
-            require_premium(&state, "downloader").unwrap_err(),
+            require_premium(&state, "test_feature").unwrap_err(),
             ERR_PREMIUM_REQUIRED
         );
     }

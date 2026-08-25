@@ -30,7 +30,6 @@ pub fn run() {
         }
         #[cfg(windows)]
         {
-            crate::downloader::init(app)?;
             setup::init(app)?;
         }
         Ok(())

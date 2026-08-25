@@ -4,7 +4,6 @@ import type { DetectedBrowser } from "../../../types/media";
 import { scrollToBrowserProfile } from "../lib/browserProfileScroll";
 import {
   IconBookmark,
-  IconDownloadTray,
   IconMusicNote,
 } from "../../../shared/ui/icons";
 
@@ -16,7 +15,7 @@ import {
  * locked browser rows, and while it is open no dock button reads as active,
  * which is the honest signal that you are somewhere else.
  */
-export type ViewType = "media" | "download" | "vault" | "playlist" | "setup";
+export type ViewType = "media" | "vault" | "playlist" | "setup";
 
 type Props = {
   browsers: DetectedBrowser[];
@@ -24,7 +23,6 @@ type Props = {
   onActiveBrowserChange: (browserId: string) => void;
   view: ViewType;
   onSelectView: (view: ViewType) => void;
-  downloaderEnabled: boolean;
   vaultEnabled: boolean;
   playlistEnabled: boolean;
 };
@@ -39,7 +37,6 @@ export function BrowserDockBar({
   onActiveBrowserChange,
   view,
   onSelectView,
-  downloaderEnabled,
   vaultEnabled,
   playlistEnabled,
 }: Props) {
@@ -54,7 +51,7 @@ export function BrowserDockBar({
   );
 
   const hasBrowsers = openBrowsers.length > 0;
-  const hasViewButtons = downloaderEnabled || vaultEnabled || playlistEnabled;
+  const hasViewButtons = vaultEnabled || playlistEnabled;
 
   if (!hasBrowsers && !hasViewButtons) {
     return null;
@@ -128,18 +125,6 @@ export function BrowserDockBar({
       <span className="pilpod-browser-dock__spacer" />
 
       {/* View switcher buttons */}
-      {downloaderEnabled ? (
-        <button
-          type="button"
-          className={`pilpod-browser-dock__view-btn${view === "download" ? " pilpod-browser-dock__view-btn--active" : ""}`}
-          title="Downloads"
-          aria-label="Downloads"
-          aria-pressed={view === "download"}
-          onClick={() => onSelectView(view === "download" ? "media" : "download")}
-        >
-          <IconDownloadTray />
-        </button>
-      ) : null}
       {vaultEnabled ? (
         <button
           type="button"

@@ -66,9 +66,8 @@ static GENERATION: AtomicU64 = AtomicU64::new(0);
 ///
 /// The *foreground window*, at process granularity — not our window's focus
 /// flag. Three things take focus off the dashboard without the user having
-/// gone anywhere: a native file dialog (the wallpaper picker, the download
-/// folder chooser, a vault backup), PilPod's own player window, and the chip
-/// itself while its settings panel holds it on screen. All three are still
+/// gone anywhere: a native file dialog (the wallpaper picker, a vault
+/// backup), PilPod's own player window, and the chip itself while its settings
 /// this process, so none of them dismiss.
 pub fn watch_for_click_away(app: &AppHandle) {
     let generation = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;

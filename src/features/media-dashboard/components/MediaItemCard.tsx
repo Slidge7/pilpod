@@ -55,7 +55,6 @@ type Props = {
   onPip?: (tab: BrowserTab, browserId: string) => void;
   /** Optional accessory buttons rendered right of PiP in the transport row. */
   saveButton?: ReactNode;
-  downloadButton?: ReactNode;
   /**
    * Hide the in-tab previous/next (media-session) buttons. Used by the
    * playlist player card, whose wrapper owns track navigation.
@@ -103,7 +102,6 @@ export function MediaItemCard({
   onSetTabVolume,
   onPip,
   saveButton,
-  downloadButton,
   hideTrackTransport = false,
   hideTabActions = false,
 }: Props) {
@@ -441,7 +439,6 @@ export function MediaItemCard({
                 </button>
               ) : null}
               {saveButton}
-              {downloadButton}
             </div>
 
             {hasMediaControls ? (
