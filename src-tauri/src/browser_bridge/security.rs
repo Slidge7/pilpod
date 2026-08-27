@@ -9,11 +9,18 @@ use std::sync::OnceLock;
 
 use super::protocol::frames::MediaAction;
 
-/// Pinned extension origins. When empty, any `chrome-extension://` /
-/// `moz-extension://` origin is accepted (web-page origins are always rejected).
-/// Populate with the published extension IDs to lock this down, e.g.
-/// `"chrome-extension://abcdef…"`.
-const ALLOWED_EXTENSION_ORIGINS: &[&str] = &[];
+/// Pinned Chromium extension origins — the published PilPod Companion.
+///
+/// The Chrome Web Store ID is stable across every Chromium browser in
+/// `browser_catalog`: Chrome, Edge, Brave, Vivaldi, Opera, Arc and Yandex all
+/// install the same store item and keep the same ID. An empty list means
+/// "accept any Chromium extension".
+///
+/// Firefox is deliberately *not* here, and cannot be: Gecko assigns a fresh
+/// random UUID to `moz-extension://` per installation, so there is no stable
+/// value to pin against. See [`origin_allowed`].
+const ALLOWED_EXTENSION_ORIGINS: &[&str] =
+    &["chrome-extension://ooogjmdnagfepkocppnldkafbcbmdhal"];
 
 /// Optional pairing token. Set once at startup from the app config dir; `None`
 /// means "unpaired" and only the Origin check applies.
@@ -26,22 +33,32 @@ pub fn set_pairing_token(token: Option<String>) {
     let _ = PAIRING_TOKEN.set(token);
 }
 
-/// Validate the WS upgrade `Origin`. CLI tools (wscat) send no Origin and are
-/// allowed for local testing; browser web pages always send an http(s) Origin
-/// and are rejected. Extension origins are accepted (optionally pinned).
+/// Validate the WS upgrade `Origin`.
+///
+/// What this check is, and what it is not: a browser *forces* a real `http(s)`
+/// origin onto a web page, which is why this reliably keeps pages off the
+/// bridge. It authenticates nothing — a native process on this machine sends
+/// whatever `Origin` header it likes, including a plausible `moz-extension://`
+/// UUID. Pinning the Chromium ID keeps a *rogue extension* out; keeping local
+/// software out is the pairing token's job (see [`token_ok`]).
 pub fn origin_allowed(origin: &str) -> bool {
+    // No Origin header at all. Only a native client does this — never a
+    // browser. Allowed while developing so `wscat` and friends still work,
+    // refused in a shipped build where the only legitimate peer is the
+    // companion extension, and it always sends one.
     if origin.is_empty() {
-        return true; // no Origin header (native CLI client) — loopback already enforced
+        return cfg!(debug_assertions);
     }
-    let is_extension =
-        origin.starts_with("chrome-extension://") || origin.starts_with("moz-extension://");
-    if !is_extension {
-        return false;
-    }
-    if ALLOWED_EXTENSION_ORIGINS.is_empty() {
+    // Gecko: per-installation random UUID, nothing to pin against.
+    if origin.starts_with("moz-extension://") {
         return true;
     }
-    ALLOWED_EXTENSION_ORIGINS.contains(&origin)
+    if origin.starts_with("chrome-extension://") {
+        return ALLOWED_EXTENSION_ORIGINS.is_empty()
+            || ALLOWED_EXTENSION_ORIGINS.contains(&origin);
+    }
+    // Web pages (http/https) and anything else.
+    false
 }
 
 /// Validate the `hello.token`. Accepts everything when no token is configured.
@@ -76,13 +93,46 @@ pub fn action_from_str(action: &str) -> Option<MediaAction> {
 mod tests {
     use super::*;
 
+    /// The published companion's own origin must always be accepted.
     #[test]
-    fn origin_rejects_web_pages_allows_extensions_and_cli() {
-        assert!(origin_allowed("chrome-extension://abc"));
+    fn origin_allows_the_pinned_companion() {
+        assert!(origin_allowed(
+            "chrome-extension://ooogjmdnagfepkocppnldkafbcbmdhal"
+        ));
+    }
+
+    /// A different Chromium extension is refused now that the ID is pinned.
+    /// This is the one thing pinning actually buys.
+    #[test]
+    fn origin_rejects_other_chromium_extensions() {
+        assert!(!origin_allowed("chrome-extension://abc"));
+        assert!(!origin_allowed(
+            "chrome-extension://aaaagjmdnagfepkocppnldkafbcbmdhal"
+        ));
+    }
+
+    /// Firefox's per-install UUID cannot be pinned, so any Gecko extension
+    /// origin is accepted by design.
+    #[test]
+    fn origin_allows_any_gecko_extension() {
         assert!(origin_allowed("moz-extension://abc"));
-        assert!(origin_allowed("")); // CLI, no Origin
+        assert!(origin_allowed(
+            "moz-extension://5f3b9a1c-0d2e-4a6b-8c7d-1e2f3a4b5c6d"
+        ));
+    }
+
+    #[test]
+    fn origin_rejects_web_pages() {
         assert!(!origin_allowed("https://evil.example"));
         assert!(!origin_allowed("http://localhost:3000"));
+    }
+
+    /// A missing Origin means a native client. Tests build with debug
+    /// assertions on — exactly the configuration that still permits it — while
+    /// a release build returns false here.
+    #[test]
+    fn origin_without_a_header_follows_the_build_profile() {
+        assert_eq!(origin_allowed(""), cfg!(debug_assertions));
     }
 
     #[test]

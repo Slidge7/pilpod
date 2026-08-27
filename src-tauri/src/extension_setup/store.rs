@@ -228,9 +228,7 @@ pub fn save_to(path: &Path, data: &ActivationData) -> Result<(), String> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| format!("create_dir_all: {e}"))?;
     }
-    let tmp = tmp_path(path);
-    std::fs::write(&tmp, json).map_err(|e| format!("write tmp: {e}"))?;
-    std::fs::rename(&tmp, path).map_err(|e| format!("rename: {e}"))
+    crate::atomic_file::write_durable(path, &tmp_path(path), &json)
 }
 
 /// Pure part of the migration: legacy `{id: bool}` ⇒ activation records.

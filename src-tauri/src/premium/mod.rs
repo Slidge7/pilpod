@@ -15,6 +15,15 @@ use std::sync::{Arc, RwLock};
 use tauri::Emitter;
 
 pub const STATUS_EVENT: &str = "premium://status";
+// Deliberately unused. Every feature ships free today and will keep doing so;
+// the entitlement machinery below is verified, tested scaffolding waiting for
+// the first feature that needs it. `allow(dead_code)` marks that as a decision
+// rather than an oversight — clippy flagged both of these as never used, and
+// they should stay flagged-and-silenced instead of quietly deleted.
+//
+// BEFORE gating anything on this: swap `license::LICENSE_PUBKEY` for the
+// production key. It is still the dev key.
+#[allow(dead_code)]
 pub const ERR_PREMIUM_REQUIRED: &str = "premium_required";
 
 /// In-memory entitlement snapshot derived from a verified license token.
@@ -90,6 +99,7 @@ pub fn evaluate_token(token: &str, now: u64) -> Entitlement {
 /// The gate. First line of every premium command.
 /// Re-checks expiry against the wall clock on every call so a
 /// license lapsing mid-session blocks new operations without a restart.
+#[allow(dead_code)]
 pub fn require_premium(state: &EntitlementState, feature: &str) -> Result<(), String> {
     let ent = state
         .read()

@@ -1,4 +1,7 @@
 mod app;
+// Durable tmp+rename writes shared by every on-disk store (vault, widget
+// settings, extension activation, license token).
+mod atomic_file;
 mod premium;
 mod vault;
 // Every window that is not `main` resolves its own document. One module owns
@@ -19,7 +22,11 @@ mod browser_dto;
 mod browser_tabs;
 #[cfg(windows)]
 mod browser_audio;
-#[cfg(windows)]
+// Debug-only. The dev lab kills live sockets, injects stale slots and fakes
+// resume events; none of that belongs in a shipped binary. The frontend
+// already hides its entry point behind `import.meta.env.DEV` — this makes
+// the Rust side agree instead of leaving ten commands reachable in release.
+#[cfg(all(windows, debug_assertions))]
 mod dev_lab;
 #[cfg(windows)]
 mod browser_bridge;

@@ -197,3 +197,64 @@ pub fn inapp_get_media() -> serde_json::Value {
         "canSeek": false,
     })
 }
+
+// ── Extension setup ─────────────────────────────────────────────────────────
+//
+// The real `extension_setup::commands` module is `#[cfg(windows)]` — it needs
+// the Win32 browser detector. These stubs exist so the frontend's invokes
+// resolve on other platforms instead of failing with "command not found".
+//
+// The reported state is deliberately quiet: nothing needs attention and the
+// onboarding gate counts as dismissed, because on a platform with no browser
+// detection there is no setup for the user to complete.
+
+#[tauri::command]
+pub fn extension_setup_overview() -> Result<serde_json::Value, String> {
+    Ok(serde_json::json!({
+        "storeUrl": "",
+        "browsers": [],
+        "onboardingDismissed": true,
+        "needsAttention": false,
+        "anyActive": false,
+    }))
+}
+
+#[tauri::command]
+pub fn extension_setup_gate_state() -> Result<serde_json::Value, String> {
+    Ok(serde_json::json!({
+        "onboardingDismissed": true,
+        "needsAttention": false,
+        "anyActive": false,
+        "attentionCount": 0,
+    }))
+}
+
+#[tauri::command]
+pub fn extension_setup_open_listing(_browser_id: String) -> Result<String, String> {
+    Err("PilPod requires Windows".into())
+}
+
+#[tauri::command]
+pub fn extension_setup_open_extensions_page(_browser_id: String) -> Result<String, String> {
+    Err("PilPod requires Windows".into())
+}
+
+#[tauri::command]
+pub fn extension_setup_skip(_browser_id: String) -> Result<bool, String> {
+    Ok(false)
+}
+
+#[tauri::command]
+pub fn extension_setup_cancel(_browser_id: String) -> Result<bool, String> {
+    Ok(false)
+}
+
+#[tauri::command]
+pub fn extension_setup_set_dismissed(_dismissed: bool) -> Result<bool, String> {
+    Ok(false)
+}
+
+#[tauri::command]
+pub fn extension_setup_reset(_browser_id: String) -> Result<bool, String> {
+    Ok(false)
+}

@@ -61,10 +61,7 @@ pub fn save_to(path: &Path, settings: &WidgetSettings) -> Result<(), String> {
         std::fs::create_dir_all(dir).map_err(|e| format!("create_dir_all: {e}"))?;
     }
     let json = serde_json::to_string_pretty(settings).map_err(|e| format!("serialize: {e}"))?;
-    let tmp = tmp_path(path);
-    std::fs::write(&tmp, json).map_err(|e| format!("write tmp: {e}"))?;
-    std::fs::rename(&tmp, path).map_err(|e| format!("rename: {e}"))?;
-    Ok(())
+    crate::atomic_file::write_durable(path, &tmp_path(path), &json)
 }
 
 #[cfg(test)]

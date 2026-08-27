@@ -27,7 +27,10 @@ use tokio_tungstenite::{
 use crate::browser_detector::{clear_reconnecting, emit_on_connection_change};
 use crate::browser_dto::{BrowserTab, TabMedia};
 
-use super::connections::{register_ws_connection, unregister_ws_connection, WsConnectionMap};
+use super::connections::{
+    register_ws_connection, unregister_ws_connection, WsConnectionMap, WsOutbound,
+    WS_OUTBOUND_CAPACITY,
+};
 use super::handler::{
     apply_ingest, apply_verified_handshake, BridgeContext, BridgeIngest,
 };
@@ -116,10 +119,19 @@ async fn handle_connection(
 ) {
     // Phase 3: identify the connecting browser by its process, before the
     // handshake consumes the stream. Ground truth — beats any self-report.
-    let verified_os_id = stream
-        .peer_addr()
-        .ok()
-        .and_then(|peer| super::peer_pid::verified_os_id_for_peer(peer, super::BROWSER_WS_PORT));
+    //
+    // `verified_os_id_for_peer` enumerates the machine's entire TCP table via
+    // `GetExtendedTcpTable`, which is a blocking syscall and not a cheap one.
+    // Run it on the blocking pool: left on the async worker it stalls every
+    // other bridge connection for as long as the walk takes.
+    let verified_os_id = match stream.peer_addr() {
+        Ok(peer) => tokio::task::spawn_blocking(move || {
+            super::peer_pid::verified_os_id_for_peer(peer, super::BROWSER_WS_PORT)
+        })
+        .await
+        .unwrap_or_default(),
+        Err(_) => None,
+    };
     // Origin allowlist enforced during the upgrade handshake (Phase 5 security).
     //
     // The large `Err` variant is tungstenite's `ErrorResponse` — the callback
@@ -152,7 +164,7 @@ async fn handle_connection(
     };
 
     let (mut write, mut read) = ws.split();
-    let (out_tx, mut out_rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+    let (out_tx, mut out_rx) = tokio::sync::mpsc::channel::<String>(WS_OUTBOUND_CAPACITY);
     let mut session = Session::new();
     session.verified_os_id = verified_os_id;
 
@@ -227,7 +239,7 @@ fn handle_client_msg(
     session: &mut Session,
     ctx: &Arc<BridgeContext>,
     ws_connections: &WsConnectionMap,
-    out_tx: &tokio::sync::mpsc::UnboundedSender<String>,
+    out_tx: &WsOutbound,
 ) -> ControlFlow<()> {
     match msg {
         ClientMsg::Hello { v, browser_id, browser, ext_version, token, caps } => {
@@ -303,7 +315,7 @@ fn handle_client_msg(
                 session_id: browser_id,
                 caps: version::default_caps(),
             };
-            let _ = out_tx.send(welcome.to_frame());
+            let _ = out_tx.try_send(welcome.to_frame());
             ControlFlow::Continue(())
         }
 
@@ -320,7 +332,7 @@ fn handle_client_msg(
             let Some(id) = session.browser_id.clone() else { return ControlFlow::Continue(()) };
             // Gap detection — fail closed by asking for a fresh snapshot.
             if rev != session.last_rev + 1 {
-                let _ = out_tx.send(ServerMsg::Resync.to_frame());
+                let _ = out_tx.try_send(ServerMsg::Resync.to_frame());
                 return ControlFlow::Continue(());
             }
             for tab in upsert {
@@ -385,7 +397,7 @@ fn handle_client_msg(
 fn ingest_and_push(
     session: &Session,
     ctx: &Arc<BridgeContext>,
-    out_tx: &tokio::sync::mpsc::UnboundedSender<String>,
+    out_tx: &WsOutbound,
     is_prog: bool,
 ) {
     let Some(id) = session.browser_id.clone() else { return };
@@ -419,7 +431,7 @@ fn ingest_and_push(
             action,
             value: cmd.value,
         };
-        let _ = out_tx.send(frame.to_frame());
+        let _ = out_tx.try_send(frame.to_frame());
     }
 }
 
@@ -432,7 +444,7 @@ fn ingest_and_push(
 /// state change (play/pause). Sending `sub`/`unsub` keeps it ticking live.
 fn reconcile_subscriptions(
     session: &mut Session,
-    out_tx: &tokio::sync::mpsc::UnboundedSender<String>,
+    out_tx: &WsOutbound,
 ) {
     let desired: std::collections::HashSet<i64> = session
         .tabs
@@ -444,7 +456,7 @@ fn reconcile_subscriptions(
     // Subscribe to tabs that gained media.
     for &id in &desired {
         if session.subscribed.insert(id) {
-            let _ = out_tx.send(ServerMsg::Sub { tab_id: id }.to_frame());
+            let _ = out_tx.try_send(ServerMsg::Sub { tab_id: id }.to_frame());
         }
     }
 
@@ -457,7 +469,7 @@ fn reconcile_subscriptions(
         .collect();
     for id in stale {
         session.subscribed.remove(&id);
-        let _ = out_tx.send(ServerMsg::Unsub { tab_id: id }.to_frame());
+        let _ = out_tx.try_send(ServerMsg::Unsub { tab_id: id }.to_frame());
     }
 }
 

@@ -88,13 +88,7 @@ pub fn save_to(path: &Path, data: &VaultData) -> Result<(), String> {
         std::fs::create_dir_all(parent).map_err(|e| format!("create_dir_all: {e}"))?;
     }
     let json = serde_json::to_string_pretty(data).map_err(|e| format!("serialize: {e}"))?;
-    let tmp = tmp_path(path);
-    std::fs::write(&tmp, json).map_err(|e| format!("write {}: {e}", tmp.display()))?;
-    std::fs::rename(&tmp, path).map_err(|e| {
-        // Leave no orphan tmp behind on failure.
-        let _ = std::fs::remove_file(&tmp);
-        format!("rename {} -> {}: {e}", tmp.display(), path.display())
-    })
+    crate::atomic_file::write_durable(path, &tmp_path(path), &json)
 }
 
 /// AppHandle convenience wrapper over [`load_from`].

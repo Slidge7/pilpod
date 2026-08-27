@@ -32,7 +32,20 @@ use super::protocol::frames::ServerMsg;
 use super::security::action_from_str;
 
 /// Outbound JSON frames to a connected extension profile.
-pub type WsOutbound = mpsc::UnboundedSender<String>;
+///
+/// Bounded on purpose. Everything travelling this way is a low-rate control
+/// message — `welcome`, `cmd`, `resync`, `ping`, `open`, `nav`; the
+/// high-frequency `prog` traffic runs the other way, client → app. So a queue
+/// that fills up is not backpressure, it is a client that has stopped reading,
+/// and an unbounded channel would absorb that silently and keep growing for as
+/// long as the socket stayed wedged. A bounded one surfaces it as a failed
+/// send, which the callers already handle: `enqueue_browser_command` falls back
+/// to the polled command queue on `false`.
+pub type WsOutbound = mpsc::Sender<String>;
+
+/// Frames buffered per connection before sends begin to fail. Generous enough
+/// that no burst of user input can trip it — if this fills, the peer is gone.
+pub const WS_OUTBOUND_CAPACITY: usize = 256;
 
 /// One live extension connection, owned exclusively by the [`SessionManager`].
 ///
@@ -49,7 +62,18 @@ struct Connection {
 
 impl Connection {
     fn send(&self, frame: &str) -> bool {
-        self.out.send(frame.to_string()).is_ok()
+        match self.out.try_send(frame.to_string()) {
+            Ok(()) => true,
+            Err(mpsc::error::TrySendError::Full(_)) => {
+                log::warn!(
+                    "[browser-bridge] outbound queue full ({WS_OUTBOUND_CAPACITY} frames) \
+                     — peer is not reading; dropping frame"
+                );
+                false
+            }
+            // Writer task gone: normal teardown, not worth a log line.
+            Err(mpsc::error::TrySendError::Closed(_)) => false,
+        }
     }
 }
 

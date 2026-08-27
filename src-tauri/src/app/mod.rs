@@ -39,48 +39,45 @@ pub fn run() {
 
     let context = tauri::generate_context!();
 
-    #[cfg(windows)]
-    {
-        let app = builder
-            .build(context)
-            .expect("error while building tauri application");
-        app.run(|app_handle, event| match event {
-            tauri::RunEvent::Ready => {
-                setup::apply_main_window_icon(app_handle);
-                // Settle the app into the shape the user left it in: an
-                // ordinary window, or the dashboard as a flyout anchored to
-                // the chip's corner.
-                crate::background::restore(app_handle);
-            }
-            // The dashboard being *destroyed* still ends PilPod.
-            //
-            // Tauri's "exit when the last window closes" rule cannot be relied
-            // on here: the widget is a real second window, so with it on the
-            // app would sit around showing nothing but a chip. When the main
-            // window is genuinely gone, so are we.
-            //
-            // Reaching this at all means the close was allowed through — with
-            // the widget on, `background::init` intercepts it and hides the
-            // window instead, and nothing is destroyed.
-            tauri::RunEvent::WindowEvent {
-                label,
-                event: tauri::WindowEvent::Destroyed,
-                ..
-            } if label == "main" => {
-                app_handle.exit(0);
-            }
-            // Flush any unsaved vault edits before the process goes away.
-            tauri::RunEvent::Exit => {
-                crate::vault::flush(app_handle);
-                crate::widget::flush(app_handle);
-            }
-            _ => {}
-        });
-        return;
-    }
+    // ONE run loop for every platform. The Windows-only calls are gated inside
+    // the arms rather than by forking the whole function — that fork is how the
+    // `RunEvent::Exit` flush came to live only on the Windows path, silently
+    // dropping the last debounced vault and widget writes on every other OS.
+    let app = builder
+        .build(context)
+        .expect("error while building tauri application");
 
-    #[cfg(not(windows))]
-    builder
-        .run(context)
-        .expect("error while running tauri application");
+    app.run(|app_handle, event| match event {
+        tauri::RunEvent::Ready => {
+            #[cfg(windows)]
+            setup::apply_main_window_icon(app_handle);
+            // Settle the app into the shape the user left it in: an ordinary
+            // window, or the dashboard as a flyout anchored to the chip's
+            // corner.
+            crate::background::restore(app_handle);
+        }
+        // The dashboard being *destroyed* still ends PilPod.
+        //
+        // Tauri's "exit when the last window closes" rule cannot be relied
+        // on here: the widget is a real second window, so with it on the
+        // app would sit around showing nothing but a chip. When the main
+        // window is genuinely gone, so are we.
+        //
+        // Reaching this at all means the close was allowed through — with
+        // the widget on, `background::init` intercepts it and hides the
+        // window instead, and nothing is destroyed.
+        tauri::RunEvent::WindowEvent {
+            label,
+            event: tauri::WindowEvent::Destroyed,
+            ..
+        } if label == "main" => {
+            app_handle.exit(0);
+        }
+        // Flush any unsaved vault edits before the process goes away.
+        tauri::RunEvent::Exit => {
+            crate::vault::flush(app_handle);
+            crate::widget::flush(app_handle);
+        }
+        _ => {}
+    });
 }

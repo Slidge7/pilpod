@@ -40,7 +40,10 @@ pub fn save(handle: &tauri::AppHandle, token: &str) -> Result<(), String> {
         token: token.to_string(),
     })
     .map_err(|e| format!("serialize: {e}"))?;
-    std::fs::write(&p, json).map_err(|e| format!("write {}: {e}", p.display()))
+    // Was a bare `fs::write`, which truncates the target in place: a crash
+    // between the truncate and the final byte left an empty license file and
+    // dropped the user to Free until they dug out their key again.
+    crate::atomic_file::write_durable(&p, &crate::atomic_file::tmp_path(&p), &json)
 }
 
 pub fn delete(handle: &tauri::AppHandle) -> Result<(), String> {
