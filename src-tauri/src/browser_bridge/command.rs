@@ -47,13 +47,19 @@ pub fn browser_media_control(
         };
     }
 
+    let outbound_value = if normalized == "setTabVolume" {
+        value.map(super::volume_scale::app_to_ext_volume)
+    } else {
+        value
+    };
+
     enqueue_browser_command(
         &queue,
         Some(&ws_connections),
         &browser_id,
         tab_id,
         normalized,
-        value,
+        outbound_value,
     );
     if normalized == "focusTab" {
         let title = tab_title_for_focus.unwrap_or_default();

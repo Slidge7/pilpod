@@ -145,7 +145,7 @@ pub fn convert_tab(post: BrowserTabPost, browser_id: &str) -> BrowserTab {
             page_visible: m.page_visible,
             user_idle_ms: m.user_idle_ms,
             document_state: m.document_state,
-            tab_volume: m.tab_volume,
+            tab_volume: super::volume_scale::ext_to_app_volume(m.tab_volume),
             tab_muted: m.tab_muted,
             can_seek: m.can_seek,
             can_pip: m.can_pip,

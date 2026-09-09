@@ -5,7 +5,7 @@
  * gesture.
  */
 
-export const TAB_VOL_MAX = 600;
+export const TAB_VOL_MAX = 150;
 
 /** Number of discrete steps the native range input is divided into. */
 export const VOL_TRACK_STEPS = 1000;
@@ -31,7 +31,7 @@ export function trackFractionToVolume(f: number): number {
 /** Fill colour band, driving the `--muted` / `--boost` / `--high` modifiers. */
 export function volFillTone(value: number): "muted" | "normal" | "boost" | "high" {
   if (value === 0) return "muted";
-  if (value > 200) return "high";
+  if (value > 125) return "high";
   if (value > 100) return "boost";
   return "normal";
 }

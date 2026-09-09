@@ -10,6 +10,7 @@ mod peer_pid;
 pub mod protocol;
 mod security;
 mod system_events;
+pub mod volume_scale;
 mod ws;
 
 pub use protocol::CONNECTED_WINDOW_SECS;
