@@ -19,6 +19,8 @@
 
 /* Full-height scroll; content passes under floating header + dock. */
 .pilpod-dashboard-shell__main {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -44,6 +46,60 @@
     rgba(0, 0, 0, 0.45) calc(100% - var(--pilpod-scroll-fade-bottom) * 0.65),
     transparent 100%
   );
+}
+
+/* Smooth-transition wallpaper backdrop */
+.pilpod-wallpaper-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+  background: var(--pilpod-bg-shell);
+}
+
+.pilpod-wallpaper-layer {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  will-change: opacity;
+}
+
+.pilpod-wallpaper-layer--prev {
+  z-index: 1;
+}
+
+.pilpod-wallpaper-layer--curr {
+  z-index: 2;
+}
+
+.pilpod-wallpaper-layer--fade-in {
+  animation: pilpodWallpaperFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.pilpod-wallpaper-layer--fade-out {
+  animation: pilpodWallpaperFadeOut 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes pilpodWallpaperFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pilpodWallpaperFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 /* User-selected wallpaper covers the entire inner shell (header + body).

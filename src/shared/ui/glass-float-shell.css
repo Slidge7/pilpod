@@ -154,6 +154,8 @@ html.dark .pilpod-source-tab-bar__tab--active {
   background-repeat: no-repeat, no-repeat;
 }
 
+
+
 /* No wallpaper → the backdrop is a uniform fill and blurring it is a no-op.
    Skipping the filter renders identical pixels for free. */
 .pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-media-item--float,

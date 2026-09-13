@@ -129,6 +129,16 @@ export function MediaItemCard({
   // an optimistic guess.
   const pipActive = tab.media?.inPip ?? false;
 
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navPendingRef = useRef<{ url: string; title: string } | null>(null);
+  const navTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isTabLoading =
+    (tab.tabState ?? "").toLowerCase() === "loading" ||
+    (tab.media?.documentState ?? "").toLowerCase() === "loading";
+
+  const isTransportDisabled = isNavigating || isTabLoading || reloadSpin || Boolean(busy);
+
   const seekWrapRef = useRef<HTMLDivElement>(null);
 
   const duration = tab.media?.duration ?? 0;
@@ -142,8 +152,8 @@ export function MediaItemCard({
   const fav = faviconFromUrl(tab.url);
   const letter = (tab.title?.trim() || "?").slice(0, 1).toUpperCase();
 
-  const badgeState = getStateBadgeClass(tab.tabState);
-  const badgeLabel = getStateBadgeLabel(tab.tabState, playing);
+  const badgeState = isNavigating ? "inactive" : getStateBadgeClass(tab.tabState);
+  const badgeLabel = isNavigating ? "loading" : getStateBadgeLabel(tab.tabState, playing);
 
   useEffect(() => {
     if (!isSeeking) {
@@ -151,6 +161,26 @@ export function MediaItemCard({
       setLocalTabMuted(tab.media?.tabMuted ?? false);
     }
   }, [tab.media?.tabVolume, tab.media?.tabMuted, isSeeking]);
+
+  useEffect(() => {
+    if (!isNavigating || !navPendingRef.current) return;
+    const urlChanged = tab.url !== navPendingRef.current.url;
+    const titleChanged = Boolean(
+      tab.media?.title && tab.media.title !== navPendingRef.current.title,
+    );
+
+    if (urlChanged || titleChanged) {
+      if (navTimeoutRef.current) clearTimeout(navTimeoutRef.current);
+      setIsNavigating(false);
+      navPendingRef.current = null;
+    }
+  }, [tab.url, tab.media?.title, isNavigating]);
+
+  useEffect(() => {
+    return () => {
+      if (navTimeoutRef.current) clearTimeout(navTimeoutRef.current);
+    };
+  }, []);
 
   const effectiveTabVol = localTabMuted ? 0 : localTabVol;
   const volTone = volFillTone(effectiveTabVol);
@@ -224,15 +254,37 @@ export function MediaItemCard({
     if (duration && onSeek) onSeek(tab, browserId, t);
   }, [isSeeking, duration, onSeek, tab, browserId, computeSeekTime]);
 
-  const handlePrevious = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    void invoke("browser_media_control", { browserId, tabId: tab.tabId, action: "previous" });
-  }, [browserId, tab.tabId]);
+  const handlePrevious = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isTransportDisabled) return;
+      setIsNavigating(true);
+      navPendingRef.current = { url: tab.url, title: tab.media?.title ?? "" };
+      if (navTimeoutRef.current) clearTimeout(navTimeoutRef.current);
+      navTimeoutRef.current = setTimeout(() => {
+        setIsNavigating(false);
+        navPendingRef.current = null;
+      }, 6000);
+      void invoke("browser_media_control", { browserId, tabId: tab.tabId, action: "previous" });
+    },
+    [browserId, tab.tabId, tab.url, tab.media?.title, isTransportDisabled],
+  );
 
-  const handleNext = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    void invoke("browser_media_control", { browserId, tabId: tab.tabId, action: "next" });
-  }, [browserId, tab.tabId]);
+  const handleNext = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isTransportDisabled) return;
+      setIsNavigating(true);
+      navPendingRef.current = { url: tab.url, title: tab.media?.title ?? "" };
+      if (navTimeoutRef.current) clearTimeout(navTimeoutRef.current);
+      navTimeoutRef.current = setTimeout(() => {
+        setIsNavigating(false);
+        navPendingRef.current = null;
+      }, 6000);
+      void invoke("browser_media_control", { browserId, tabId: tab.tabId, action: "next" });
+    },
+    [browserId, tab.tabId, tab.url, tab.media?.title, isTransportDisabled],
+  );
 
   const handleReload = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -407,10 +459,14 @@ export function MediaItemCard({
               {tab.media && canPrev && !hideTrackTransport ? (
                 <button
                   type="button"
-                  className="pilpod-media-item__icon-btn pilpod-media-item__transport-btn"
+                  className={`pilpod-media-item__icon-btn pilpod-media-item__transport-btn${
+                    isTransportDisabled ? " pilpod-media-item__transport-btn--disabled" : ""
+                  }`}
+                  disabled={isTransportDisabled}
                   onClick={handlePrevious}
-                  title="Previous"
+                  title={isTransportDisabled ? "Loading…" : "Previous"}
                   aria-label="Previous track"
+                  aria-disabled={isTransportDisabled}
                 >
                   <IconSkipBack />
                 </button>
@@ -418,10 +474,14 @@ export function MediaItemCard({
               {tab.media && canNext && !hideTrackTransport ? (
                 <button
                   type="button"
-                  className="pilpod-media-item__icon-btn pilpod-media-item__transport-btn"
+                  className={`pilpod-media-item__icon-btn pilpod-media-item__transport-btn${
+                    isTransportDisabled ? " pilpod-media-item__transport-btn--disabled" : ""
+                  }`}
+                  disabled={isTransportDisabled}
                   onClick={handleNext}
-                  title="Next"
+                  title={isTransportDisabled ? "Loading…" : "Next"}
                   aria-label="Next track"
+                  aria-disabled={isTransportDisabled}
                 >
                   <IconSkipForward />
                 </button>
@@ -445,12 +505,12 @@ export function MediaItemCard({
               <button
                 type="button"
                 className={playBtnClass}
-                disabled={busy}
+                disabled={busy || isNavigating || isTabLoading}
                 onClick={(e) => { e.stopPropagation(); onPlayPause(tab, browserId); }}
-                title={playing ? "Pause" : "Play"}
-                aria-label={playing ? "Pause" : "Play"}
+                title={isNavigating || isTabLoading ? "Loading…" : playing ? "Pause" : "Play"}
+                aria-label={isNavigating || isTabLoading ? "Loading…" : playing ? "Pause" : "Play"}
               >
-                {busy ? <Spinner /> : playing
+                {busy || isNavigating || isTabLoading ? <Spinner /> : playing
                   ? <IconPause className="pilpod-icon--sm" />
                   : <IconPlay className="pilpod-icon--sm" />}
               </button>

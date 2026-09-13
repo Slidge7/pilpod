@@ -25,6 +25,7 @@ import { useAppearance } from "./hooks/useAppearance";
 import { useGlassAppearance } from "./hooks/useGlassAppearance";
 import { useMediaDashboard } from "./hooks/useMediaDashboard";
 import { useWallpaper } from "./hooks/useWallpaper";
+import { useWallpaperTransition } from "./hooks/useWallpaperTransition";
 import { useStaticGlassWallpaper } from "./hooks/useStaticGlassWallpaper";
 import {
   DASHBOARD_IDLE_BROWSER_OPACITY,
@@ -38,10 +39,17 @@ export function MediaDashboard() {
   const { appearance, toggle } = useAppearance();
   const { glassStrength, setGlassStrength } = useGlassAppearance();
   const wallpaper = useWallpaper(appearance);
-  const hasWallpaper = wallpaper.dataUrl != null;
+  const wpTransition = useWallpaperTransition(wallpaper.dataUrl);
+  const hasWallpaper = wpTransition.hasAnyWallpaper;
   // Pre-blurred wallpaper textures — replace live backdrop-filter blurs with
   // identical static slices (see useStaticGlassWallpaper.ts for the why).
-  const staticGlass = useStaticGlassWallpaper(wallpaper.dataUrl, glassStrength);
+  // The wallpaper backdrop handles the smooth cross-fade; card blurs swap
+  // atomically when the new texture is ready (imperceptible under the tint).
+  const staticGlass = useStaticGlassWallpaper(
+    wpTransition.currentUrl,
+    glassStrength,
+  );
+  const isStaticGlassActive = hasWallpaper && staticGlass.ready;
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ViewType>("media");
   const [activeDockBrowserId, setActiveDockBrowserId] = useState<string | null>(
@@ -219,7 +227,7 @@ export function MediaDashboard() {
         className={[
           "pilpod-dashboard-shell__inner",
           hasWallpaper ? "pilpod-dashboard-shell__inner--wallpaper" : "",
-          hasWallpaper && staticGlass.ready
+          isStaticGlassActive
             ? "pilpod-dashboard-shell__inner--glass-static"
             : "",
           isUserIdle ? DASHBOARD_IDLE_SHELL_CLASS : "",
@@ -227,9 +235,6 @@ export function MediaDashboard() {
           .filter(Boolean)
           .join(" ")}
         style={{
-          ...(wallpaper.dataUrl
-            ? { backgroundImage: `url("${wallpaper.dataUrl}")` }
-            : undefined),
           ...staticGlass.styleVars,
           ...(isUserIdle
             ? {
@@ -239,6 +244,36 @@ export function MediaDashboard() {
             : undefined),
         }}
       >
+        {hasWallpaper ? (
+          <div className="pilpod-wallpaper-backdrop" aria-hidden="true">
+            {wpTransition.previousUrl ? (
+              <div
+                key={`prev-${wpTransition.previousUrl}`}
+                className={[
+                  "pilpod-wallpaper-layer",
+                  "pilpod-wallpaper-layer--prev",
+                  !wpTransition.currentUrl ? "pilpod-wallpaper-layer--fade-out" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                style={{ backgroundImage: `url("${wpTransition.previousUrl}")` }}
+              />
+            ) : null}
+            {wpTransition.currentUrl ? (
+              <div
+                key={`curr-${wpTransition.currentUrl}`}
+                className={[
+                  "pilpod-wallpaper-layer",
+                  "pilpod-wallpaper-layer--curr",
+                  wpTransition.isTransitioning ? "pilpod-wallpaper-layer--fade-in" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                style={{ backgroundImage: `url("${wpTransition.currentUrl}")` }}
+              />
+            ) : null}
+          </div>
+        ) : null}
         <DashboardHeader
           menuOpen={menuOpen}
           widgetEnabled={widget.enabled}

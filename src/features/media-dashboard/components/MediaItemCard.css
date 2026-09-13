@@ -235,16 +235,21 @@
   height: 12px;
 }
 
-.pilpod-media-item__icon-btn:hover {
+.pilpod-media-item__icon-btn:hover:not(:disabled) {
   background: var(--pilpod-glass-menu-act-bg);
   color: var(--pilpod-glass-text);
 }
 
-.pilpod-media-item__icon-btn:active {
+.pilpod-media-item__icon-btn:active:not(:disabled) {
   transform: scale(0.9);
 }
 
-.pilpod-media-item__icon-btn--danger:hover {
+.pilpod-media-item__icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pilpod-media-item__icon-btn--danger:hover:not(:disabled) {
   background: var(--pilpod-act-cl-bg);
   color: var(--pilpod-act-cl-text);
 }
@@ -489,6 +494,12 @@
 .pilpod-media-item__transport-btn svg {
   width: 14px;
   height: 14px;
+}
+
+.pilpod-media-item__transport-btn:disabled,
+.pilpod-media-item__transport-btn--disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .pilpod-media-item__row2:has(.pilpod-media-item__vol-block:hover) .pilpod-media-item__transport,
