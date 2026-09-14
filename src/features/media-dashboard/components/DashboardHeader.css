@@ -1,3 +1,21 @@
+/*
+  Header scrim colours. The header stays transparent so the wallpaper reads
+  edge to edge; these only paint while the cursor is on the header.
+*/
+:root {
+  --pilpod-header-scrim: rgba(255, 255, 255, 0.66);
+  --pilpod-header-scrim-mid: rgba(255, 255, 255, 0.42);
+  --pilpod-header-scrim-fade: rgba(255, 255, 255, 0);
+  --pilpod-header-scrim-line: rgba(15, 23, 42, 0.08);
+}
+
+html.dark {
+  --pilpod-header-scrim: rgba(15, 23, 42, 0.66);
+  --pilpod-header-scrim-mid: rgba(15, 23, 42, 0.42);
+  --pilpod-header-scrim-fade: rgba(15, 23, 42, 0);
+  --pilpod-header-scrim-line: rgba(255, 255, 255, 0.1);
+}
+
 .pilpod-dash-header {
   position: absolute;
   top: 0;
@@ -8,6 +26,60 @@
   align-items: stretch;
   border: none;
   background: transparent;
+}
+
+/*
+  Hover scrim.
+
+  A transparent header over an arbitrary wallpaper means the icons can land on
+  a patch the same colour as they are, and the only way to find a button is to
+  sweep the cursor until one lights up. The header stays transparent at rest —
+  that is the look — but as soon as the cursor is on it, a soft tint fades in
+  behind the controls so they are readable before they are pressed.
+
+  Mechanics: a positioned pseudo-element at `z-index: -1`. The header is its own
+  stacking context (position + z-index), so the scrim sits above the header's
+  own background and below every control — a plain `position: absolute` overlay
+  would paint *over* the non-positioned button groups and swallow them.
+
+  Only `opacity` animates, so the fade is a compositor job. The blur is applied
+  in the hover rule rather than the base rule on purpose: a `backdrop-filter`
+  that is always declared keeps a backdrop surface allocated for an element
+  that is invisible 99% of the time, which is exactly the VRAM cost the static
+  glass work removed elsewhere.
+*/
+.pilpod-dash-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  /* Fades out into the content rather than cutting a hard band across it. */
+  background: linear-gradient(
+    to bottom,
+    var(--pilpod-header-scrim) 0%,
+    var(--pilpod-header-scrim-mid) 62%,
+    var(--pilpod-header-scrim-fade) 100%
+  );
+  box-shadow: inset 0 -1px 0 0 var(--pilpod-header-scrim-line);
+  transition: opacity 220ms ease;
+  will-change: opacity;
+}
+
+.pilpod-dash-header:hover::before,
+.pilpod-dash-header:focus-within::before {
+  opacity: 1;
+  /* Arrives quickly, leaves gently. */
+  transition-duration: 120ms;
+  backdrop-filter: blur(7px) saturate(1.15);
+  -webkit-backdrop-filter: blur(7px) saturate(1.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pilpod-dash-header::before {
+    transition: none;
+  }
 }
 
 .pilpod-dash-header__left {

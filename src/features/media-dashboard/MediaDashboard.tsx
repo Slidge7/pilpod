@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrowserDockBar, type ViewType } from "./components/BrowserDockBar";
 import { invoke } from "@tauri-apps/api/core";
 import { VaultPanel, useVault, VAULT_UI_ENABLED } from "../vault";
@@ -29,11 +29,14 @@ import { useWallpaperTransition } from "./hooks/useWallpaperTransition";
 import { useStaticGlassWallpaper } from "./hooks/useStaticGlassWallpaper";
 import {
   DASHBOARD_IDLE_BROWSER_OPACITY,
+  DASHBOARD_IDLE_REGION_SELECTOR,
   DASHBOARD_IDLE_SHELL_CLASS,
   useDashboardIdleMode,
   useIdleConfig,
+  useIdleSpotlight,
 } from "./idle";
 import "./idle/dashboard-idle-mode.css";
+import "./idle/idle-spotlight.css";
 
 export function MediaDashboard() {
   const { appearance, toggle } = useAppearance();
@@ -194,10 +197,33 @@ export function MediaDashboard() {
     0,
   );
 
+  // Idle mode dims the browser cards; these two refs are what the guard and
+  // the spotlight need in order to work on real geometry.
+  const innerRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // The dimmed region lives inside BrowserSessionsPanel, so it is looked up
+  // rather than held as a ref. Resolved lazily — the panel is unmounted on the
+  // vault / playlist / setup views and the guard must not fire there.
+  const idleRegion = useCallback(
+    () => mainRef.current?.querySelector(DASHBOARD_IDLE_REGION_SELECTOR) ?? null,
+    [],
+  );
+
   const idleConfig = useIdleConfig();
   const isUserIdle = useDashboardIdleMode({
     enabled: idleConfig.enabled,
     idleMs: idleConfig.ms,
+    // The click that wakes the screen is a "show me the content" click, not a
+    // "close this tab" click. It stops here.
+    guardWakeClick: true,
+    guardRoot: idleRegion,
+  });
+
+  useIdleSpotlight({
+    active: isUserIdle,
+    hostRef: innerRef,
+    viewportRef: mainRef,
   });
 
   useEffect(() => {
@@ -224,6 +250,7 @@ export function MediaDashboard() {
   return (
     <div className={shellClass}>
       <div
+        ref={innerRef}
         className={[
           "pilpod-dashboard-shell__inner",
           hasWallpaper ? "pilpod-dashboard-shell__inner--wallpaper" : "",
@@ -306,7 +333,7 @@ export function MediaDashboard() {
           extensionSetupBadge={setupBadge}
         />
 
-        <main className="pilpod-dashboard-shell__main">
+        <main ref={mainRef} className="pilpod-dashboard-shell__main">
           {error ? (
             <div className="pilpod-alert-error">{error}</div>
           ) : null}

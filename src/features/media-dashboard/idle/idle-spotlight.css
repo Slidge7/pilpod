@@ -1,0 +1,102 @@
+/**
+ * Idle spotlight — a cursor torch over the faded dashboard.
+ *
+ * Built by useIdleSpotlight.ts. The mask below never changes: the lens is a
+ * fixed-size circle that is *moved* with a transform, and the ring layer inside
+ * it is counter-moved, so a frame is two composited transforms rather than a
+ * repositioned full-screen mask.
+ */
+
+:root {
+  --pilpod-idle-spot-line: rgba(37, 99, 235, 0.55);
+  --pilpod-idle-spot-bloom: rgba(37, 99, 235, 0.26);
+  --pilpod-idle-spot-wash: rgba(255, 255, 255, 0.1);
+}
+
+html.dark {
+  --pilpod-idle-spot-line: rgba(147, 197, 253, 0.78);
+  --pilpod-idle-spot-bloom: rgba(96, 165, 250, 0.34);
+  --pilpod-idle-spot-wash: rgba(255, 255, 255, 0.06);
+}
+
+.pilpod-idle-spotlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms ease;
+  contain: layout paint;
+}
+
+.pilpod-idle-spotlight.is-lit {
+  opacity: 1;
+}
+
+.pilpod-idle-spotlight__lens {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(var(--pilpod-idle-spot-r, 150px) * 2);
+  height: calc(var(--pilpod-idle-spot-r, 150px) * 2);
+  /* Promoted and clipped: the compositor layer is 2r x 2r, never the height of
+     the ring layer inside it. Without the clip the promoted layer would be
+     sized to the whole scrolled content — the same VRAM trap the static-glass
+     work went after. */
+  overflow: hidden;
+  contain: layout paint;
+  will-change: transform;
+  /* Soft falloff so edges arrive and leave instead of popping. */
+  -webkit-mask-image: radial-gradient(
+    closest-side,
+    #000 0%,
+    rgba(0, 0, 0, 0.95) 34%,
+    rgba(0, 0, 0, 0.5) 64%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    closest-side,
+    #000 0%,
+    rgba(0, 0, 0, 0.95) 34%,
+    rgba(0, 0, 0, 0.5) 64%,
+    transparent 100%
+  );
+  /* Faint wash: reads as a light source rather than free-floating outlines. */
+  background: radial-gradient(
+    closest-side,
+    var(--pilpod-idle-spot-wash) 0%,
+    transparent 70%
+  );
+}
+
+/* Deliberately NOT promoted: it is clipped by the lens, so moving it repaints
+   at most one lens-sized tile. A layer of its own would be as tall as the
+   scrolled page. */
+.pilpod-idle-spotlight__world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  transform: translate3d(0, 0, 0);
+}
+
+/* One per surface under the torch: outline only, no fill — the content itself
+   stays faded, exactly as the idle effect intends. */
+.pilpod-idle-spotlight__edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-shadow:
+    0 0 0 1px var(--pilpod-idle-spot-line),
+    0 0 12px 0 var(--pilpod-idle-spot-bloom),
+    inset 0 0 14px -7px var(--pilpod-idle-spot-bloom);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pilpod-idle-spotlight {
+    display: none;
+  }
+}
