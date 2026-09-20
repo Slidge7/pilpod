@@ -11,7 +11,13 @@
 .pilpod-media-item__body-menu,
 .pilpod-media-item__pinned-menu--float,
 .pilpod-browser-profile__vol-popup,
-.pilpod-search-tag {
+.pilpod-search-tag,
+.pilpod-vault-row,
+.pilpod-player-controls,
+.pilpod-vault-adder,
+.pilpod-vault-saver,
+.xs-card,
+.xs-step {
   position: relative;
 }
 
@@ -23,7 +29,13 @@
 .pilpod-media-item__body-menu::after,
 .pilpod-media-item__pinned-menu--float::after,
 .pilpod-browser-profile__vol-popup::after,
-.pilpod-search-tag::after {
+.pilpod-search-tag::after,
+.pilpod-vault-row::after,
+.pilpod-player-controls::after,
+.pilpod-vault-adder::after,
+.pilpod-vault-saver::after,
+.xs-card::after,
+.xs-step::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -36,13 +48,25 @@
 
 .pilpod-media-item--float::before,
 .pilpod-launcher__shell::before,
-.pilpod-browser-profile::before {
+.pilpod-browser-profile::before,
+.pilpod-vault-row::before,
+.pilpod-player-controls::before,
+.pilpod-vault-adder::before,
+.pilpod-vault-saver::before,
+.xs-card::before,
+.xs-step::before {
   opacity: var(--pilpod-glass-strength, 1);
 }
 
 .pilpod-media-item__body-menu > *,
 .pilpod-media-item__pinned-menu--float > *,
-.pilpod-media-item--float > * {
+.pilpod-media-item--float > *,
+.pilpod-vault-row > *,
+.pilpod-player-controls > *,
+.pilpod-vault-adder > *,
+.pilpod-vault-saver > *,
+.xs-card > *,
+.xs-step > * {
   position: relative;
   z-index: 1;
 }

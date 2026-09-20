@@ -139,13 +139,12 @@
   padding: 8px 10px;
   margin: 0 0 8px;
   border-radius: 12px;
-  border: 1px solid var(--pilpod-border-muted);
-  background: var(--pilpod-bg-elevated);
+  overflow: hidden;
 }
 
 .pilpod-player-controls--live {
-  border-color: color-mix(in srgb, var(--pilpod-accent-blue) 30%, transparent);
-  background: color-mix(in srgb, var(--pilpod-accent-blue) 6%, var(--pilpod-bg-elevated));
+  border-color: color-mix(in srgb, var(--pilpod-accent-blue) 45%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--pilpod-accent-blue) 20%, transparent);
 }
 
 .pilpod-player-controls__row {
@@ -161,8 +160,8 @@
   padding: 0 6px;
   font-size: 12px;
   border-radius: 8px;
-  border: 1px solid var(--pilpod-border-muted);
-  background: var(--pilpod-bg-card);
+  border: 1px solid var(--pilpod-glass-float-border);
+  background: var(--pilpod-glass-tint);
   color: var(--pilpod-text);
   outline: none;
 }
@@ -244,8 +243,7 @@
 /* ── Playlist rows: now-playing feedback (used by PlaylistDetail) ─────── */
 
 .pilpod-vault-row--now-playing {
-  border-color: color-mix(in srgb, var(--pilpod-accent-blue) 40%, transparent);
-  background: color-mix(in srgb, var(--pilpod-accent-blue) 8%, transparent);
+  border-color: var(--pilpod-glass-float-playing-border);
 }
 
 .pilpod-vault-row__now-playing-badge {

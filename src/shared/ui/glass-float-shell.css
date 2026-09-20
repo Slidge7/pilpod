@@ -8,7 +8,13 @@
 .pilpod-source-tab-bar__tab,
 .pilpod-launcher__shell,
 .pilpod-playlist-player,
-.pilpod-browser-profile {
+.pilpod-browser-profile,
+.pilpod-vault-row,
+.pilpod-player-controls,
+.pilpod-vault-adder,
+.pilpod-vault-saver,
+.xs-card,
+.xs-step {
   position: relative;
   /* Surface tint lives in a variable so the static-glass mode below can
      re-layer it above the pre-blurred wallpaper. Same computed color. */
@@ -30,7 +36,13 @@
 
 .pilpod-launcher__shell::before,
 .pilpod-playlist-player::before,
-.pilpod-browser-profile::before {
+.pilpod-browser-profile::before,
+.pilpod-vault-row::before,
+.pilpod-player-controls::before,
+.pilpod-vault-adder::before,
+.pilpod-vault-saver::before,
+.xs-card::before,
+.xs-step::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -41,7 +53,13 @@
 
 .pilpod-launcher__shell > *,
 .pilpod-playlist-player > *,
-.pilpod-browser-profile > * {
+.pilpod-browser-profile > *,
+.pilpod-vault-row > *,
+.pilpod-player-controls > *,
+.pilpod-vault-adder > *,
+.pilpod-vault-saver > *,
+.xs-card > *,
+.xs-step > * {
   position: relative;
   z-index: 1;
 }
@@ -51,7 +69,13 @@ html.dark .pilpod-control-card.pilpod-control-card--tab,
 html.dark .pilpod-source-tab-bar__tab,
 html.dark .pilpod-launcher__shell,
 html.dark .pilpod-playlist-player,
-html.dark .pilpod-browser-profile {
+html.dark .pilpod-browser-profile,
+html.dark .pilpod-vault-row,
+html.dark .pilpod-player-controls,
+html.dark .pilpod-vault-adder,
+html.dark .pilpod-vault-saver,
+html.dark .xs-card,
+html.dark .xs-step {
   box-shadow:
     0 2px 0 0 rgba(255, 255, 255, 0.2) inset,
     0 -1px 0 0 rgba(0, 0, 0, 0.35) inset,
@@ -62,6 +86,8 @@ html.dark .pilpod-browser-profile {
 .pilpod-media-item--float:hover,
 .pilpod-control-card.pilpod-control-card--tab:hover:not(.pilpod-control-card--playing),
 .pilpod-source-tab-bar__tab:hover:not(.pilpod-source-tab-bar__tab--active),
+.pilpod-vault-row:hover,
+.xs-card:hover,
 .pilpod-launcher--expanded .pilpod-launcher__shell,
 .pilpod-launcher__shell:focus-within {
   /* Only the tint variable changes on hover — the base rule (and the
@@ -99,7 +125,9 @@ html.dark .pilpod-launcher__shell:focus-within {
 
 html.dark .pilpod-media-item--float:hover,
 html.dark .pilpod-control-card.pilpod-control-card--tab:hover:not(.pilpod-control-card--playing),
-html.dark .pilpod-source-tab-bar__tab:hover:not(.pilpod-source-tab-bar__tab--active) {
+html.dark .pilpod-source-tab-bar__tab:hover:not(.pilpod-source-tab-bar__tab--active),
+html.dark .pilpod-vault-row:hover,
+html.dark .xs-card:hover {
   box-shadow:
     0 2px 0 0 rgba(255, 255, 255, 0.24) inset,
     0 -1px 0 0 rgba(0, 0, 0, 0.38) inset,
@@ -108,7 +136,10 @@ html.dark .pilpod-source-tab-bar__tab:hover:not(.pilpod-source-tab-bar__tab--act
 }
 
 .pilpod-media-item--float.pilpod-media-item--playing,
-.pilpod-source-tab-bar__tab--active {
+.pilpod-source-tab-bar__tab--active,
+.pilpod-vault-row--pinned,
+.pilpod-vault-row--now-playing,
+.pilpod-vault-row--playlist-live {
   border-color: var(--pilpod-glass-float-playing-border);
   box-shadow:
     0 2px 0 0 rgba(255, 255, 255, 0.92) inset,
@@ -118,7 +149,10 @@ html.dark .pilpod-source-tab-bar__tab:hover:not(.pilpod-source-tab-bar__tab--act
 }
 
 html.dark .pilpod-media-item--float.pilpod-media-item--playing,
-html.dark .pilpod-source-tab-bar__tab--active {
+html.dark .pilpod-source-tab-bar__tab--active,
+html.dark .pilpod-vault-row--pinned,
+html.dark .pilpod-vault-row--now-playing,
+html.dark .pilpod-vault-row--playlist-live {
   box-shadow:
     0 2px 0 0 rgba(255, 255, 255, 0.2) inset,
     0 -1px 0 0 rgba(0, 0, 0, 0.35) inset,
@@ -141,7 +175,13 @@ html.dark .pilpod-source-tab-bar__tab--active {
 .pilpod-dashboard-shell__inner--glass-static .pilpod-source-tab-bar__tab,
 .pilpod-dashboard-shell__inner--glass-static .pilpod-launcher__shell,
 .pilpod-dashboard-shell__inner--glass-static .pilpod-playlist-player,
-.pilpod-dashboard-shell__inner--glass-static .pilpod-browser-profile {
+.pilpod-dashboard-shell__inner--glass-static .pilpod-browser-profile,
+.pilpod-dashboard-shell__inner--glass-static .pilpod-vault-row,
+.pilpod-dashboard-shell__inner--glass-static .pilpod-player-controls,
+.pilpod-dashboard-shell__inner--glass-static .pilpod-vault-adder,
+.pilpod-dashboard-shell__inner--glass-static .pilpod-vault-saver,
+.pilpod-dashboard-shell__inner--glass-static .xs-card,
+.pilpod-dashboard-shell__inner--glass-static .xs-step {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   background-color: transparent;
@@ -154,8 +194,6 @@ html.dark .pilpod-source-tab-bar__tab--active {
   background-repeat: no-repeat, no-repeat;
 }
 
-
-
 /* No wallpaper → the backdrop is a uniform fill and blurring it is a no-op.
    Skipping the filter renders identical pixels for free. */
 .pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-media-item--float,
@@ -163,7 +201,13 @@ html.dark .pilpod-source-tab-bar__tab--active {
 .pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-source-tab-bar__tab,
 .pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-launcher__shell,
 .pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-playlist-player,
-.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-browser-profile {
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-browser-profile,
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-vault-row,
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-player-controls,
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-vault-adder,
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .pilpod-vault-saver,
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .xs-card,
+.pilpod-dashboard-shell__inner:not(.pilpod-dashboard-shell__inner--wallpaper) .xs-step {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
