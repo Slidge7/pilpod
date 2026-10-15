@@ -1,0 +1,7 @@
+{
+  "_comment": "Copy these values from Partner Center > your MSIX app > Product management > Product identity. They must match exactly. displayName must be the app name you reserved.",
+  "packageName": "Service7.PilPodApp",
+  "publisher": "CN=856E4792-DFD6-4A09-8FC5-A9329B2379F7",
+  "publisherDisplayName": "Service7",
+  "displayName": "PilPod App"
+}

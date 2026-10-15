@@ -6,6 +6,18 @@ mod setup;
 pub fn run() {
     let mut builder = tauri::Builder::default();
 
+    // ── Single-instance guard ─────────────────────────────────────────
+    // Must be the FIRST plugin: the duplicate process exits before any
+    // windows, tray icons, or WebSocket bridges are created. The
+    // callback fires in the already-running instance, bringing its
+    // dashboard back from wherever it is — minimized, behind other
+    // windows, or hidden in widget / tray mode.
+    builder = builder.plugin(tauri_plugin_single_instance::init(
+        |app, _argv, _cwd| {
+            let _ = crate::background::show_main(app);
+        },
+    ));
+
     builder = builder.plugin(tauri_plugin_dialog::init());
 
     // Placement + enabled state for the floating widget. Managed on every
