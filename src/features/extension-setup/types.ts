@@ -19,6 +19,18 @@ export type EngineFamily = "chromium" | "gecko";
  */
 export type StoreSupport = "native" | "needsOptIn" | "unsupported";
 
+/**
+ * Mirrors `extension_setup::install_probe::InstallState` — read from the
+ * browser's own preferences, so it is known even before the extension ever
+ * connects.
+ */
+export type InstallState = "notInstalled" | "disabled" | "installed";
+
+/** Mirrors `service::ConnectAction`: what the Connect button opened. */
+export type ConnectAction = "storeListing" | "extensionsPage" | "optionsPage";
+
+export type ConnectOutcome = { action: ConnectAction; url: string };
+
 /** One browser row in the setup screen. */
 export type BrowserSetupInfo = {
   id: string;
@@ -30,8 +42,10 @@ export type BrowserSetupInfo = {
   /** We can resolve its executable, so "Open in <Browser>" will work. */
   launchable: boolean;
   running: boolean;
-  /** Companion files found in one of its profiles, even if it never connected. */
+  /** Companion found in one of its profiles, even if it never connected. */
   extensionOnDisk: boolean;
+  /** Finer-grained than `extensionOnDisk`. Absent only on old payloads. */
+  installState?: InstallState;
   iconUrl?: string | null;
   firstActivatedAt?: number;
   lastVerifiedAt?: number;
@@ -82,6 +96,7 @@ export const SETUP_COMMANDS = {
   overview: "extension_setup_overview",
   gateState: "extension_setup_gate_state",
   openListing: "extension_setup_open_listing",
+  connect: "extension_setup_connect",
   openExtensionsPage: "extension_setup_open_extensions_page",
   skip: "extension_setup_skip",
   cancel: "extension_setup_cancel",

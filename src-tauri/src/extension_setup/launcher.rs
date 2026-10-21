@@ -22,6 +22,20 @@ pub trait BrowserOps: Send + Sync {
     /// Launch `exe` pointed at `url`. Returns once the process is spawned — we
     /// deliberately do not wait, the browser owns its own lifetime.
     fn open_url(&self, exe: &Path, url: &str) -> Result<(), String>;
+
+    /// [`open_url`](Self::open_url) in a specific profile. Extension pages
+    /// (`chrome-extension://…`) only load in a profile that has the extension,
+    /// so the options page must be opened where the companion was found.
+    /// `None` behaves exactly like `open_url`.
+    fn open_url_in_profile(
+        &self,
+        exe: &Path,
+        url: &str,
+        profile_dir: Option<&str>,
+    ) -> Result<(), String> {
+        let _ = profile_dir;
+        self.open_url(exe, url)
+    }
 }
 
 /// Real implementation, backed by the browser catalog's registry/process scan.
@@ -45,6 +59,22 @@ impl BrowserOps for SystemOps {
             .map(|_| ())
             .map_err(|e| format!("could not launch {}: {e}", exe.display()))
     }
+
+    fn open_url_in_profile(
+        &self,
+        exe: &Path,
+        url: &str,
+        profile_dir: Option<&str>,
+    ) -> Result<(), String> {
+        let mut cmd = std::process::Command::new(exe);
+        if let Some(p) = profile_dir {
+            cmd.arg(format!("--profile-directory={p}"));
+        }
+        cmd.arg(url)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("could not launch {}: {e}", exe.display()))
+    }
 }
 
 /// Test double. Records every call and can be told to fail.
@@ -56,6 +86,8 @@ pub struct MockOps {
     pub opened: std::sync::Mutex<Vec<(PathBuf, String)>>,
     /// When true, `open_url` reports a spawn failure.
     pub fail_open: bool,
+    /// Profile passed with each call, parallel to `opened`.
+    pub profiles: std::sync::Mutex<Vec<Option<String>>>,
 }
 
 #[cfg(test)]
@@ -69,6 +101,7 @@ impl MockOps {
                 .collect(),
             opened: std::sync::Mutex::new(Vec::new()),
             fail_open: false,
+            profiles: std::sync::Mutex::new(Vec::new()),
         }
     }
 
@@ -107,6 +140,20 @@ impl BrowserOps for MockOps {
             .lock()
             .unwrap()
             .push((exe.to_path_buf(), url.to_string()));
+        self.profiles.lock().unwrap().push(None);
+        Ok(())
+    }
+
+    fn open_url_in_profile(
+        &self,
+        exe: &Path,
+        url: &str,
+        profile_dir: Option<&str>,
+    ) -> Result<(), String> {
+        self.open_url(exe, url)?;
+        if let Some(last) = self.profiles.lock().unwrap().last_mut() {
+            *last = profile_dir.map(str::to_string);
+        }
         Ok(())
     }
 }

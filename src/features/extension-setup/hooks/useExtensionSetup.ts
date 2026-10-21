@@ -7,6 +7,7 @@ import {
   EMPTY_OVERVIEW,
   SETUP_COMMANDS,
   type BrowserSetupInfo,
+  type ConnectOutcome,
   type SetupOverview,
 } from "../types";
 import { activationSignature } from "./useExtensionGate";
@@ -19,6 +20,12 @@ export type ExtensionSetupApi = {
   refresh: () => Promise<void>;
   browserById: (id: string) => BrowserSetupInfo | undefined;
   openListing: (browserId: string) => Promise<boolean>;
+  /**
+   * The smart action: store if not installed, extensions page if switched
+   * off, the companion's options page if installed but not connected.
+   * Resolves to what was opened, or `null` on failure.
+   */
+  connect: (browserId: string) => Promise<ConnectOutcome | null>;
   openExtensionsPage: (browserId: string) => Promise<boolean>;
   skip: (browserId: string) => Promise<void>;
   cancel: (browserId: string) => Promise<void>;
@@ -139,6 +146,22 @@ export function useExtensionSetup(
     [refresh],
   );
 
+  const connect = useCallback(
+    async (browserId: string): Promise<ConnectOutcome | null> => {
+      let out: ConnectOutcome | null = null;
+      try {
+        out = await invoke<ConnectOutcome>(SETUP_COMMANDS.connect, { browserId });
+        if (alive.current) setError(null);
+      } catch (e) {
+        if (alive.current) setError(String(e));
+      }
+      await refresh();
+      changed.current?.();
+      return out;
+    },
+    [refresh],
+  );
+
   const browserById = useCallback(
     (id: string) => overview.browsers.find((b) => b.id === id),
     [overview.browsers],
@@ -161,6 +184,7 @@ export function useExtensionSetup(
     refresh,
     browserById,
     openListing: (browserId) => run(SETUP_COMMANDS.openListing, { browserId }),
+    connect,
     openExtensionsPage: (browserId) =>
       run(SETUP_COMMANDS.openExtensionsPage, { browserId }),
     skip: async (browserId) => {

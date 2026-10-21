@@ -9,6 +9,7 @@ use serde::Serialize;
 use super::activation::{ActivationEvent, ActivationState};
 use super::config;
 use super::engine::{self, EngineFamily, StoreSupport};
+use super::install_probe::{CompanionInstall, InstallState};
 use super::launcher::BrowserOps;
 use super::store::ActivationStore;
 
@@ -61,10 +62,11 @@ pub struct BrowserFacts {
     pub display_name: String,
     pub running: bool,
     pub icon_url: Option<String>,
-    /// The companion's files were found in one of this browser's profiles.
-    /// Distinguishes "never installed" from "installed but not talking to us"
-    /// (disabled, or the bridge port is blocked) — different advice each way.
-    pub extension_on_disk: bool,
+    /// Where the companion is installed in this browser, if anywhere — read
+    /// from the browser's own preferences (see `install_probe`). Distinguishes
+    /// "never installed" from "installed but off" from "installed and on but not
+    /// talking to us", which each need a different next step.
+    pub companion: Option<CompanionInstall>,
 }
 
 /// One row in the setup UI.
@@ -80,7 +82,10 @@ pub struct BrowserSetupInfo {
     /// Executable resolvable ⇒ we can actually launch it for the user.
     pub launchable: bool,
     pub running: bool,
+    /// Kept for older readers: `install_state != NotInstalled`.
     pub extension_on_disk: bool,
+    /// Not installed / installed but disabled / installed and enabled.
+    pub install_state: InstallState,
     pub icon_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub first_activated_at: Option<u64>,
@@ -151,7 +156,8 @@ pub fn build_overview(
                 activation_state: record.map(|r| r.state).unwrap_or_default(),
                 launchable: ops.resolve_exe(&f.id).is_some(),
                 running: f.running,
-                extension_on_disk: f.extension_on_disk,
+                extension_on_disk: f.companion.is_some(),
+                install_state: InstallState::of(f.companion.as_ref()),
                 icon_url: f.icon_url.clone(),
                 first_activated_at: record.and_then(|r| r.first_activated_at),
                 last_verified_at: record.and_then(|r| r.last_verified_at),
@@ -247,6 +253,82 @@ pub fn open_store_listing(
     Ok(url)
 }
 
+/// What [`connect_browser`] opened, so the UI can show the matching guide.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectOutcome {
+    pub action: ConnectAction,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ConnectAction {
+    /// Not installed → the Chrome Web Store listing.
+    StoreListing,
+    /// Installed but switched off → the browser's extensions page, on our item.
+    ExtensionsPage,
+    /// Installed and on, just not connected → the companion's options page,
+    /// where the user turns the desktop connection on.
+    OptionsPage,
+}
+
+/// The one "do the next right thing" action for a browser row.
+///
+/// Decides from where the companion actually is, rather than always sending the
+/// user to the store:
+///
+/// * not installed → store listing (same as [`open_store_listing`])
+/// * installed, disabled → extensions page deep-linked to the installed id
+/// * installed, enabled → options page, **in the profile it was found in**
+///
+/// Every branch marks setup started (which never demotes an `Active` browser),
+/// so the guide's live step waits for the handshake either way.
+pub fn connect_browser(
+    ops: &dyn BrowserOps,
+    store: &mut ActivationStore,
+    os_browser_id: &str,
+    companion: Option<&CompanionInstall>,
+    now_ms: u64,
+) -> Result<ConnectOutcome, SetupError> {
+    let Some(install) = companion else {
+        let url = open_store_listing(ops, store, os_browser_id, now_ms)?;
+        return Ok(ConnectOutcome {
+            action: ConnectAction::StoreListing,
+            url,
+        });
+    };
+
+    let info = engine::engine_for(os_browser_id)
+        .ok_or_else(|| SetupError::UnknownBrowser(os_browser_id.to_string()))?;
+    if !info.can_install() {
+        return Err(SetupError::Unsupported(os_browser_id.to_string()));
+    }
+    let exe = ops
+        .resolve_exe(os_browser_id)
+        .ok_or_else(|| SetupError::NotInstalled(os_browser_id.to_string()))?;
+
+    let (action, url) = if install.enabled {
+        (
+            ConnectAction::OptionsPage,
+            config::options_page_url(&install.extension_id),
+        )
+    } else {
+        let page = info
+            .extensions_page
+            .ok_or_else(|| SetupError::NoExtensionsPage(os_browser_id.to_string()))?;
+        (
+            ConnectAction::ExtensionsPage,
+            config::extension_detail_url_for(page, &install.extension_id),
+        )
+    };
+
+    ops.open_url_in_profile(&exe, &url, install.profile_dir.as_deref())
+        .map_err(SetupError::LaunchFailed)?;
+    store.apply(os_browser_id, ActivationEvent::SetupStarted, now_ms);
+    Ok(ConnectOutcome { action, url })
+}
+
 /// Open the browser's own extensions page, deep-linked to our item.
 /// Troubleshooting only: never changes activation state.
 pub fn open_extensions_page(
@@ -303,7 +385,7 @@ mod tests {
             display_name: name.to_string(),
             running: false,
             icon_url: None,
-            extension_on_disk: false,
+            companion: None,
         }
     }
 
@@ -527,12 +609,102 @@ mod tests {
         let ops = MockOps::with_installed(&["chrome"]);
         let st = store();
         let mut f = facts("chrome", "Chrome");
-        f.extension_on_disk = true;
-        let ov = build_overview(&[f], &st, &ops);
+        f.companion = Some(install(true, None));
+        let ov = build_overview(&[f.clone()], &st, &ops);
         assert!(
             ov.browsers[0].extension_on_disk,
             "the UI needs this to say 'installed but not connected'"
         );
+        assert_eq!(ov.browsers[0].install_state, InstallState::Installed);
+
+        f.companion = Some(install(false, None));
+        let ov = build_overview(&[f], &st, &ops);
+        assert_eq!(ov.browsers[0].install_state, InstallState::Disabled);
+
+        let ov = build_overview(&[facts("chrome", "Chrome")], &st, &ops);
+        assert_eq!(ov.browsers[0].install_state, InstallState::NotInstalled);
+        assert!(!ov.browsers[0].extension_on_disk);
+    }
+
+    // ── connect_browser ─────────────────────────────────────────────────────
+
+    fn install(enabled: bool, profile: Option<&str>) -> CompanionInstall {
+        CompanionInstall {
+            extension_id: config::EXTENSION_ID.to_string(),
+            profile_dir: profile.map(str::to_string),
+            enabled,
+        }
+    }
+
+    #[test]
+    fn connect_sends_an_uninstalled_browser_to_the_store() {
+        let ops = MockOps::with_installed(&["chrome"]);
+        let mut st = store();
+        let out = connect_browser(&ops, &mut st, "chrome", None, 1).unwrap();
+        assert_eq!(out.action, ConnectAction::StoreListing);
+        assert_eq!(out.url, STORE_URL);
+        assert_eq!(ops.only_call().1, STORE_URL);
+        assert_eq!(st.state_of("chrome"), ActivationState::SetupPending);
+    }
+
+    #[test]
+    fn connect_opens_the_options_page_when_installed_but_not_connected() {
+        let ops = MockOps::with_installed(&["chrome"]);
+        let mut st = store();
+        let inst = install(true, Some("Profile 3"));
+        let out = connect_browser(&ops, &mut st, "chrome", Some(&inst), 1).unwrap();
+        let want = "chrome-extension://ooogjmdnagfepkocppnldkafbcbmdhal/src/ui/options.html";
+        assert_eq!(out.action, ConnectAction::OptionsPage);
+        assert_eq!(out.url, want);
+        assert_eq!(ops.only_call().1, want, "never the store when it is already installed");
+        assert_eq!(
+            ops.profiles.lock().unwrap().clone(),
+            vec![Some("Profile 3".to_string())],
+            "options page must open in the profile that has the extension"
+        );
+        assert_eq!(st.state_of("chrome"), ActivationState::SetupPending);
+    }
+
+    #[test]
+    fn connect_opens_the_extensions_page_when_installed_but_disabled() {
+        let ops = MockOps::with_installed(&["msedge"]);
+        let mut st = store();
+        let inst = install(false, Some("Default"));
+        let out = connect_browser(&ops, &mut st, "msedge", Some(&inst), 1).unwrap();
+        assert_eq!(out.action, ConnectAction::ExtensionsPage);
+        assert_eq!(out.url, "edge://extensions/?id=ooogjmdnagfepkocppnldkafbcbmdhal");
+    }
+
+    #[test]
+    fn connect_uses_the_installed_id_for_a_dev_copy() {
+        let ops = MockOps::with_installed(&["chrome"]);
+        let mut st = store();
+        let mut inst = install(true, None);
+        inst.extension_id = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb".into();
+        let out = connect_browser(&ops, &mut st, "chrome", Some(&inst), 1).unwrap();
+        assert_eq!(
+            out.url,
+            "chrome-extension://bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/src/ui/options.html"
+        );
+    }
+
+    #[test]
+    fn connect_never_demotes_an_active_browser() {
+        let ops = MockOps::with_installed(&["chrome"]);
+        let mut st = store();
+        st.apply("chrome", ActivationEvent::HandshakeVerified, 1);
+        connect_browser(&ops, &mut st, "chrome", Some(&install(true, None)), 2).unwrap();
+        assert_eq!(st.state_of("chrome"), ActivationState::Active);
+    }
+
+    #[test]
+    fn connect_failed_launch_leaves_state_alone() {
+        let ops = MockOps::failing(&["chrome"]);
+        let mut st = store();
+        let err = connect_browser(&ops, &mut st, "chrome", Some(&install(true, None)), 1)
+            .unwrap_err();
+        assert!(matches!(err, SetupError::LaunchFailed(_)));
+        assert_eq!(st.state_of("chrome"), ActivationState::Inactive);
     }
 
     #[test]
@@ -663,6 +835,7 @@ mod tests {
             "\"storeSupport\"",
             "\"extensionsPage\"",
             "\"extensionOnDisk\"",
+            "\"installState\"",
             "\"needsAttention\"",
             "\"anyActive\"",
             "\"onboardingDismissed\"",

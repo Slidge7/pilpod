@@ -16,8 +16,9 @@ use tauri::State;
 
 use crate::browser_detector::DetectedBrowsersState;
 
+use super::install_probe::{self, CompanionInstall};
 use super::launcher::{BrowserOps, SystemOps};
-use super::service::{self, BrowserFacts, SetupGateState, SetupOverview};
+use super::service::{self, BrowserFacts, ConnectOutcome, SetupGateState, SetupOverview};
 use super::{now_ms, ActivationStoreHandle};
 
 /// Lock the store, run `f`, and turn a poisoned mutex into a plain error rather
@@ -34,33 +35,33 @@ fn with_store<T>(
 
 /// How long an on-disk companion probe stays good for.
 ///
-/// The probe walks every Chromium profile's `Extensions/<id>/<version>/` tree
-/// and parses the `manifest.json` files it finds. That is real disk I/O, and it
-/// cannot meaningfully change between two calls milliseconds apart — installing
-/// an extension takes a human several seconds at minimum.
-const DISK_SCAN_TTL: Duration = Duration::from_secs(10);
+/// The probe parses every Chromium profile's preferences JSON (see
+/// `install_probe`). That is real disk I/O, and it cannot meaningfully change
+/// between two calls milliseconds apart. Kept short because the open guide
+/// polls the overview to notice an install landing.
+const DISK_SCAN_TTL: Duration = Duration::from_secs(3);
 
-type DiskScanCache = HashMap<String, (Instant, bool)>;
+type DiskScanCache = HashMap<String, (Instant, Option<CompanionInstall>)>;
 
 static DISK_SCAN: LazyLock<Mutex<DiskScanCache>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-/// `scan_os_extension_installed` behind a short TTL. A poisoned lock falls
+/// `install_probe::probe_browser` behind a short TTL. A poisoned lock falls
 /// through to a live scan rather than panicking — worst case is the old cost.
-fn extension_on_disk_cached(browser_id: &str) -> bool {
+fn companion_cached(browser_id: &str) -> Option<CompanionInstall> {
     let now = Instant::now();
 
     if let Ok(cache) = DISK_SCAN.lock() {
         if let Some((at, hit)) = cache.get(browser_id) {
             if now.saturating_duration_since(*at) < DISK_SCAN_TTL {
-                return *hit;
+                return hit.clone();
             }
         }
     }
 
-    let fresh = crate::browser_os_scan::scan_os_extension_installed(browser_id);
+    let fresh = install_probe::probe_browser(browser_id);
     if let Ok(mut cache) = DISK_SCAN.lock() {
-        cache.insert(browser_id.to_string(), (now, fresh));
+        cache.insert(browser_id.to_string(), (now, fresh.clone()));
     }
     fresh
 }
@@ -90,7 +91,7 @@ fn collect_facts(detected: &DetectedBrowsersState) -> Vec<BrowserFacts> {
         .into_iter()
         .map(|d| BrowserFacts {
             icon_url: crate::browser_icon::data_url_for_browser(&d.id),
-            extension_on_disk: extension_on_disk_cached(&d.id),
+            companion: companion_cached(&d.id),
             id: d.id,
             display_name: d.display_name,
             running: d.running,
@@ -147,6 +148,25 @@ pub fn extension_setup_open_listing(
     let ops: &dyn BrowserOps = &SystemOps;
     with_store(&state, |store| {
         service::open_store_listing(ops, store, &browser_id, now_ms())
+    })?
+    .map_err(String::from)
+}
+
+/// The row's main button: open whatever gets this browser connected — the
+/// store if the companion is missing, the extensions page if it is switched
+/// off, or the companion's options page if it is installed but not connected.
+/// Always probes live: this is the moment a stale answer would send the user
+/// to the wrong page.
+#[tauri::command]
+pub fn extension_setup_connect(
+    state: State<'_, ActivationStoreHandle>,
+    browser_id: String,
+) -> Result<ConnectOutcome, String> {
+    invalidate_disk_scan_cache();
+    let companion = companion_cached(&browser_id);
+    let ops: &dyn BrowserOps = &SystemOps;
+    with_store(&state, |store| {
+        service::connect_browser(ops, store, &browser_id, companion.as_ref(), now_ms())
     })?
     .map_err(String::from)
 }

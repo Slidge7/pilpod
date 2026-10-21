@@ -33,6 +33,7 @@ pub mod activation;
 pub mod commands;
 pub mod config;
 pub mod engine;
+pub mod install_probe;
 pub mod launcher;
 pub mod service;
 pub mod store;

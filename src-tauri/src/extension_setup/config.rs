@@ -24,7 +24,24 @@ pub fn store_listing_url() -> String {
 /// `extensions_page` is the browser's own scheme root (e.g. `chrome://extensions`),
 /// supplied by the catalog — this function only appends the item path.
 pub fn extension_detail_url(extensions_page: &str) -> String {
-    format!("{}/?id={EXTENSION_ID}", extensions_page.trim_end_matches('/'))
+    extension_detail_url_for(extensions_page, EXTENSION_ID)
+}
+
+/// [`extension_detail_url`] for a specific installed id — the store id, or a
+/// developer's unpacked copy.
+pub fn extension_detail_url_for(extensions_page: &str, extension_id: &str) -> String {
+    format!("{}/?id={extension_id}", extensions_page.trim_end_matches('/'))
+}
+
+/// The companion's options page, relative to its root. This is where the user
+/// turns the desktop connection on (it is off by default and consent-gated), so
+/// it is where "installed but not connected" sends them.
+pub const OPTIONS_PAGE_PATH: &str = "src/ui/options.html";
+
+/// Absolute URL of the companion's options page for an installed id.
+/// `chrome-extension://` is understood by every Chromium fork, Edge included.
+pub fn options_page_url(extension_id: &str) -> String {
+    format!("chrome-extension://{extension_id}/{OPTIONS_PAGE_PATH}")
 }
 
 #[cfg(test)]
@@ -54,6 +71,18 @@ mod tests {
         assert_eq!(
             extension_detail_url("edge://extensions/"),
             "edge://extensions/?id=ooogjmdnagfepkocppnldkafbcbmdhal"
+        );
+    }
+
+    #[test]
+    fn options_url_targets_the_installed_id() {
+        assert_eq!(
+            options_page_url(EXTENSION_ID),
+            "chrome-extension://ooogjmdnagfepkocppnldkafbcbmdhal/src/ui/options.html"
+        );
+        assert_eq!(
+            extension_detail_url_for("edge://extensions", "abc"),
+            "edge://extensions/?id=abc"
         );
     }
 

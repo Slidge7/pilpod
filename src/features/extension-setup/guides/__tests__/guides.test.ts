@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   ALL_GUIDES,
   CHROMIUM_GUIDE,
+  CONNECT_GUIDE,
   EDGE_GUIDE,
+  ENABLE_GUIDE,
   OPERA_GUIDE,
   UNSUPPORTED_GUIDE,
   guideFor,
@@ -82,6 +84,35 @@ describe("guideFor", () => {
   });
 });
 
+describe("guideFor — already installed", () => {
+  it("sends an installed-but-not-connected browser to the connect guide, not the store", () => {
+    expect(guideFor(browser({ installState: "installed" }))).toBe(CONNECT_GUIDE);
+    expect(guideFor(browser({ id: "msedge", installState: "installed" }))).toBe(CONNECT_GUIDE);
+  });
+
+  it("sends a disabled install to the enable guide", () => {
+    expect(guideFor(browser({ installState: "disabled" }))).toBe(ENABLE_GUIDE);
+  });
+
+  it("keeps the store guides for a browser without the extension", () => {
+    expect(guideFor(browser({ installState: "notInstalled" }))).toBe(CHROMIUM_GUIDE);
+    expect(guideFor(browser({ id: "msedge", installState: "notInstalled" }))).toBe(EDGE_GUIDE);
+  });
+
+  it("still routes unsupported browsers to the dead end, whatever the install state", () => {
+    expect(
+      guideFor(browser({ storeSupport: "unsupported", engine: "gecko", installState: "installed" })),
+    ).toBe(UNSUPPORTED_GUIDE);
+  });
+
+  it("connect and enable guides never open the store", () => {
+    for (const g of [CONNECT_GUIDE, ENABLE_GUIDE]) {
+      expect(g.steps.some((s) => s.action.kind === "openStore"), g.id).toBe(false);
+      expect(g.steps.filter((s) => s.action.kind === "connect").length, g.id).toBe(1);
+    }
+  });
+});
+
 describe("guide content invariants", () => {
   it("every guide has at least one step", () => {
     for (const g of ALL_GUIDES) expect(g.steps.length).toBeGreaterThan(0);
@@ -95,7 +126,7 @@ describe("guide content invariants", () => {
   });
 
   it("installable guides have exactly one live step, and it is last", () => {
-    for (const g of [CHROMIUM_GUIDE, EDGE_GUIDE, OPERA_GUIDE]) {
+    for (const g of [CHROMIUM_GUIDE, EDGE_GUIDE, OPERA_GUIDE, CONNECT_GUIDE, ENABLE_GUIDE]) {
       const live = g.steps.filter((s) => s.live);
       expect(live.length, `${g.id} should have one live step`).toBe(1);
       expect(g.steps[g.steps.length - 1].live, `${g.id} live step must be last`).toBe(true);

@@ -8,10 +8,20 @@ import { StepDiagram } from "./diagrams";
 /** How long to wait before offering troubleshooting on the live step. */
 const STUCK_AFTER_MS = 60_000;
 
+/**
+ * While the guide waits, re-read the overview this often. Activation changes
+ * arrive as events, but *install* changes (the user just clicked "Add", or
+ * flipped the toggle on) only show up in the on-disk probe — this is what lets
+ * the guide move on to "connect" by itself.
+ */
+const INSTALL_POLL_MS = 4_000;
+
 export function SetupGuide({
   browser,
   storeUrl,
   onOpenListing,
+  onConnect,
+  onRefresh,
   onOpenExtensionsPage,
   onCopyStoreUrl,
   onDone,
@@ -20,6 +30,10 @@ export function SetupGuide({
   browser: BrowserSetupInfo;
   storeUrl: string;
   onOpenListing: (id: string) => void;
+  /** Open whatever gets this browser connected (store / extensions / options). */
+  onConnect: (id: string) => void;
+  /** Re-read the overview — used to notice the extension being installed. */
+  onRefresh: () => void;
   onOpenExtensionsPage: (id: string) => void;
   onCopyStoreUrl: () => Promise<boolean>;
   /** Fired once, when this browser becomes verified while the guide is open. */
@@ -47,6 +61,35 @@ export function SetupGuide({
       onDone(browser.id);
     }
   }, [isActive, browser.id, onDone]);
+
+  // Poll for install changes while waiting. Held in a ref so an inline
+  // callback from the parent does not restart the timer every render.
+  const refreshRef = useRef(onRefresh);
+  refreshRef.current = onRefresh;
+  useEffect(() => {
+    if (isActive) return;
+    const t = setInterval(() => refreshRef.current(), INSTALL_POLL_MS);
+    return () => clearInterval(t);
+  }, [isActive, browser.id]);
+
+  // The moment the extension turns up installed-and-enabled (just added from
+  // the store, or just switched back on) but isn't connected, open its
+  // settings so the user's next click is "Connect". Once per transition.
+  const lastInstall = useRef(browser.installState);
+  const connectRef = useRef(onConnect);
+  connectRef.current = onConnect;
+  useEffect(() => {
+    const prev = lastInstall.current;
+    lastInstall.current = browser.installState;
+    if (
+      !isActive &&
+      prev !== undefined &&
+      prev !== "installed" &&
+      browser.installState === "installed"
+    ) {
+      connectRef.current(browser.id);
+    }
+  }, [browser.installState, browser.id, isActive]);
 
   return (
     <div className="xs-guide">
@@ -77,6 +120,7 @@ export function SetupGuide({
                   step={step}
                   browser={browser}
                   onOpenListing={onOpenListing}
+                  onConnect={onConnect}
                   onOpenExtensionsPage={onOpenExtensionsPage}
                   onCopyStoreUrl={onCopyStoreUrl}
                 />
@@ -93,12 +137,14 @@ function StepButton({
   step,
   browser,
   onOpenListing,
+  onConnect,
   onOpenExtensionsPage,
   onCopyStoreUrl,
 }: {
   step: GuideStep;
   browser: BrowserSetupInfo;
   onOpenListing: (id: string) => void;
+  onConnect: (id: string) => void;
   onOpenExtensionsPage: (id: string) => void;
   onCopyStoreUrl: () => Promise<boolean>;
 }) {
@@ -125,6 +171,23 @@ function StepButton({
           onClick={() => onOpenListing(browser.id)}
         >
           {step.action.label ?? "Open the listing"}
+        </button>
+      );
+
+    case "connect":
+      return (
+        <button
+          type="button"
+          className="xs-btn xs-btn--primary"
+          disabled={!browser.launchable}
+          title={
+            browser.launchable
+              ? undefined
+              : "PilPod can't find this browser's program file"
+          }
+          onClick={() => onConnect(browser.id)}
+        >
+          {step.action.label ?? "Open"}
         </button>
       );
 

@@ -485,7 +485,33 @@ fn firefox_appdata_rel(browser_id: &str) -> Option<&'static str> {
     }
 }
 
+/// Every Chromium "User Data"-style folder a browser keeps profiles in. Used by
+/// `extension_setup::install_probe`, which reads each profile's preferences to
+/// find the companion, its profile and whether it is enabled.
+pub fn chromium_profile_roots(browser_id: &str) -> Vec<PathBuf> {
+    if browser_id == "arc" {
+        let Some(local) = std::env::var_os("LOCALAPPDATA") else {
+            return Vec::new();
+        };
+        let Ok(entries) = std::fs::read_dir(PathBuf::from(local).join("Packages")) else {
+            return Vec::new();
+        };
+        return entries
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().starts_with("TheBrowserCompany.Arc"))
+            .map(|e| e.path().join("LocalCache").join("Local").join("User Data"))
+            .collect();
+    }
+    browser_profile_root(browser_id)
+        .and_then(profile_root_base)
+        .into_iter()
+        .collect()
+}
+
 pub fn scan_os_extension_installed(browser_id: &str) -> bool {
+    if crate::extension_setup::install_probe::probe_browser(browser_id).is_some() {
+        return true;
+    }
     if browser_id == "arc" {
         return scan_arc_msix_extension();
     }

@@ -1,8 +1,7 @@
 mod app;
 // Durable tmp+rename writes shared by every on-disk store (vault, widget
-// settings, extension activation, license token).
+// settings, extension activation).
 mod atomic_file;
-mod premium;
 mod vault;
 // Every window that is not `main` resolves its own document. One module owns
 // that decision so the dev-server-vs-bundled-asset branch cannot be written

@@ -84,6 +84,7 @@ macro_rules! pilpod_invoke_handler {
             setup_cmds::extension_setup_overview,
             setup_cmds::extension_setup_gate_state,
             setup_cmds::extension_setup_open_listing,
+            setup_cmds::extension_setup_connect,
             setup_cmds::extension_setup_open_extensions_page,
             setup_cmds::extension_setup_skip,
             setup_cmds::extension_setup_cancel,
@@ -93,9 +94,6 @@ macro_rules! pilpod_invoke_handler {
             crate::wallpaper::read_wallpaper,
             crate::wallpaper::list_folder_images,
             crate::wallpaper::read_image_file,
-            crate::premium::commands::premium_get_status,
-            crate::premium::commands::premium_activate,
-            crate::premium::commands::premium_deactivate,
             // Vault is platform-neutral — real commands everywhere.
             crate::vault::commands::vault_get_state,
             crate::vault::commands::vault_add_bookmark,

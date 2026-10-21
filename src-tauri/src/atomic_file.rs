@@ -14,7 +14,7 @@
 //!
 //! `sync_all` on the temp file, *before* the rename, is what closes that gap.
 //! It costs almost nothing at these file sizes, and these stores hold data the
-//! user cannot reconstruct: bookmarks, playlists, a license token.
+//! user cannot reconstruct: bookmarks, playlists, settings.
 
 use std::fs::File;
 use std::io::Write;

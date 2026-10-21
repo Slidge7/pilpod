@@ -27,7 +27,9 @@ export function ExtensionSetupPanel({
   const activate = useCallback(
     (id: string) => {
       setOpenBrowserId(id);
-      void api.openListing(id);
+      // Rust decides where to go from what's actually installed: the store, the
+      // extensions page, or the companion's own settings.
+      void api.connect(id);
     },
     [api],
   );
@@ -53,6 +55,8 @@ export function ExtensionSetupPanel({
           browser={open}
           storeUrl={overview.storeUrl}
           onOpenListing={(id) => void api.openListing(id)}
+          onConnect={(id) => void api.connect(id)}
+          onRefresh={() => void api.refresh()}
           onOpenExtensionsPage={(id) => void api.openExtensionsPage(id)}
           onCopyStoreUrl={api.copyStoreUrl}
           onDone={handleDone}

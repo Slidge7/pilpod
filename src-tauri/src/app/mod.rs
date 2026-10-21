@@ -25,10 +25,9 @@ pub fn run() {
     // native side needs it to position the window.
     builder = builder.manage(crate::widget::WidgetStore::default());
 
-    // Single setup closure: premium entitlement init runs on ALL platforms,
-    // then the Windows-only subsystem init.
+    // Single setup closure: platform-neutral init first, then the
+    // Windows-only subsystem init.
     builder = builder.setup(|app| {
-        crate::premium::init(app)?;
         // Vault is platform-neutral (pure file I/O) — init on all platforms.
         crate::vault::init(app)?;
         // Reads persisted widget settings into memory. The OS window is left

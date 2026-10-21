@@ -16,6 +16,8 @@
 /** What a step's button does. `none` renders the step with no button. */
 export type StepActionKind =
   | "openStore"
+  /** Whatever gets this browser connected — see `extension_setup_connect`. */
+  | "connect"
   | "openExtensionsPage"
   | "copyStoreUrl"
   | "none";
@@ -47,7 +49,7 @@ export type GuideStep = {
   live?: boolean;
 };
 
-export type GuideId = "chromium" | "edge" | "opera" | "unsupported";
+export type GuideId = "chromium" | "edge" | "opera" | "connect" | "enable" | "unsupported";
 
 export type Guide = {
   id: GuideId;

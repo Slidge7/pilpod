@@ -235,6 +235,11 @@ pub fn extension_setup_open_listing(_browser_id: String) -> Result<String, Strin
 }
 
 #[tauri::command]
+pub fn extension_setup_connect(_browser_id: String) -> Result<serde_json::Value, String> {
+    Err("PilPod requires Windows".into())
+}
+
+#[tauri::command]
 pub fn extension_setup_open_extensions_page(_browser_id: String) -> Result<String, String> {
     Err("PilPod requires Windows".into())
 }

@@ -151,6 +151,40 @@ describe("diagnose", () => {
   });
 });
 
+describe("install-aware status", () => {
+  it("says installed-but-not-connected instead of the generic not-connected", () => {
+    const b = browser({ installState: "installed" });
+    expect(statusBadge(b).label).toBe("Installed · not connected");
+    expect(primaryActionLabel(b)).toBe("Connect");
+    expect(diagnose(b)).toBe("installedButSilent");
+  });
+
+  it("flags a disabled install and offers to turn it on", () => {
+    const b = browser({ installState: "disabled", extensionOnDisk: true });
+    expect(statusBadge(b).label).toBe("Installed · turned off");
+    expect(statusBadge(b).tone).toBe("warn");
+    expect(primaryActionLabel(b)).toBe("Turn on");
+    expect(diagnose(b)).toBe("installedDisabled");
+  });
+
+  it("offers settings, not reinstall, on a working browser that has it installed", () => {
+    expect(primaryActionLabel(browser({ activationState: "active", installState: "installed" }))).toBe(
+      "Settings",
+    );
+  });
+
+  it("keeps the store wording when it is not installed", () => {
+    expect(primaryActionLabel(browser({ installState: "notInstalled" }))).toBe("Set up");
+    expect(statusBadge(browser({ installState: "notInstalled" })).label).toBe("Not connected");
+  });
+
+  it("leaves skipped alone even when installed", () => {
+    expect(statusBadge(browser({ activationState: "skipped", installState: "installed" })).label).toBe(
+      "Skipped",
+    );
+  });
+});
+
 describe("diagnosisHint", () => {
   it("stays quiet when there is nothing useful to add", () => {
     expect(diagnosisHint(browser({ activationState: "active" }))).toBeNull();

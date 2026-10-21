@@ -6,7 +6,12 @@
  * is actionable, and the diagnosis when something looks wrong.
  */
 
-import type { ActivationState, BrowserSetupInfo } from "../types";
+import type { ActivationState, BrowserSetupInfo, InstallState } from "../types";
+
+/** Install state, falling back to the coarse on-disk flag for old payloads. */
+export function installStateOf(browser: BrowserSetupInfo): InstallState {
+  return browser.installState ?? (browser.extensionOnDisk ? "installed" : "notInstalled");
+}
 
 export type StatusTone = "neutral" | "pending" | "good" | "warn" | "muted";
 
@@ -28,10 +33,28 @@ const UNSUPPORTED_BADGE: StatusBadge = {
   tone: "muted",
 };
 
+const INSTALLED_NOT_CONNECTED: StatusBadge = {
+  label: "Installed · not connected",
+  tone: "pending",
+};
+
+const INSTALLED_DISABLED: StatusBadge = {
+  label: "Installed · turned off",
+  tone: "warn",
+};
+
 /** Badge for a browser row. Unsupported browsers never show a setup state. */
 export function statusBadge(browser: BrowserSetupInfo): StatusBadge {
   if (browser.storeSupport === "unsupported") return UNSUPPORTED_BADGE;
-  return BADGES[browser.activationState] ?? BADGES.inactive;
+  const s = browser.activationState;
+  // Not connected yet, but we know the extension is there: say so, rather than
+  // the generic "Not connected" that reads as "go install it".
+  if (s === "inactive" || s === "setupPending" || s === "revoked") {
+    const install = installStateOf(browser);
+    if (install === "disabled") return INSTALLED_DISABLED;
+    if (install === "installed") return INSTALLED_NOT_CONNECTED;
+  }
+  return BADGES[s] ?? BADGES.inactive;
 }
 
 /**
@@ -43,9 +66,16 @@ export function statusBadge(browser: BrowserSetupInfo): StatusBadge {
  */
 export function primaryActionLabel(browser: BrowserSetupInfo): string | null {
   if (browser.storeSupport === "unsupported") return null;
+  const install = installStateOf(browser);
+  if (browser.activationState === "active") {
+    // Installed and working: the useful thing is its settings, not the store.
+    return install === "notInstalled" ? "Reinstall" : "Settings";
+  }
+  // The button does whatever gets this browser connected (see
+  // `extension_setup_connect`), so name what it will actually do.
+  if (install === "disabled") return "Turn on";
+  if (install === "installed") return "Connect";
   switch (browser.activationState) {
-    case "active":
-      return "Reinstall";
     case "revoked":
       return "Reconnect";
     case "setupPending":
@@ -73,6 +103,7 @@ export type Diagnosis =
   | "ok"
   | "unsupported"
   | "notLaunchable"
+  | "installedDisabled"
   | "installedButSilent"
   | "browserClosed"
   | "notInstalled";
@@ -88,9 +119,12 @@ export function diagnose(browser: BrowserSetupInfo): Diagnosis {
   if (browser.activationState === "active") return "ok";
   // Detected (registry) but we can't find the exe — a broken/partial install.
   if (!browser.launchable) return "notLaunchable";
-  // The strongest signal we have: files are on disk but nothing ever connected.
-  // Almost always the extension is disabled, or the bridge port is blocked.
-  if (browser.extensionOnDisk) {
+  const install = installStateOf(browser);
+  // Installed but switched off in the browser — nothing can connect until it's on.
+  if (install === "disabled") return "installedDisabled";
+  // Installed and on, but not connected: almost always the desktop connection
+  // hasn't been turned on in the companion's settings yet (it is off by default).
+  if (install === "installed") {
     return browser.running ? "installedButSilent" : "browserClosed";
   }
   return "notInstalled";
@@ -102,13 +136,15 @@ const DIAGNOSIS_HINTS: Record<Diagnosis, string | null> = {
   notLaunchable:
     "PilPod can see this browser is installed but can't find its program file. " +
     "Reinstalling the browser usually fixes this.",
+  installedDisabled:
+    "The companion is installed here but turned off. Press Turn on to open the " +
+    "extensions page and switch it on.",
   installedButSilent:
-    "The companion is installed here but isn't reaching PilPod. Check it's " +
-    "enabled on the extensions page, and that a firewall isn't blocking " +
-    "PilPod's local connection.",
+    "The companion is installed and enabled here, but not connected to PilPod " +
+    "yet. Press Connect to open its settings, then click Connect there.",
   browserClosed:
-    "The companion is installed here. Open the browser and it should connect " +
-    "on its own.",
+    "The companion is installed here. Open the browser — if it doesn't connect " +
+    "by itself, press Connect.",
   notInstalled: null,
 };
 

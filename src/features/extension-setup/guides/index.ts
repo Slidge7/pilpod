@@ -3,6 +3,8 @@
  *
  * Resolution order, most specific first:
  *   1. `storeSupport === "unsupported"` → the dead-end guide, whatever the id
+ *   1b. already installed → the connect guide (or the enable guide when it is
+ *       switched off) — the store would be the wrong place to send them
  *   2. a per-browser override (Edge, Opera)
  *   3. the engine default (Chromium)
  *   4. the dead-end guide
@@ -15,13 +17,14 @@
 
 import type { BrowserSetupInfo } from "../types";
 import { CHROMIUM_GUIDE } from "./chromium";
+import { CONNECT_GUIDE, ENABLE_GUIDE } from "./connect";
 import { EDGE_GUIDE } from "./edge";
 import { OPERA_GUIDE } from "./opera";
 import type { Guide, GuideStep, GuideVars } from "./types";
 import { UNSUPPORTED_GUIDE } from "./unsupported";
 
 export * from "./types";
-export { CHROMIUM_GUIDE, EDGE_GUIDE, OPERA_GUIDE, UNSUPPORTED_GUIDE };
+export { CHROMIUM_GUIDE, CONNECT_GUIDE, EDGE_GUIDE, ENABLE_GUIDE, OPERA_GUIDE, UNSUPPORTED_GUIDE };
 
 /** Per-browser overrides, keyed by OS browser id. */
 const BY_BROWSER_ID: Record<string, Guide> = {
@@ -37,9 +40,11 @@ const BY_ENGINE: Record<string, Guide> = {
 
 /** Pick the guide for a browser. Never returns undefined. */
 export function guideFor(
-  browser: Pick<BrowserSetupInfo, "id" | "engine" | "storeSupport">,
+  browser: Pick<BrowserSetupInfo, "id" | "engine" | "storeSupport" | "installState">,
 ): Guide {
   if (browser.storeSupport === "unsupported") return UNSUPPORTED_GUIDE;
+  if (browser.installState === "installed") return CONNECT_GUIDE;
+  if (browser.installState === "disabled") return ENABLE_GUIDE;
   return (
     BY_BROWSER_ID[browser.id] ?? BY_ENGINE[browser.engine] ?? UNSUPPORTED_GUIDE
   );
@@ -96,5 +101,7 @@ export const ALL_GUIDES: Guide[] = [
   CHROMIUM_GUIDE,
   EDGE_GUIDE,
   OPERA_GUIDE,
+  CONNECT_GUIDE,
+  ENABLE_GUIDE,
   UNSUPPORTED_GUIDE,
 ];

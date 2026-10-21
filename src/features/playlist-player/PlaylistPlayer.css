@@ -3,7 +3,7 @@
  *
  * The card's glass surface (`.pilpod-playlist-player`) is defined in
  * `shared/ui/glass-float-shell.css` alongside the other floating shells so it
- * shares the premium glass treatment AND the static-glass / no-wallpaper
+ * shares the glass treatment AND the static-glass / no-wallpaper
  * performance fast paths. Only layout + inner elements live here.
  */
 

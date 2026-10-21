@@ -38,6 +38,30 @@ first launch → OS scan finds browsers → all Inactive → gate lists them
 
 ---
 
+## 2026-10-21 — install-aware Connect button
+
+The row's main button no longer always opens the store. `extension_setup_connect`
+probes the browser first (`extension_setup/install_probe.rs` reads
+`extensions.settings.<id>` from each profile's `Secure Preferences` / `Preferences`)
+and opens:
+
+| Companion in this browser | Opens | Guide |
+|---|---|---|
+| not installed | Chrome Web Store listing | store guide (chromium/edge/opera) |
+| installed, **disabled** | `<browser>://extensions/?id=<id>` in that profile | `ENABLE_GUIDE` |
+| installed, enabled, not connected | `chrome-extension://<id>/src/ui/options.html` in that profile (`--profile-directory`) | `CONNECT_GUIDE` |
+
+DTO gains `installState: "notInstalled" | "disabled" | "installed"` (`extensionOnDisk`
+kept, = not `notInstalled`). While a guide is open it polls the overview every 4 s;
+when the install state flips to `installed` (just added from the store / just turned
+on) it opens the options page automatically, so the user's next click is Connect.
+
+QA to add: options page opens in the right profile on Chrome **and Edge**
+(`chrome-extension://` on Edge), disabled → enable → auto-open options, unpacked dev copy
+(different id) is detected by manifest name.
+
+---
+
 ## Where things live
 
 **Rust — `src-tauri/src/extension_setup/`**
