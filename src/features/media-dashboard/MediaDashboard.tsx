@@ -3,6 +3,9 @@ import { BrowserDockBar, type ViewType } from "./components/BrowserDockBar";
 import { invoke } from "@tauri-apps/api/core";
 import { VaultPanel, useVault, VAULT_UI_ENABLED } from "../vault";
 import { PlaylistPlayerCard, usePlaylistPlayer } from "../playlist-player";
+// The opener only — not the feature index, which would import the God Mode
+// page and, through it, this module back (a cycle).
+import { openGodModeWindow } from "../god-mode/api";
 import { INAPP_BROWSER_ID } from "../playlist-player/types";
 import { SaveTabMenuButton } from "../vault/components/SaveTabMenuButton";
 import {
@@ -247,6 +250,13 @@ export function MediaDashboard() {
     });
   };
 
+  const openGodMode = () => {
+    setMenuOpen(false);
+    openGodModeWindow().catch((err: unknown) => {
+      console.error("[god-mode] open_god_mode_window failed:", err);
+    });
+  };
+
   return (
     <div className={shellClass}>
       <div
@@ -329,6 +339,7 @@ export function MediaDashboard() {
           onToggleAppearance={toggle}
           onRefresh={refresh}
           onOpenDevLab={openDevLab}
+          onOpenGodMode={openGodMode}
           onOpenExtensionSetup={openSetupSection}
           extensionSetupBadge={setupBadge}
         />

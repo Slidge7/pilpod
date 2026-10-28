@@ -7,7 +7,9 @@ use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, State};
+
+use crate::aux_window::{self, AuxWindowSpec};
 
 use crate::browser_bridge::connections::{
     kill_ws_connection, push_ws_sync_all, ws_connected_ids, WsConnectionMap,
@@ -20,7 +22,12 @@ use crate::browser_detector::{
 use crate::browser_tabs::{BrowserSlot, BrowserSlotsMap};
 use crate::browser_dto::BrowserTab;
 
-const DEV_LAB_LABEL: &str = "dev-lab";
+const DEV_LAB_WINDOW: AuxWindowSpec = AuxWindowSpec {
+    label: "dev-lab",
+    title: "PilPod Dev Lab",
+    size: (1280.0, 860.0),
+    min_size: (900.0, 600.0),
+};
 const POLL_INTERVAL_MS: u64 = 500;
 const POLL_TIMEOUT_MS: u64 = 12_000;
 const POST_CONNECT_WAIT_MS: u64 = 1_500;
@@ -52,50 +59,7 @@ pub struct DevWakeAndSyncResult {
 
 #[tauri::command]
 pub async fn open_dev_lab_window(app: AppHandle) -> Result<(), String> {
-    // Window creation must not run on the WebView thread (deadlocks on Windows).
-    tauri::async_runtime::spawn_blocking(move || create_or_focus_dev_lab_window(&app))
-        .await
-        .map_err(|e| format!("join error: {e}"))?
-}
-
-fn dev_lab_url(app: &AppHandle) -> WebviewUrl {
-    crate::frontend::url(app, "index.html")
-}
-
-fn create_or_focus_dev_lab_window(app: &AppHandle) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window(DEV_LAB_LABEL) {
-        window.set_focus().map_err(|e| e.to_string())?;
-        return Ok(());
-    }
-
-    let url = dev_lab_url(app);
-    #[allow(unused_mut)]
-    let mut builder = WebviewWindowBuilder::new(app, DEV_LAB_LABEL, url)
-        .title("PilPod Dev Lab")
-        .inner_size(1280.0, 860.0)
-        .min_inner_size(900.0, 600.0)
-        .resizable(true)
-        .decorations(false)
-        .transparent(true)
-        .shadow(false);
-
-    // Every window in the process must request the same WebView2 arguments or
-    // environment creation fails — see `inapp_player::agent::BROWSER_ARGS`.
-    #[cfg(windows)]
-    {
-        builder = builder.additional_browser_args(crate::inapp_player::agent::BROWSER_ARGS);
-    }
-
-    let window = builder.build().map_err(|e| e.to_string())?;
-
-    #[cfg(windows)]
-    crate::platform::window_corners::apply(&window);
-
-    if let Err(e) = window.set_icon(tauri::include_image!("icons/icon.ico")) {
-        eprintln!("[dev-lab] window icon: {e}");
-    }
-
-    Ok(())
+    aux_window::open(app, DEV_LAB_WINDOW).await
 }
 
 #[tauri::command]

@@ -81,6 +81,8 @@ macro_rules! pilpod_invoke_handler {
             crate::widget::commands::widget_open_main,
             crate::widget::commands::widget_hide_main,
             crate::widget::commands::widget_relayout,
+            // God Mode only opens its window; everything it shows is broadcast.
+            crate::god_mode::open_god_mode_window,
             setup_cmds::extension_setup_overview,
             setup_cmds::extension_setup_gate_state,
             setup_cmds::extension_setup_open_listing,

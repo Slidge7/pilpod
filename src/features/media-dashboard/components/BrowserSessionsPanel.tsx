@@ -33,44 +33,16 @@ import {
   type SearchTagOption,
 } from "../lib/browserMedia";
 import { browserProfileDomId } from "../lib/browserProfileScroll";
+import {
+  browserDisplayLabel,
+  formatAge,
+  resolveBrowserStatus,
+  type BrowserConnectionStatus,
+} from "../lib/browserStatus";
 import { isBrowserLocked } from "../../extension-setup";
 import { UnifiedTabRow } from "./UnifiedTabRow";
 import { MediaItemCard } from "./MediaItemCard";
 import { ActiveMediaStrip } from "./ActiveMediaStrip";
-
-function browserDisplayLabel(browser: DetectedBrowser): string {
-  return browser.profileLabel ?? browser.displayName;
-}
-
-/** Format an age in seconds as a compact human-readable string. */
-function formatAge(secs: number): string {
-  if (secs < 60) return `${secs}s ago`;
-  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
-  return `${Math.floor(secs / 3600)}h ago`;
-}
-
-type BrowserConnectionStatus =
-  | "closed"
-  | "connected"
-  | "offline"
-  | "reconnecting"
-  | "no-ext";
-
-function resolveBrowserStatus(browser: DetectedBrowser): BrowserConnectionStatus {
-  if (!browser.running) return "closed";
-  // Gated on verified activation rather than the old `extensionInstalled`
-  // boolean, so a browser whose extension was removed or disabled (`revoked`)
-  // reverts to the same "needs setup" treatment as one that never had it.
-  if (isBrowserLocked(browser.activationState)) return "no-ext";
-  if (
-    browser.extensionReconnecting === true &&
-    !browser.extensionConnected
-  ) {
-    return "reconnecting";
-  }
-  if (!browser.extensionConnected) return "offline";
-  return "connected";
-}
 
 function browserStatusMeta(
   status: BrowserConnectionStatus,

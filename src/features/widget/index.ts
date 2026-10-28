@@ -7,6 +7,9 @@
  * bundle pull them in by accident and quietly undo the split.
  */
 export { useWidgetState, widgetApi, type WidgetController } from "./api";
+// Read-only subscription (no setters, no legacy migration) for windows that
+// only *display* widget state, such as God Mode.
+export { watchWidgetState } from "./ipc";
 export {
   WIDGET_ACCENTS,
   WIDGET_ACCENT_LABELS,

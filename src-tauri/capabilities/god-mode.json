@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "god-mode",
+  "description": "Capability for the God Mode overview window. It reads broadcast state and acts through the same app commands as the dashboard; the window permissions are only what its own title bar needs (drag, minimize, maximize, close).",
+  "windows": ["god-mode"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-set-focus",
+    "core:window:allow-start-dragging"
+  ]
+}

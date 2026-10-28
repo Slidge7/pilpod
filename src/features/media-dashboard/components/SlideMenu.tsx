@@ -11,6 +11,7 @@ import {
   IconBeaker,
   IconExtensionMissing,
   IconFolderOpen,
+  IconGodMode,
   IconImage,
   IconMoon,
   IconRefresh,
@@ -40,6 +41,8 @@ type Props = {
   onToggleAppearance: () => void;
   onRefresh: () => void;
   onOpenDevLab?: () => void;
+  /** Opens the God Mode overview window. */
+  onOpenGodMode?: () => void;
   /** Opens the permanent "Browser setup" section. */
   onOpenExtensionSetup?: () => void;
   /** Browsers needing setup; renders a dot on the entry. 0 = no dot. */
@@ -70,6 +73,7 @@ export function SlideMenu({
   onToggleAppearance,
   onRefresh,
   onOpenDevLab,
+  onOpenGodMode,
   onOpenExtensionSetup,
   extensionSetupBadge = 0,
 }: Props) {
@@ -259,6 +263,18 @@ export function SlideMenu({
               {extensionSetupBadge > 0 ? (
                 <span className="pilpod-slide-menu__dot" aria-hidden="true" />
               ) : null}
+            </button>
+          ) : null}
+          {onOpenGodMode ? (
+            <button
+              type="button"
+              onClick={onOpenGodMode}
+              className="pilpod-slide-menu__btn"
+              title="God Mode — every browser, window and tab in one big view"
+              aria-label="Open God Mode"
+              tabIndex={btnTabIndex}
+            >
+              <IconGodMode />
             </button>
           ) : null}
           {import.meta.env.DEV && onOpenDevLab ? (

@@ -8,6 +8,12 @@ mod vault;
 // wrong twice — see the module docs for the release-only blank-window bug it
 // was extracted to fix.
 mod frontend;
+// Full-page windows opened from the dashboard (dev lab, God Mode): one builder,
+// so every such window gets the same WebView2 args, corners and focus rule.
+mod aux_window;
+// The all-seeing overview window. Shipped (not debug-only): it reads broadcast
+// state and acts through the dashboard's own commands, so it builds everywhere.
+mod god_mode;
 // Platform-neutral: pure file I/O + a state machine. The Windows-only pieces
 // (browser launching, registry paths) live behind cfg gates inside the module.
 //

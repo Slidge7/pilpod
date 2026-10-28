@@ -191,6 +191,13 @@ export function useBrowserControls(
     [control],
   );
 
+  /** Mute or unmute one tab (the extension reads `value` 1 / 0). */
+  const setTabMuted = useCallback(
+    (tab: BrowserTab, browserId: string, muted: boolean) =>
+      void control(browserId, tab.tabId, "muteTab", { value: muted ? 1 : 0 }),
+    [control],
+  );
+
   /**
    * Apply one action across every matching tab.
    *
@@ -288,6 +295,7 @@ export function useBrowserControls(
     setTabVolume,
     resetTabVolume,
     pip,
+    setTabMuted,
     pauseAll,
     muteAll,
     resetAllVolumes,

@@ -26,3 +26,17 @@ export function persistAppearance(mode: AppearanceMode): void {
     /* ignore */
   }
 }
+
+/**
+ * Keep this document's appearance in step with the choice made in another
+ * window. Every PilPod window shares one origin, so the dashboard's toggle
+ * (which persists to {@link THEME_STORAGE_KEY}) reaches secondary windows as a
+ * `storage` event. Returns an unsubscribe function.
+ */
+export function followStoredAppearance(): () => void {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === THEME_STORAGE_KEY) applyAppearance(readStoredAppearance());
+  };
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
+}
