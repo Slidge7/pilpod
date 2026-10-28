@@ -21,6 +21,8 @@ import {
   IconPip,
   IconPlay,
   IconReload,
+  IconSeekBack10,
+  IconSeekForward10,
   IconSkipBack,
   IconSkipForward,
   IconVolume,
@@ -37,6 +39,15 @@ import {
   volumeToTrackFraction,
 } from "../../../shared/ui/volumeScale";
 
+/** Step for the back / forward skip buttons, in seconds. */
+const SKIP_STEP_SECS = 10;
+/**
+ * How long a skip target is shown before falling back to the reported time.
+ * Normally the extension's next position report settles it far sooner.
+ */
+const SKIP_PREVIEW_TTL_MS = 1500;
+/** A reported time this close to the skip target means the seek has landed. */
+const SKIP_SETTLE_SECS = 1.5;
 
 type Props = {
   tab: BrowserTab;
@@ -125,6 +136,11 @@ export function MediaItemCard({
   const [localTabMuted, setLocalTabMuted] = useState(tabMuted);
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPreview, setSeekPreview] = useState<number | null>(null);
+  // Target of the last ±10 s skip, held until the extension reports the new
+  // position. It is both the optimistic display value and the base for the next
+  // skip, so quick repeated clicks add up instead of re-reading a stale time.
+  const [skipPreview, setSkipPreview] = useState<number | null>(null);
+  const skipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Real PiP state reported by the extension — the button is a true toggle, not
   // an optimistic guess.
   const pipActive = tab.media?.inPip ?? false;
@@ -143,7 +159,7 @@ export function MediaItemCard({
 
   const duration = tab.media?.duration ?? 0;
   const currentTime = tab.media?.currentTime ?? 0;
-  const displayTime = seekPreview !== null ? seekPreview : currentTime;
+  const displayTime = seekPreview ?? skipPreview ?? currentTime;
   const displayProgress = duration > 0 ? (displayTime / duration) * 100 : 0;
   const durationLabel = duration > 0 ? formatDuration(duration) : null;
   const currentTimeLabel = duration > 0 ? formatDuration(displayTime) : null;
@@ -179,8 +195,15 @@ export function MediaItemCard({
   useEffect(() => {
     return () => {
       if (navTimeoutRef.current) clearTimeout(navTimeoutRef.current);
+      if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
     };
   }, []);
+
+  // The skip has landed once the reported position reaches its target.
+  useEffect(() => {
+    if (skipPreview === null) return;
+    if (Math.abs(currentTime - skipPreview) < SKIP_SETTLE_SECS) setSkipPreview(null);
+  }, [currentTime, skipPreview]);
 
   const effectiveTabVol = localTabMuted ? 0 : localTabVol;
   const volTone = volFillTone(effectiveTabVol);
@@ -253,6 +276,23 @@ export function MediaItemCard({
     setIsSeeking(false);
     if (duration && onSeek) onSeek(tab, browserId, t);
   }, [isSeeking, duration, onSeek, tab, browserId, computeSeekTime]);
+
+  const handleSkip = useCallback(
+    (e: React.MouseEvent, delta: number) => {
+      e.stopPropagation();
+      if (isTransportDisabled || !onSeek || duration <= 0) return;
+      const base = skipPreview ?? currentTime;
+      const target = Math.max(0, Math.min(duration, base + delta));
+      setSkipPreview(target);
+      if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
+      skipTimerRef.current = setTimeout(() => {
+        skipTimerRef.current = null;
+        setSkipPreview(null);
+      }, SKIP_PREVIEW_TTL_MS);
+      onSeek(tab, browserId, target);
+    },
+    [isTransportDisabled, onSeek, duration, skipPreview, currentTime, tab, browserId],
+  );
 
   const handlePrevious = useCallback(
     (e: React.MouseEvent) => {
@@ -328,6 +368,9 @@ export function MediaItemCard({
 
   const hasTabVol = tab.media != null && onSetTabVolume != null;
   const seekActive = duration > 0 && onSeek != null && canSeek;
+  // Same condition as the scrubber: no skip buttons on live streams or on
+  // media whose site does not allow seeking.
+  const showSkip = tab.media != null && seekActive;
 
   return (
     <li
@@ -527,6 +570,44 @@ export function MediaItemCard({
           onPointerUp={seekActive ? handleSeekPointerUp : undefined}
           onPointerCancel={seekActive ? handleSeekPointerUp : undefined}
         >
+          {/* ±10 s pill — centered above the bar, shown while the bar is hovered
+              or dragged. It sits INSIDE the seek zone so hovering it keeps the
+              zone hovered; a press on it must not start a scrub. */}
+          {showSkip ? (
+            <div
+              className="pilpod-media-item__seek-hover"
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="pilpod-media-item__seek-hover-btn"
+                disabled={isTransportDisabled}
+                onClick={(e) => handleSkip(e, -SKIP_STEP_SECS)}
+                title={`Back ${SKIP_STEP_SECS} seconds`}
+                aria-label={`Back ${SKIP_STEP_SECS} seconds`}
+              >
+                <IconSeekBack10 />
+              </button>
+              <span className="pilpod-media-item__seek-hover-time">
+                <span className="pilpod-media-item__seek-hover-time-cur">
+                  {currentTimeLabel ?? "0:00"}
+                </span>
+                <span className="pilpod-media-item__seek-hover-time-sep">/</span>
+                <span>{durationLabel}</span>
+              </span>
+              <button
+                type="button"
+                className="pilpod-media-item__seek-hover-btn"
+                disabled={isTransportDisabled}
+                onClick={(e) => handleSkip(e, SKIP_STEP_SECS)}
+                title={`Forward ${SKIP_STEP_SECS} seconds`}
+                aria-label={`Forward ${SKIP_STEP_SECS} seconds`}
+              >
+                <IconSeekForward10 />
+              </button>
+            </div>
+          ) : null}
           <div className="pilpod-media-item__seek-track">
             <div className={progressClass} style={{ width: `${displayProgress}%` }} />
           </div>

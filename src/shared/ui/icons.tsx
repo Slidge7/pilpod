@@ -557,6 +557,55 @@ export function IconSkipForward({ className }: { className?: string }) {
 }
 
 
+/**
+ * Jump back 10 s — counter-clockwise arc with the "10" drawn as strokes (not
+ * <text>), so it stays crisp and matches the line weight of the other icons.
+ */
+export function IconSeekBack10({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 13a8 8 0 1 0 8-8" />
+      <polyline points="13.5 2 10.5 5 13.5 8" />
+      <path d="M8.3 11.1 9.6 10.2v5.6" strokeWidth="1.5" />
+      <ellipse cx="14.1" cy="13" rx="1.85" ry="2.8" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+/** Jump forward 10 s — mirror of {@link IconSeekBack10}. */
+export function IconSeekForward10({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M20 13a8 8 0 1 1-8-8" />
+      <polyline points="10.5 2 13.5 5 10.5 8" />
+      <path d="M8.3 11.1 9.6 10.2v5.6" strokeWidth="1.5" />
+      <ellipse cx="14.1" cy="13" rx="1.85" ry="2.8" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 export function IconPip({ className }: { className?: string }) {
   return (
     <svg

@@ -634,6 +634,103 @@
   transition: none;
 }
 
+/* ── SEEK HOVER PILL: [-10]  0:00 / 0:00  [+10] ──────────────
+   Centered just above the bar, revealed while the bar is hovered or dragged.
+   A child of __seek-wrap, so hovering the pill keeps the zone hovered. */
+
+.pilpod-media-item__seek-hover {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--pilpod-glass-menu-bg);
+  border: 1px solid var(--pilpod-glass-menu-border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(var(--pilpod-glass-blur-float));
+  -webkit-backdrop-filter: blur(var(--pilpod-glass-blur-float));
+  cursor: default;
+  white-space: nowrap;
+  /* Hidden state. `visibility` (not pointer-events) carries the grace delay:
+     the pill stays visible AND clickable for 250ms after the pointer leaves
+     the bar — enough to travel up to it from anywhere along the bar. */
+  visibility: hidden;
+  opacity: 0;
+  transform: translate(-50%, 4px) scale(0.96);
+  transition:
+    opacity 0.14s ease 0.25s,
+    transform 0.16s ease 0.25s,
+    visibility 0s linear 0.39s;
+}
+
+.pilpod-media-item__seek-wrap--active:hover .pilpod-media-item__seek-hover,
+.pilpod-media-item__seek-wrap--dragging .pilpod-media-item__seek-hover {
+  visibility: visible;
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+  transition:
+    opacity 0.14s ease 0.06s,
+    transform 0.16s ease 0.06s,
+    visibility 0s linear 0.06s;
+}
+
+.pilpod-media-item__seek-hover-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  width: 26px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pilpod-glass-menu-act-color);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.14s;
+}
+
+.pilpod-media-item__seek-hover-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.pilpod-media-item__seek-hover-btn:hover:not(:disabled) {
+  background: var(--pilpod-glass-menu-act-bg);
+  color: var(--pilpod-glass-text);
+}
+
+.pilpod-media-item__seek-hover-btn:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.pilpod-media-item__seek-hover-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pilpod-media-item__seek-hover-time {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 0 4px;
+  font-size: 9.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--pilpod-glass-text-dim);
+}
+
+.pilpod-media-item__seek-hover-time-cur {
+  color: var(--pilpod-glass-text);
+}
+
+.pilpod-media-item__seek-hover-time-sep {
+  opacity: 0.5;
+}
+
 /* ── INSET VARIANT ───────────────────────────────────────── */
 
 .pilpod-media-item--inset {
@@ -683,6 +780,7 @@ html.dark .pilpod-media-item--inset.pilpod-media-item--playing {
   .pilpod-media-item__play-btn,
   .pilpod-media-item__seek-track,
   .pilpod-media-item__seek-thumb,
+  .pilpod-media-item__seek-hover,
   .pilpod-media-item__seek-fill {
     transition: none !important;
   }
