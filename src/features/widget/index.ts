@@ -8,7 +8,7 @@
  */
 export { useWidgetState, widgetApi, type WidgetController } from "./api";
 // Read-only subscription (no setters, no legacy migration) for windows that
-// only *display* widget state, such as God Mode.
+// only *display* widget state, such as Sky.
 export { watchWidgetState } from "./ipc";
 export {
   WIDGET_ACCENTS,

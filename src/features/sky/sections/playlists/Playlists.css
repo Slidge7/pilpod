@@ -1,0 +1,606 @@
+/* Playlists section — covers, a playlist's tracks, the live session. */
+
+/* ── Covers ─────────────────────────────────────────────────────────────── */
+
+.sky-cover {
+  display: grid;
+  flex: none;
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: var(--sky-radius-md);
+  overflow: hidden;
+  background: var(--pilpod-bg-thumb);
+}
+
+.sky-cover > .sky-thumb2 {
+  --sky-thumb-size: 100%;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.sky-cover--mosaic {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.sky-cover--blank {
+  place-items: center;
+  background:
+    radial-gradient(120% 90% at 20% 10%, hsl(var(--sky-tile-hue) 70% 64%), transparent 60%),
+    linear-gradient(150deg, hsl(var(--sky-tile-hue) 55% 46%), hsl(calc(var(--sky-tile-hue) + 40) 50% 30%));
+}
+
+.sky-cover__glyph {
+  font-size: 34px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+}
+
+.sky-cover--lg {
+  width: 168px;
+  border-radius: var(--sky-radius-lg);
+  box-shadow: 0 16px 36px -12px rgb(15 23 42 / 0.45);
+}
+
+.sky-cover--lg .sky-cover__glyph {
+  font-size: 56px;
+}
+
+/* ── Grid of playlists ──────────────────────────────────────────────────── */
+
+.sky-pl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 22px 18px;
+}
+
+.sky-pl {
+  position: relative;
+  min-width: 0;
+  padding: 10px;
+  border-radius: var(--sky-radius-lg);
+  transition: background 120ms ease;
+}
+
+.sky-pl:hover,
+.sky-pl:focus-within {
+  background: var(--pilpod-bg-card);
+}
+
+.sky-pl__open {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sky-pl__open:focus-visible {
+  outline: 2px solid var(--sky-accent);
+  outline-offset: -2px;
+}
+
+.sky-pl__cover {
+  position: relative;
+  pointer-events: none;
+}
+
+.sky-pl__play {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--sky-accent);
+  color: #fff;
+  box-shadow: 0 8px 18px -4px rgb(0 0 0 / 0.45);
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.sky-pl__play svg {
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+}
+
+.sky-pl:hover .sky-pl__play,
+.sky-pl:focus-within .sky-pl__play,
+.sky-pl--live .sky-pl__play {
+  opacity: 1;
+  transform: none;
+}
+
+.sky-pl__play:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.sky-pl__live {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
+.sky-pl__name {
+  margin: 10px 0 2px;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.sky-pl__meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+  pointer-events: none;
+}
+
+.sky-pl--live .sky-cover {
+  box-shadow: 0 0 0 2px var(--pilpod-playback-red);
+}
+
+/* ── Live session bar ───────────────────────────────────────────────────── */
+
+.sky-playerbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 22px;
+  padding: 10px 12px;
+  border: 1px solid var(--pilpod-playback-border);
+  border-radius: var(--sky-radius-lg);
+  background:
+    linear-gradient(90deg, var(--pilpod-playback-row), transparent 80%),
+    var(--pilpod-bg-card);
+}
+
+.sky-playerbar__art {
+  --sky-thumb-size: 48px;
+  border-radius: var(--sky-radius-sm);
+}
+
+.sky-playerbar__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.sky-playerbar__title {
+  margin: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sky-playerbar__status {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sky-playerbar__status.is-error {
+  color: var(--pilpod-error-text);
+}
+
+.sky-playerbar__controls {
+  display: flex;
+  gap: 4px;
+}
+
+/* ── Playlist detail ────────────────────────────────────────────────────── */
+
+.sky-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  color: var(--pilpod-text-muted);
+}
+
+.sky-crumbs__sep {
+  width: 12px;
+  height: 12px;
+}
+
+.sky-plhero {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  margin: 0 0 26px;
+}
+
+.sky-plhero__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.sky-plhero__name {
+  margin: 0;
+  font-family: var(--sky-font-display);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.sky-plhero__meta {
+  margin: 8px 0 18px;
+  color: var(--pilpod-text-muted);
+}
+
+.sky-plhero__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sky-play {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sky-play__split {
+  display: inline-flex;
+  border-radius: 999px;
+  background: var(--sky-accent);
+  box-shadow: 0 8px 20px -8px var(--sky-accent);
+}
+
+.sky-play__main,
+.sky-play__caret {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sky-play__main {
+  padding: 0 16px 0 14px;
+  border-radius: 999px 0 0 999px;
+}
+
+.sky-play__caret {
+  padding: 0 10px 0 8px;
+  border-left: 1px solid rgb(255 255 255 / 0.3);
+  border-radius: 0 999px 999px 0;
+}
+
+.sky-play__main:hover:not(:disabled),
+.sky-play__caret:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.sky-play__main:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sky-play__main svg {
+  width: 15px;
+  height: 15px;
+}
+
+.sky-play__caret svg {
+  width: 12px;
+  height: 12px;
+}
+
+.sky-play__main:focus-visible,
+.sky-play__caret:focus-visible {
+  outline: 2px solid var(--pilpod-text);
+  outline-offset: 2px;
+}
+
+.sky-play__where {
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+}
+
+.sky-play .sky-menu {
+  top: calc(100% + 8px);
+}
+
+/* Tracks. */
+.sky-tracks {
+  max-width: 1100px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sky-track {
+  display: grid;
+  grid-template-columns: 36px auto minmax(0, 1fr) minmax(0, 160px) 56px auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 4px 8px;
+  border-radius: var(--sky-radius-sm);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 52px;
+}
+
+.sky-track:hover {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.sky-track--current {
+  background: var(--pilpod-playback-row);
+}
+
+.sky-track__pos {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  color: var(--pilpod-text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.sky-track--current .sky-track__pos {
+  color: var(--pilpod-playback-red);
+}
+
+.sky-track__playbtn {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: var(--pilpod-bg-elevated);
+  color: var(--pilpod-text);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.sky-track__playbtn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sky-track:hover .sky-track__playbtn,
+.sky-track__playbtn:focus-visible {
+  opacity: 1;
+}
+
+.sky-track__art {
+  --sky-thumb-size: 40px;
+  border-radius: 6px;
+}
+
+.sky-track__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sky-track__title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sky-track--current .sky-track__title {
+  color: var(--pilpod-playback-red);
+}
+
+.sky-track__sub,
+.sky-track__host {
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sky-track__len {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--pilpod-text-muted);
+  text-align: right;
+}
+
+.sky-track__actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+}
+
+.sky-track:hover .sky-track__actions,
+.sky-track:focus-within .sky-track__actions {
+  opacity: 1;
+}
+
+@media (max-width: 1180px) {
+  .sky-track {
+    grid-template-columns: 32px auto minmax(0, 1fr) 52px auto;
+  }
+  .sky-track__host {
+    display: none;
+  }
+  .sky-cover--lg {
+    width: 128px;
+  }
+  .sky-plhero__name {
+    font-size: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-pl__play {
+    transition: none;
+  }
+}
+
+/* ── Reordering ─────────────────────────────────────────────────────────── */
+
+.sky-track--sortable {
+  grid-template-columns: 22px 36px auto minmax(0, 1fr) minmax(0, 160px) 56px auto;
+  transition: transform 160ms ease;
+}
+
+.sky-track__grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--pilpod-text-subtle);
+  cursor: grab;
+  touch-action: none;
+  opacity: 0;
+}
+
+.sky-track:hover .sky-track__grip,
+.sky-track__grip:focus-visible,
+.sky-track--dragging .sky-track__grip {
+  opacity: 1;
+}
+
+.sky-track__grip:focus-visible {
+  outline: 2px solid var(--sky-accent);
+}
+
+.sky-track--dragging {
+  background: var(--pilpod-bg-elevated);
+  box-shadow: 0 10px 28px -10px rgb(0 0 0 / 0.5), 0 0 0 1px var(--sky-accent-ring);
+  cursor: grabbing;
+}
+
+.sky-track--dragging .sky-track__grip {
+  cursor: grabbing;
+}
+
+.sky-plhero__rename {
+  margin-left: 6px;
+  vertical-align: middle;
+  opacity: 0;
+}
+
+.sky-plhero__name:hover .sky-plhero__rename,
+.sky-plhero__rename:focus-visible {
+  opacity: 1;
+}
+
+.sky-plhero__name .sky-rename {
+  font-size: 26px;
+  font-weight: 600;
+  height: 44px;
+}
+
+/* ── Add from open tabs ─────────────────────────────────────────────────── */
+
+.sky-addtabs {
+  padding: 8px;
+}
+
+.sky-addtabs__head {
+  margin: 0;
+  padding: 6px 8px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pilpod-text-subtle);
+}
+
+.sky-addtabs__empty {
+  margin: 0;
+  padding: 16px 8px 18px;
+  color: var(--pilpod-text-muted);
+}
+
+.sky-addtabs__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sky-addtabs__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--sky-radius-sm);
+}
+
+.sky-addtabs__row:hover {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.sky-addtabs__art {
+  --sky-thumb-size: 36px;
+}
+
+.sky-addtabs__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.sky-addtabs__title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sky-addtabs__meta {
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sky-addtabs__row .sky-btn {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+@media (max-width: 1180px) {
+  .sky-track--sortable {
+    grid-template-columns: 22px 32px auto minmax(0, 1fr) 52px auto;
+  }
+}

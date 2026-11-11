@@ -422,6 +422,18 @@ fn ingest_and_push(
         return;
     }
 
+    // Skip blocked YouTube videos in tabs the user is not looking at. Runs on
+    // every full/delta, so a tab that loses focus is caught on the very next
+    // snapshot. A focused tab is never touched (see `youtube_block::logic`).
+    crate::youtube_block::enforce(
+        &ctx.app,
+        session.browser_id.as_deref().unwrap_or_default(),
+        &session.browser_name,
+        &session.tabs,
+        &ctx.ws_connections,
+        &ctx.command_queue,
+    );
+
     // Deliver any commands enqueued while the socket was down as immediate `cmd`s.
     for cmd in result.commands {
         let Some(action) = action_from_str(&cmd.action) else { continue };

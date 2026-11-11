@@ -1,0 +1,104 @@
+/* Blocked panel (main window) — builds on the History panel's toolbar/search. */
+
+.pilpod-blk-count {
+  margin-left: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.pilpod-blk-hint {
+  margin: 0;
+  padding: 0 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-blk-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pilpod-blk-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--pilpod-glass-float-border);
+  background: var(--pilpod-glass-tint);
+}
+
+.pilpod-blk-row:hover {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.pilpod-blk-icon {
+  flex: none;
+  color: #ff8a80;
+}
+
+.pilpod-blk-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pilpod-blk-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--pilpod-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-blk-sub {
+  font-size: 11px;
+  color: var(--pilpod-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-blk-kind {
+  flex: none;
+  width: 62px;
+  padding: 2px 0;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--pilpod-text-secondary);
+  background: var(--pilpod-border-muted);
+}
+
+.pilpod-blk-kind--blocked,
+.pilpod-blk-kind--skipped {
+  color: #ff8a80;
+  background: rgba(255, 82, 82, 0.14);
+}
+
+.pilpod-blk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 28px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-blk-empty strong {
+  color: var(--pilpod-text);
+  font-size: 13px;
+}

@@ -468,6 +468,10 @@ pub fn emit_browsers_to_ui(
         &activation,
     );
 
+    // History records from exactly what the dashboard is shown — one feed,
+    // one definition of "open right now". Memory-only; never waits on disk.
+    crate::history::observe(app, &payload.browsers);
+
     if let Err(e) = app.emit(BROWSERS_UPDATE_EVENT, &payload) {
         eprintln!("[browser-detector] emit failed: {e}");
     }

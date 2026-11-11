@@ -1,0 +1,484 @@
+/* Playlists section — covers, a playlist's tracks, the live session. */
+
+/* ── Covers ─────────────────────────────────────────────────────────────── */
+
+.gm-cover {
+  display: grid;
+  flex: none;
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: var(--gm-radius-md);
+  overflow: hidden;
+  background: var(--pilpod-bg-thumb);
+}
+
+.gm-cover > .gm-thumb2 {
+  --gm-thumb-size: 100%;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.gm-cover--mosaic {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.gm-cover--blank {
+  place-items: center;
+  background:
+    radial-gradient(120% 90% at 20% 10%, hsl(var(--gm-tile-hue) 70% 64%), transparent 60%),
+    linear-gradient(150deg, hsl(var(--gm-tile-hue) 55% 46%), hsl(calc(var(--gm-tile-hue) + 40) 50% 30%));
+}
+
+.gm-cover__glyph {
+  font-size: 34px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+}
+
+.gm-cover--lg {
+  width: 168px;
+  border-radius: var(--gm-radius-lg);
+  box-shadow: 0 16px 36px -12px rgb(15 23 42 / 0.45);
+}
+
+.gm-cover--lg .gm-cover__glyph {
+  font-size: 56px;
+}
+
+/* ── Grid of playlists ──────────────────────────────────────────────────── */
+
+.gm-pl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 22px 18px;
+}
+
+.gm-pl {
+  position: relative;
+  min-width: 0;
+  padding: 10px;
+  border-radius: var(--gm-radius-lg);
+  transition: background 120ms ease;
+}
+
+.gm-pl:hover,
+.gm-pl:focus-within {
+  background: var(--pilpod-bg-card);
+}
+
+.gm-pl__open {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.gm-pl__open:focus-visible {
+  outline: 2px solid var(--gm-accent);
+  outline-offset: -2px;
+}
+
+.gm-pl__cover {
+  position: relative;
+  pointer-events: none;
+}
+
+.gm-pl__play {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--gm-accent);
+  color: #fff;
+  box-shadow: 0 8px 18px -4px rgb(0 0 0 / 0.45);
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.gm-pl__play svg {
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+}
+
+.gm-pl:hover .gm-pl__play,
+.gm-pl:focus-within .gm-pl__play,
+.gm-pl--live .gm-pl__play {
+  opacity: 1;
+  transform: none;
+}
+
+.gm-pl__play:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.gm-pl__live {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
+.gm-pl__name {
+  margin: 10px 0 2px;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.gm-pl__meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+  pointer-events: none;
+}
+
+.gm-pl--live .gm-cover {
+  box-shadow: 0 0 0 2px var(--pilpod-playback-red);
+}
+
+/* ── Live session bar ───────────────────────────────────────────────────── */
+
+.gm-playerbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 22px;
+  padding: 10px 12px;
+  border: 1px solid var(--pilpod-playback-border);
+  border-radius: var(--gm-radius-lg);
+  background:
+    linear-gradient(90deg, var(--pilpod-playback-row), transparent 80%),
+    var(--pilpod-bg-card);
+}
+
+.gm-playerbar__art {
+  --gm-thumb-size: 48px;
+  border-radius: var(--gm-radius-sm);
+}
+
+.gm-playerbar__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.gm-playerbar__title {
+  margin: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-playerbar__status {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-playerbar__status.is-error {
+  color: var(--pilpod-error-text);
+}
+
+.gm-playerbar__controls {
+  display: flex;
+  gap: 4px;
+}
+
+/* ── Playlist detail ────────────────────────────────────────────────────── */
+
+.gm-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  color: var(--pilpod-text-muted);
+}
+
+.gm-crumbs__sep {
+  width: 12px;
+  height: 12px;
+}
+
+.gm-plhero {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  margin: 0 0 26px;
+}
+
+.gm-plhero__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.gm-plhero__name {
+  margin: 0;
+  font-family: var(--gm-font-display);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.gm-plhero__meta {
+  margin: 8px 0 18px;
+  color: var(--pilpod-text-muted);
+}
+
+.gm-plhero__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.gm-play {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gm-play__split {
+  display: inline-flex;
+  border-radius: 999px;
+  background: var(--gm-accent);
+  box-shadow: 0 8px 20px -8px var(--gm-accent);
+}
+
+.gm-play__main,
+.gm-play__caret {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gm-play__main {
+  padding: 0 16px 0 14px;
+  border-radius: 999px 0 0 999px;
+}
+
+.gm-play__caret {
+  padding: 0 10px 0 8px;
+  border-left: 1px solid rgb(255 255 255 / 0.3);
+  border-radius: 0 999px 999px 0;
+}
+
+.gm-play__main:hover:not(:disabled),
+.gm-play__caret:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.gm-play__main:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.gm-play__main svg {
+  width: 15px;
+  height: 15px;
+}
+
+.gm-play__caret svg {
+  width: 12px;
+  height: 12px;
+}
+
+.gm-play__main:focus-visible,
+.gm-play__caret:focus-visible {
+  outline: 2px solid var(--pilpod-text);
+  outline-offset: 2px;
+}
+
+.gm-play__where {
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+}
+
+.gm-play .gm-menu {
+  top: calc(100% + 8px);
+}
+
+/* Tracks. */
+.gm-tracks {
+  max-width: 1100px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gm-track {
+  display: grid;
+  grid-template-columns: 36px auto minmax(0, 1fr) minmax(0, 160px) 56px auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 4px 8px;
+  border-radius: var(--gm-radius-sm);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 52px;
+}
+
+.gm-track:hover {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.gm-track--current {
+  background: var(--pilpod-playback-row);
+}
+
+.gm-track__pos {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  color: var(--pilpod-text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.gm-track--current .gm-track__pos {
+  color: var(--pilpod-playback-red);
+}
+
+.gm-track__playbtn {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: var(--pilpod-bg-elevated);
+  color: var(--pilpod-text);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.gm-track__playbtn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.gm-track:hover .gm-track__playbtn,
+.gm-track__playbtn:focus-visible {
+  opacity: 1;
+}
+
+.gm-track__art {
+  --gm-thumb-size: 40px;
+  border-radius: 6px;
+}
+
+.gm-track__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gm-track__title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-track--current .gm-track__title {
+  color: var(--pilpod-playback-red);
+}
+
+.gm-track__sub,
+.gm-track__host {
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-track__len {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--pilpod-text-muted);
+  text-align: right;
+}
+
+.gm-track__actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+}
+
+.gm-track:hover .gm-track__actions,
+.gm-track:focus-within .gm-track__actions {
+  opacity: 1;
+}
+
+/* New playlist form in the sidebar. */
+.gm-newpl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 0 4px;
+}
+
+.gm-newpl__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 1180px) {
+  .gm-track {
+    grid-template-columns: 32px auto minmax(0, 1fr) 52px auto;
+  }
+  .gm-track__host {
+    display: none;
+  }
+  .gm-cover--lg {
+    width: 128px;
+  }
+  .gm-plhero__name {
+    font-size: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gm-pl__play {
+    transition: none;
+  }
+}

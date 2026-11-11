@@ -41,6 +41,11 @@ use crate::vault::open as vault_open_cmds;
 use crate::platform::stub_commands as vault_open_cmds;
 
 #[cfg(windows)]
+use crate::history::open as history_open_cmds;
+#[cfg(not(windows))]
+use crate::platform::stub_commands as history_open_cmds;
+
+#[cfg(windows)]
 use crate::playlist_player::commands as player_cmds;
 #[cfg(not(windows))]
 use crate::platform::stub_commands as player_cmds;
@@ -81,8 +86,8 @@ macro_rules! pilpod_invoke_handler {
             crate::widget::commands::widget_open_main,
             crate::widget::commands::widget_hide_main,
             crate::widget::commands::widget_relayout,
-            // God Mode only opens its window; everything it shows is broadcast.
-            crate::god_mode::open_god_mode_window,
+            // PilPod Sky only opens its window; everything it shows is broadcast.
+            crate::sky::open_sky_window,
             setup_cmds::extension_setup_overview,
             setup_cmds::extension_setup_gate_state,
             setup_cmds::extension_setup_open_listing,
@@ -116,6 +121,19 @@ macro_rules! pilpod_invoke_handler {
             crate::vault::commands::vault_import,
             // Smart open reaches into the browser subsystem — Windows-only.
             vault_open_cmds::vault_open_entry,
+            // History is platform-neutral; only "open" reaches the browsers.
+            crate::history::commands::history_get_settings,
+            crate::history::commands::history_set_settings,
+            crate::history::commands::history_query_pages,
+            crate::history::commands::history_query_media,
+            crate::history::commands::history_delete,
+            crate::history::commands::history_clear,
+            history_open_cmds::history_open,
+            // YouTube blocker is platform-neutral; enforcement rides the bridge.
+            crate::youtube_block::youtube_block_get_state,
+            crate::youtube_block::youtube_block_add,
+            crate::youtube_block::youtube_block_remove,
+            crate::youtube_block::youtube_block_clear_history,
             player_cmds::player_get_state,
             player_cmds::player_start,
             player_cmds::player_stop,

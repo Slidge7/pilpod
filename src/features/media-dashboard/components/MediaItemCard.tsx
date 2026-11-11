@@ -1,3 +1,4 @@
+import { BlockVideoButton } from "../../youtube-block";
 import "./MediaItemCard.css";
 import {
   useState,
@@ -16,13 +17,13 @@ import {
   faviconFromUrl,
 } from "../lib/browserMedia";
 import {
+  IconSeekBack10,
+  IconSeekForward10,
   IconOpenInTab,
   IconPause,
   IconPip,
   IconPlay,
   IconReload,
-  IconSeekBack10,
-  IconSeekForward10,
   IconSkipBack,
   IconSkipForward,
   IconVolume,
@@ -46,6 +47,9 @@ const SKIP_STEP_SECS = 10;
  * Normally the extension's next position report settles it far sooner.
  */
 const SKIP_PREVIEW_TTL_MS = 1500;
+/** After a skip, how long the strip shows the new time instead of "10". */
+const SKIP_PULSE_MS = 900;
+
 /** A reported time this close to the skip target means the seek has landed. */
 const SKIP_SETTLE_SECS = 1.5;
 
@@ -156,6 +160,8 @@ export function MediaItemCard({
   const isTransportDisabled = isNavigating || isTabLoading || reloadSpin || Boolean(busy);
 
   const seekWrapRef = useRef<HTMLDivElement>(null);
+  const [skipPulse, setSkipPulse] = useState<"back" | "fwd" | null>(null);
+  const skipPulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const duration = tab.media?.duration ?? 0;
   const currentTime = tab.media?.currentTime ?? 0;
@@ -283,6 +289,12 @@ export function MediaItemCard({
       if (isTransportDisabled || !onSeek || duration <= 0) return;
       const base = skipPreview ?? currentTime;
       const target = Math.max(0, Math.min(duration, base + delta));
+      setSkipPulse(delta < 0 ? "back" : "fwd");
+      if (skipPulseTimerRef.current) clearTimeout(skipPulseTimerRef.current);
+      skipPulseTimerRef.current = setTimeout(() => {
+        skipPulseTimerRef.current = null;
+        setSkipPulse(null);
+      }, SKIP_PULSE_MS);
       setSkipPreview(target);
       if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
       skipTimerRef.current = setTimeout(() => {
@@ -407,16 +419,45 @@ export function MediaItemCard({
             </button>
           </div>
 
-          {/* Current time + duration, split across the thumbnail bottom */}
+          {/* Current time + duration, split across the thumbnail bottom. When the
+              media can seek, hovering the strip turns each half into a ±10 s
+              button (the time comes back for a moment after each skip). */}
           {durationLabel ? (
-            <div className="pilpod-media-item__thumb-time">
-              <span className="pilpod-media-item__thumb-time-current">
-                {currentTimeLabel ?? "0:00"}
-              </span>
-              <span className="pilpod-media-item__thumb-time-duration">
-                {durationLabel}
-              </span>
-            </div>
+            showSkip ? (
+              <div className={`pilpod-media-item__thumb-time pilpod-media-item__thumb-time--skip${skipPulse ? " is-peek" : ""}`}>
+                <button
+                  type="button"
+                  className="pilpod-media-item__thumb-time-current pilpod-media-item__thumb-skip"
+                  disabled={isTransportDisabled}
+                  onClick={(e) => handleSkip(e, -SKIP_STEP_SECS)}
+                  title={`Back ${SKIP_STEP_SECS} seconds`}
+                  aria-label={`Back ${SKIP_STEP_SECS} seconds (now ${currentTimeLabel ?? "0:00"})`}
+                >
+                  <span className="pilpod-media-item__thumb-skip-time">{currentTimeLabel ?? "0:00"}</span>
+                  <span className="pilpod-media-item__thumb-skip-label"><IconSeekBack10 /></span>
+                </button>
+                <button
+                  type="button"
+                  className="pilpod-media-item__thumb-time-duration pilpod-media-item__thumb-skip"
+                  disabled={isTransportDisabled}
+                  onClick={(e) => handleSkip(e, SKIP_STEP_SECS)}
+                  title={`Forward ${SKIP_STEP_SECS} seconds`}
+                  aria-label={`Forward ${SKIP_STEP_SECS} seconds (length ${durationLabel})`}
+                >
+                  <span className="pilpod-media-item__thumb-skip-time">{durationLabel}</span>
+                  <span className="pilpod-media-item__thumb-skip-label"><IconSeekForward10 /></span>
+                </button>
+              </div>
+            ) : (
+              <div className="pilpod-media-item__thumb-time">
+                <span className="pilpod-media-item__thumb-time-current">
+                  {currentTimeLabel ?? "0:00"}
+                </span>
+                <span className="pilpod-media-item__thumb-time-duration">
+                  {durationLabel}
+                </span>
+              </div>
+            )
           ) : null}
         </div>
 
@@ -541,6 +582,12 @@ export function MediaItemCard({
                   <IconPip />
                 </button>
               ) : null}
+              <BlockVideoButton
+                url={tab.url}
+                title={tab.media?.title?.trim() || tab.title}
+                browserName={browserDisplayName}
+                className="pilpod-media-item__icon-btn pilpod-media-item__transport-btn pilpod-media-item__icon-btn--danger"
+              />
               {saveButton}
             </div>
 
@@ -564,50 +611,12 @@ export function MediaItemCard({
         {/* ── FULL-WIDTH SEEKBAR (spans thumbnail + content) ── */}
         <div
           ref={seekWrapRef}
-          className={`pilpod-media-item__seek-wrap${seekActive ? " pilpod-media-item__seek-wrap--active" : ""}${isSeeking ? " pilpod-media-item__seek-wrap--dragging" : ""}`}
+          className={`pilpod-media-item__seek-wrap${seekActive ? " pilpod-media-item__seek-wrap--active" : ""}${showSkip ? " pilpod-media-item__seek-wrap--skip" : ""}${isSeeking ? " pilpod-media-item__seek-wrap--dragging" : ""}`}
           onPointerDown={seekActive ? handleSeekPointerDown : undefined}
           onPointerMove={seekActive ? handleSeekPointerMove : undefined}
           onPointerUp={seekActive ? handleSeekPointerUp : undefined}
           onPointerCancel={seekActive ? handleSeekPointerUp : undefined}
         >
-          {/* ±10 s pill — centered above the bar, shown while the bar is hovered
-              or dragged. It sits INSIDE the seek zone so hovering it keeps the
-              zone hovered; a press on it must not start a scrub. */}
-          {showSkip ? (
-            <div
-              className="pilpod-media-item__seek-hover"
-              onPointerDown={(e) => e.stopPropagation()}
-              onPointerUp={(e) => e.stopPropagation()}
-            >
-              <button
-                type="button"
-                className="pilpod-media-item__seek-hover-btn"
-                disabled={isTransportDisabled}
-                onClick={(e) => handleSkip(e, -SKIP_STEP_SECS)}
-                title={`Back ${SKIP_STEP_SECS} seconds`}
-                aria-label={`Back ${SKIP_STEP_SECS} seconds`}
-              >
-                <IconSeekBack10 />
-              </button>
-              <span className="pilpod-media-item__seek-hover-time">
-                <span className="pilpod-media-item__seek-hover-time-cur">
-                  {currentTimeLabel ?? "0:00"}
-                </span>
-                <span className="pilpod-media-item__seek-hover-time-sep">/</span>
-                <span>{durationLabel}</span>
-              </span>
-              <button
-                type="button"
-                className="pilpod-media-item__seek-hover-btn"
-                disabled={isTransportDisabled}
-                onClick={(e) => handleSkip(e, SKIP_STEP_SECS)}
-                title={`Forward ${SKIP_STEP_SECS} seconds`}
-                aria-label={`Forward ${SKIP_STEP_SECS} seconds`}
-              >
-                <IconSeekForward10 />
-              </button>
-            </div>
-          ) : null}
           <div className="pilpod-media-item__seek-track">
             <div className={progressClass} style={{ width: `${displayProgress}%` }} />
           </div>

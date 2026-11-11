@@ -172,6 +172,104 @@
   background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.85) 100%);
 }
 
+/* The bar's 12px hit zone would sit on top of the time strip (they overlap at
+   the thumbnail's bottom edge) and swallow its clicks. When the strip is a
+   control, only the track itself — plus a 9px reach above it, right of the
+   thumbnail — takes pointer events; the strip above it stays clickable. */
+.pilpod-media-item__seek-wrap--skip.pilpod-media-item__seek-wrap--active {
+  pointer-events: none;
+}
+
+.pilpod-media-item__seek-wrap--skip .pilpod-media-item__seek-track {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.pilpod-media-item__seek-wrap--skip .pilpod-media-item__seek-track::before {
+  content: "";
+  position: absolute;
+  left: 72px;
+  right: 0;
+  bottom: 100%;
+  height: 9px;
+}
+
+/* ── TIME STRIP AS ±10 s CONTROL ───────────────────────────
+   Resting it looks exactly like the plain strip. It is "armed" while the
+   strip itself is hovered / focused or the seekbar is hovered / dragged (hovering the thumbnail only shows go-to-tab): it grows
+   to 20px and each half becomes a back-10 / forward-10 button (the half under
+   the pointer lights up). The go-to-tab circle is nudged up so the two never
+   touch. After a click the real time returns for a moment (.is-peek). */
+
+.pilpod-media-item__thumb-time--skip {
+  pointer-events: auto;
+  z-index: 3;
+}
+
+.pilpod-media-item__thumb-skip {
+  appearance: none;
+  border: none;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s, color 0.15s, height 0.16s ease, padding 0.16s ease;
+}
+
+.pilpod-media-item__thumb-skip:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.pilpod-media-item__thumb-skip-label {
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.pilpod-media-item__thumb-skip-label svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.pilpod-media-item__thumb-time--skip:is(:hover, :focus-within):not(.is-peek) .pilpod-media-item__thumb-skip-time,
+.pilpod-media-item:has(.pilpod-media-item__seek-wrap--skip:is(:hover, .pilpod-media-item__seek-wrap--dragging)) .pilpod-media-item__thumb-time--skip:not(.is-peek) .pilpod-media-item__thumb-skip-time {
+  display: none;
+}
+
+.pilpod-media-item__thumb-time--skip:is(:hover, :focus-within):not(.is-peek) .pilpod-media-item__thumb-skip-label,
+.pilpod-media-item:has(.pilpod-media-item__seek-wrap--skip:is(:hover, .pilpod-media-item__seek-wrap--dragging)) .pilpod-media-item__thumb-time--skip:not(.is-peek) .pilpod-media-item__thumb-skip-label {
+  display: inline-flex;
+}
+
+.pilpod-media-item__thumb-time--skip:is(:hover, :focus-within) .pilpod-media-item__thumb-skip,
+.pilpod-media-item:has(.pilpod-media-item__seek-wrap--skip:is(:hover, .pilpod-media-item__seek-wrap--dragging)) .pilpod-media-item__thumb-time--skip .pilpod-media-item__thumb-skip {
+  height: 22px;
+  padding: 0 0 4px;
+  color: #fff;
+  background: rgba(10, 6, 30, 0.88);
+}
+
+.pilpod-media-item__thumb-time--skip:is(:hover, :focus-within) .pilpod-media-item__thumb-skip:hover:not(:disabled),
+.pilpod-media-item:has(.pilpod-media-item__seek-wrap--skip:is(:hover, .pilpod-media-item__seek-wrap--dragging)) .pilpod-media-item__thumb-time--skip .pilpod-media-item__thumb-skip:hover:not(:disabled),
+.pilpod-media-item__thumb-time--skip .pilpod-media-item__thumb-skip:focus-visible {
+  background: var(--pilpod-glass-accent);
+  color: #fff;
+}
+
+.pilpod-media-item__thumb-time--skip .pilpod-media-item__thumb-skip:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.pilpod-media-item__thumb-time--skip .pilpod-media-item__thumb-skip:focus-visible {
+  outline: 1.5px solid #fff;
+  outline-offset: -2px;
+}
+
+/* Room for the armed strip under the go-to-tab circle (30px at the centre of
+   the 72px thumbnail would reach 51px; the strip starts at 52px). */
+
 /* ── CONTENT (right column, two rows) ────────────────────── */
 
 .pilpod-media-item__content {
@@ -634,103 +732,6 @@
   transition: none;
 }
 
-/* ── SEEK HOVER PILL: [-10]  0:00 / 0:00  [+10] ──────────────
-   Centered just above the bar, revealed while the bar is hovered or dragged.
-   A child of __seek-wrap, so hovering the pill keeps the zone hovered. */
-
-.pilpod-media-item__seek-hover {
-  position: absolute;
-  left: 50%;
-  bottom: 100%;
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  padding: 2px;
-  border-radius: 999px;
-  background: var(--pilpod-glass-menu-bg);
-  border: 1px solid var(--pilpod-glass-menu-border);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(var(--pilpod-glass-blur-float));
-  -webkit-backdrop-filter: blur(var(--pilpod-glass-blur-float));
-  cursor: default;
-  white-space: nowrap;
-  /* Hidden state. `visibility` (not pointer-events) carries the grace delay:
-     the pill stays visible AND clickable for 250ms after the pointer leaves
-     the bar — enough to travel up to it from anywhere along the bar. */
-  visibility: hidden;
-  opacity: 0;
-  transform: translate(-50%, 4px) scale(0.96);
-  transition:
-    opacity 0.14s ease 0.25s,
-    transform 0.16s ease 0.25s,
-    visibility 0s linear 0.39s;
-}
-
-.pilpod-media-item__seek-wrap--active:hover .pilpod-media-item__seek-hover,
-.pilpod-media-item__seek-wrap--dragging .pilpod-media-item__seek-hover {
-  visibility: visible;
-  opacity: 1;
-  transform: translate(-50%, 0) scale(1);
-  transition:
-    opacity 0.14s ease 0.06s,
-    transform 0.16s ease 0.06s,
-    visibility 0s linear 0.06s;
-}
-
-.pilpod-media-item__seek-hover-btn {
-  appearance: none;
-  border: none;
-  background: transparent;
-  padding: 0;
-  width: 26px;
-  height: 22px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--pilpod-glass-menu-act-color);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform 0.14s;
-}
-
-.pilpod-media-item__seek-hover-btn svg {
-  width: 15px;
-  height: 15px;
-}
-
-.pilpod-media-item__seek-hover-btn:hover:not(:disabled) {
-  background: var(--pilpod-glass-menu-act-bg);
-  color: var(--pilpod-glass-text);
-}
-
-.pilpod-media-item__seek-hover-btn:active:not(:disabled) {
-  transform: scale(0.9);
-}
-
-.pilpod-media-item__seek-hover-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.pilpod-media-item__seek-hover-time {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 3px;
-  padding: 0 4px;
-  font-size: 9.5px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--pilpod-glass-text-dim);
-}
-
-.pilpod-media-item__seek-hover-time-cur {
-  color: var(--pilpod-glass-text);
-}
-
-.pilpod-media-item__seek-hover-time-sep {
-  opacity: 0.5;
-}
-
 /* ── INSET VARIANT ───────────────────────────────────────── */
 
 .pilpod-media-item--inset {
@@ -780,7 +781,6 @@ html.dark .pilpod-media-item--inset.pilpod-media-item--playing {
   .pilpod-media-item__play-btn,
   .pilpod-media-item__seek-track,
   .pilpod-media-item__seek-thumb,
-  .pilpod-media-item__seek-hover,
   .pilpod-media-item__seek-fill {
     transition: none !important;
   }

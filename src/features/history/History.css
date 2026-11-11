@@ -1,0 +1,467 @@
+/* History panel — shared --pilpod design tokens, fits the 350px dashboard.
+   Row surfaces come from `.pilpod-vault-row` (the shared glass row, see
+   shared/ui/glass-*.css); everything below is History's own layout. */
+
+.pilpod-history-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 10px 10px;
+  min-height: 0;
+}
+
+/* ── Toolbar: Pages | Media + settings ───────────────────────────────── */
+.pilpod-history-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pilpod-history-tabs {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--pilpod-glass-float-border);
+  background: var(--pilpod-glass-tint, var(--pilpod-bg-tab-track));
+  backdrop-filter: blur(var(--pilpod-glass-blur-float, 4px));
+  -webkit-backdrop-filter: blur(var(--pilpod-glass-blur-float, 4px));
+}
+
+.pilpod-history-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+}
+
+.pilpod-history-tab--active {
+  background: var(--pilpod-bg-tab-active);
+  color: var(--pilpod-text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.pilpod-history-iconbtn {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+}
+
+.pilpod-history-iconbtn:hover {
+  background: var(--pilpod-bg-row-hover);
+  color: var(--pilpod-text);
+}
+
+.pilpod-history-iconbtn--active {
+  border-color: var(--pilpod-accent-blue-ring);
+  color: var(--pilpod-accent-blue);
+}
+
+.pilpod-history-iconbtn--danger:hover {
+  color: var(--pilpod-red-close-hover-text);
+  background: var(--pilpod-red-close-hover-bg);
+}
+
+.pilpod-history-textbtn {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pilpod-history-textbtn:hover:not(:disabled) {
+  background: var(--pilpod-bg-row-hover);
+  color: var(--pilpod-text);
+}
+
+.pilpod-history-textbtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pilpod-history-textbtn--danger {
+  color: var(--pilpod-accent-red, #dc2626);
+}
+
+/* A ConfirmButton waiting for its second click. */
+.pilpod-history-confirm--armed,
+.pilpod-history-confirm--armed:hover:not(:disabled) {
+  color: var(--pilpod-error-text);
+  background: var(--pilpod-error-bg);
+  border-color: var(--pilpod-error-border);
+}
+
+/* ── Settings card + paused banner ───────────────────────────────────── */
+.pilpod-history-settings,
+.pilpod-history-paused {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--pilpod-glass-float-border);
+  background: var(--pilpod-glass-tint, var(--pilpod-bg-elevated));
+  backdrop-filter: blur(var(--pilpod-glass-blur-float, 4px));
+  -webkit-backdrop-filter: blur(var(--pilpod-glass-blur-float, 4px));
+  font-size: 12px;
+  color: var(--pilpod-text-secondary);
+}
+
+.pilpod-history-paused {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  border-color: var(--pilpod-accent-blue-ring);
+}
+
+.pilpod-history-settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pilpod-history-settings__hint {
+  font-size: 11px;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-history-select {
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 7px;
+  border: 1px solid var(--pilpod-border-muted);
+  background: var(--pilpod-bg-elevated);
+  color: var(--pilpod-text);
+}
+
+.pilpod-history-switch {
+  appearance: none;
+  position: relative;
+  width: 30px;
+  height: 18px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--pilpod-border-strong);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.pilpod-history-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: transform 120ms ease;
+}
+
+.pilpod-history-switch:checked {
+  background: var(--pilpod-accent-blue);
+}
+
+.pilpod-history-switch:checked::after {
+  transform: translateX(12px);
+}
+
+.pilpod-history-switch:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--pilpod-accent-blue-ring);
+}
+
+/* ── Search ───────────────────────────────────────────────────────────── */
+.pilpod-history-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--pilpod-glass-float-border);
+  background: var(--pilpod-glass-tint);
+  backdrop-filter: blur(var(--pilpod-glass-blur-float, 4px));
+  -webkit-backdrop-filter: blur(var(--pilpod-glass-blur-float, 4px));
+}
+
+.pilpod-history-search:focus-within {
+  border-color: var(--pilpod-accent-blue-ring);
+}
+
+.pilpod-history-search__icon {
+  flex: 0 0 auto;
+  color: var(--pilpod-text-subtle);
+}
+
+.pilpod-history-search__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--pilpod-text);
+  font-size: 13px;
+}
+
+/* ── Day groups ───────────────────────────────────────────────────────── */
+.pilpod-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pilpod-history-day {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pilpod-history-day__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.pilpod-history-day__label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pilpod-text-muted);
+}
+
+/* Day actions stay out of the way until the day is hovered or focused. */
+.pilpod-history-day__head .pilpod-history-textbtn:not(.pilpod-history-confirm--armed) {
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.pilpod-history-day:hover .pilpod-history-day__head .pilpod-history-textbtn,
+.pilpod-history-day__head .pilpod-history-textbtn:focus-visible {
+  opacity: 1;
+}
+
+.pilpod-history-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Rows ─────────────────────────────────────────────────────────────── */
+.pilpod-history-row {
+  border-radius: 12px;
+  padding: 6px 8px;
+  overflow: hidden;
+}
+
+.pilpod-history-row__main {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pilpod-history-row__thumb {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--pilpod-bg-thumb);
+  color: var(--pilpod-text-secondary);
+}
+
+.pilpod-history-row__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Favicons are icons, not artwork: keep them small and uncropped. */
+.pilpod-history-row__thumb--icon img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.pilpod-history-row__letter {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-history-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pilpod-history-row__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pilpod-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-history-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--pilpod-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* The host gives way first; time and browser always stay readable. */
+.pilpod-history-row__host {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilpod-history-row__when {
+  flex: 0 0 auto;
+}
+
+.pilpod-history-row__browser {
+  flex: 0 1 auto;
+  min-width: 14px;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+}
+
+.pilpod-history-row__browser img {
+  width: 12px;
+  height: 12px;
+  vertical-align: -2px;
+}
+
+/* Floats over the row on hover/focus instead of reserving width in it —
+   at 350px every pixel of title matters. */
+.pilpod-history-row__actions {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  border: 1px solid var(--pilpod-border-muted);
+  background: var(--pilpod-bg-elevated);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 120ms ease;
+}
+
+.pilpod-history-row:hover .pilpod-history-row__actions,
+.pilpod-history-row:focus-within .pilpod-history-row__actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Still open in its tab. */
+.pilpod-history-live {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pilpod-accent-blue);
+  box-shadow: 0 0 0 3px var(--pilpod-accent-blue-muted);
+}
+
+/* ── States ───────────────────────────────────────────────────────────── */
+.pilpod-history-status {
+  margin: 0;
+  padding: 16px 4px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-history-status--error {
+  color: var(--pilpod-error-text);
+}
+
+.pilpod-history-more {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
+.pilpod-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 16px;
+  text-align: center;
+}
+
+.pilpod-history-empty__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pilpod-text-secondary);
+}
+
+.pilpod-history-empty__hint {
+  margin: 0;
+  max-width: 240px;
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+}

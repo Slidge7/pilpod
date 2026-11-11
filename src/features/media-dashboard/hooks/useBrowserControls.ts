@@ -191,6 +191,17 @@ export function useBrowserControls(
     [control],
   );
 
+  /** Skip to the next / previous track on sites that support it (`canNext`/`canPrev`). */
+  const nextTrack = useCallback(
+    (tab: BrowserTab, browserId: string) => void control(browserId, tab.tabId, "next"),
+    [control],
+  );
+
+  const previousTrack = useCallback(
+    (tab: BrowserTab, browserId: string) => void control(browserId, tab.tabId, "previous"),
+    [control],
+  );
+
   /** Mute or unmute one tab (the extension reads `value` 1 / 0). */
   const setTabMuted = useCallback(
     (tab: BrowserTab, browserId: string, muted: boolean) =>
@@ -295,6 +306,8 @@ export function useBrowserControls(
     setTabVolume,
     resetTabVolume,
     pip,
+    nextTrack,
+    previousTrack,
     setTabMuted,
     pauseAll,
     muteAll,

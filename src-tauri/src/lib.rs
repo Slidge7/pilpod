@@ -3,17 +3,24 @@ mod app;
 // settings, extension activation).
 mod atomic_file;
 mod vault;
+// PilPod's own history of pages and media, recorded from the browser feed the
+// dashboard already receives. Platform-neutral (SQLite + a pure recorder); its
+// one browser-facing piece, `history::open`, is Windows-gated inside.
+mod history;
+// Block a YouTube video by link and skip it whenever it plays in a tab the user
+// is not looking at. Platform-neutral store; enforcement is bridge-driven (Windows).
+mod youtube_block;
 // Every window that is not `main` resolves its own document. One module owns
 // that decision so the dev-server-vs-bundled-asset branch cannot be written
 // wrong twice — see the module docs for the release-only blank-window bug it
 // was extracted to fix.
 mod frontend;
-// Full-page windows opened from the dashboard (dev lab, God Mode): one builder,
+// Full-page windows opened from the dashboard (dev lab, PilPod Sky): one builder,
 // so every such window gets the same WebView2 args, corners and focus rule.
 mod aux_window;
-// The all-seeing overview window. Shipped (not debug-only): it reads broadcast
+// PilPod Sky, the window over everything. Shipped (not debug-only): it reads broadcast
 // state and acts through the dashboard's own commands, so it builds everywhere.
-mod god_mode;
+mod sky;
 // Platform-neutral: pure file I/O + a state machine. The Windows-only pieces
 // (browser launching, registry paths) live behind cfg gates inside the module.
 //
@@ -37,6 +44,9 @@ mod dev_lab;
 mod browser_bridge;
 #[cfg(windows)]
 mod browser_commands;
+// Focus-a-live-tab-or-launch, shared by the vault and history "open" actions.
+#[cfg(windows)]
+mod browser_open;
 #[cfg(windows)]
 mod browser_catalog;
 #[cfg(windows)]

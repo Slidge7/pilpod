@@ -1,10 +1,9 @@
-import { useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { BrowserTab } from "../../../types/media";
 import type { VaultApi } from "../hooks/useVault";
 import { useAnchoredMenu } from "../hooks/useAnchoredMenu";
-import { captureBookmark, captureMedia, type CaptureBrowser } from "../lib/capture";
-import { findCollectionByName } from "../lib/vaultIndex";
+import type { CaptureBrowser } from "../lib/capture";
+import { useSaveTargets } from "../hooks/useSaveTargets";
 import {
   SaveTargetMenu,
   SAVE_MENU_MAX_HEIGHT,
@@ -16,10 +15,11 @@ import { IconBookmark, IconBookmarkFilled } from "../../../shared/ui/icons";
  * The bookmark button on a tab row: a save-state toggle *and* the trigger for
  * the "where should this go?" menu.
  *
- * This component owns every write the menu can trigger, so `SaveTargetMenu`
- * stays presentational and `MediaDashboard` stays a wiring layer. All state is
- * read through `VaultApi`'s O(1) index callbacks — nothing here scans the vault,
- * which matters because one of these renders per visible tab row.
+ * The writes and their rules live in `useSaveTargets` (shared with PilPod
+ * Sky's save menu), so `SaveTargetMenu` stays presentational and
+ * `MediaDashboard` stays a wiring layer. All state is read through
+ * `VaultApi`'s O(1) index callbacks — nothing here scans the vault, which
+ * matters because one of these renders per visible tab row.
  *
  * Interaction rules:
  *   * A row is a checkbox, so the menu stays open after a pick (filing one tab
@@ -44,62 +44,13 @@ export function SaveTabMenuButton({
   isMediaTab: boolean;
   busy?: boolean;
 }) {
-  const url = tab.url ?? "";
   const { anchorRef, menuRef, open, toggle, close, pos } = useAnchoredMenu({
     width: SAVE_MENU_WIDTH,
     height: SAVE_MENU_MAX_HEIGHT,
   });
 
-  const bookmark = api.bookmarkFor(url);
-  const saved = bookmark != null;
-
-  // ── Bookmarks ────────────────────────────────────────────────────────
-  const toggleDefault = useCallback(() => {
-    if (bookmark) void api.removeBookmark(bookmark.id);
-    else void api.saveToCollection(captureBookmark(tab, browser), null);
-  }, [api, bookmark, tab, browser]);
-
-  const pickCollection = useCallback(
-    (collectionId: string) => {
-      // Unsaved ⇒ one call creates the bookmark already filed. Saved ⇒ toggle.
-      if (bookmark) void api.toggleBookmarkCollection(bookmark.id, collectionId);
-      else void api.saveToCollection(captureBookmark(tab, browser), collectionId);
-    },
-    [api, bookmark, tab, browser],
-  );
-
-  const createCollection = useCallback(
-    async (name: string) => {
-      // The backend rejects duplicate names; reuse rather than show an error.
-      const existing = findCollectionByName(api.vault.collections, name);
-      const id = existing?.id ?? (await api.createCollection(name));
-      if (!id) return;
-      await api.saveToCollection(captureBookmark(tab, browser), id);
-    },
-    [api, tab, browser],
-  );
-
-  // ── Playlists (media tabs only) ──────────────────────────────────────
-  const pickPlaylist = useCallback(
-    (playlistId: string) => {
-      const itemId = api.mediaIdFor(url);
-      if (itemId && api.playlistIdsFor(url).has(playlistId)) {
-        void api.removeFromPlaylist(playlistId, itemId);
-        return;
-      }
-      void api.addMediaToPlaylist(playlistId, captureMedia(tab, browser));
-    },
-    [api, url, tab, browser],
-  );
-
-  const createPlaylist = useCallback(
-    async (name: string) => {
-      const id = await api.createPlaylist(name);
-      if (!id) return;
-      await api.addMediaToPlaylist(id, captureMedia(tab, browser));
-    },
-    [api, tab, browser],
-  );
+  const targets = useSaveTargets(api, tab, browser);
+  const { saved } = targets;
 
   const label = saved ? "Saved — choose where to file this tab" : "Save this tab";
 
@@ -143,14 +94,14 @@ export function SaveTabMenuButton({
                 showPlaylists={isMediaTab}
                 playlists={api.vault.playlists}
                 collections={api.vault.collections}
-                inPlaylistIds={api.playlistIdsFor(url)}
-                inCollectionIds={api.collectionIdsFor(url)}
+                inPlaylistIds={targets.inPlaylistIds}
+                inCollectionIds={targets.inCollectionIds}
                 saved={saved}
-                onPickPlaylist={pickPlaylist}
-                onCreatePlaylist={(name) => void createPlaylist(name)}
-                onPickCollection={pickCollection}
-                onCreateCollection={(name) => void createCollection(name)}
-                onToggleDefault={toggleDefault}
+                onPickPlaylist={targets.pickPlaylist}
+                onCreatePlaylist={(name) => void targets.createPlaylist(name)}
+                onPickCollection={targets.pickCollection}
+                onCreateCollection={(name) => void targets.createCollection(name)}
+                onToggleDefault={targets.toggleDefault}
                 onClose={close}
               />
             </div>,

@@ -3,7 +3,9 @@ import "./BrowserDockBar.css";
 import type { DetectedBrowser } from "../../../types/media";
 import { scrollToBrowserProfile } from "../lib/browserProfileScroll";
 import {
+  IconBlock,
   IconBookmark,
+  IconHistory,
   IconMusicNote,
 } from "../../../shared/ui/icons";
 
@@ -15,7 +17,7 @@ import {
  * locked browser rows, and while it is open no dock button reads as active,
  * which is the honest signal that you are somewhere else.
  */
-export type ViewType = "media" | "vault" | "playlist" | "setup";
+export type ViewType = "media" | "vault" | "playlist" | "history" | "blocked" | "setup";
 
 type Props = {
   browsers: DetectedBrowser[];
@@ -25,6 +27,8 @@ type Props = {
   onSelectView: (view: ViewType) => void;
   vaultEnabled: boolean;
   playlistEnabled: boolean;
+  historyEnabled: boolean;
+  blockedEnabled?: boolean;
 };
 
 function browserDisplayLabel(browser: DetectedBrowser): string {
@@ -39,6 +43,8 @@ export function BrowserDockBar({
   onSelectView,
   vaultEnabled,
   playlistEnabled,
+  historyEnabled,
+  blockedEnabled = false,
 }: Props) {
   const openBrowsers = useMemo(
     () =>
@@ -51,7 +57,7 @@ export function BrowserDockBar({
   );
 
   const hasBrowsers = openBrowsers.length > 0;
-  const hasViewButtons = vaultEnabled || playlistEnabled;
+  const hasViewButtons = vaultEnabled || playlistEnabled || historyEnabled || blockedEnabled;
 
   if (!hasBrowsers && !hasViewButtons) {
     return null;
@@ -147,6 +153,30 @@ export function BrowserDockBar({
           onClick={() => onSelectView(view === "playlist" ? "media" : "playlist")}
         >
           <IconMusicNote />
+        </button>
+      ) : null}
+      {historyEnabled ? (
+        <button
+          type="button"
+          className={`pilpod-browser-dock__view-btn${view === "history" ? " pilpod-browser-dock__view-btn--active" : ""}`}
+          title="History"
+          aria-label="History"
+          aria-pressed={view === "history"}
+          onClick={() => onSelectView(view === "history" ? "media" : "history")}
+        >
+          <IconHistory />
+        </button>
+      ) : null}
+      {blockedEnabled ? (
+        <button
+          type="button"
+          className={`pilpod-browser-dock__view-btn${view === "blocked" ? " pilpod-browser-dock__view-btn--active" : ""}`}
+          title="Blocked videos"
+          aria-label="Blocked videos"
+          aria-pressed={view === "blocked"}
+          onClick={() => onSelectView(view === "blocked" ? "media" : "blocked")}
+        >
+          <IconBlock />
         </button>
       ) : null}
     </nav>

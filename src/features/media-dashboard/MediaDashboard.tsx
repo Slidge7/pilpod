@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrowserDockBar, type ViewType } from "./components/BrowserDockBar";
 import { invoke } from "@tauri-apps/api/core";
 import { VaultPanel, useVault, VAULT_UI_ENABLED } from "../vault";
+import { HistoryPanel } from "../history";
 import { PlaylistPlayerCard, usePlaylistPlayer } from "../playlist-player";
-// The opener only — not the feature index, which would import the God Mode
+// The opener only — not the feature index, which would import the Sky
 // page and, through it, this module back (a cycle).
-import { openGodModeWindow } from "../god-mode/api";
+import { openSkyWindow } from "../sky/api";
 import { INAPP_BROWSER_ID } from "../playlist-player/types";
 import { SaveTabMenuButton } from "../vault/components/SaveTabMenuButton";
 import {
@@ -21,6 +22,7 @@ import type { TabAccessories } from "./components/BrowserSessionsPanel";
 import "./MediaDashboard.css";
 import "./shell/dashboard-glass-screen.css";
 import { DashboardHeader } from "./components/DashboardHeader";
+import { BlockedPanel } from "../youtube-block";
 import { SlideMenu } from "./components/SlideMenu";
 import { BrowserSessionsPanel } from "./components/BrowserSessionsPanel";
 import { useWidgetState } from "../widget";
@@ -250,10 +252,10 @@ export function MediaDashboard() {
     });
   };
 
-  const openGodMode = () => {
+  const openSky = () => {
     setMenuOpen(false);
-    openGodModeWindow().catch((err: unknown) => {
-      console.error("[god-mode] open_god_mode_window failed:", err);
+    openSkyWindow().catch((err: unknown) => {
+      console.error("[sky] open_sky_window failed:", err);
     });
   };
 
@@ -339,7 +341,7 @@ export function MediaDashboard() {
           onToggleAppearance={toggle}
           onRefresh={refresh}
           onOpenDevLab={openDevLab}
-          onOpenGodMode={openGodMode}
+          onOpenSky={openSky}
           onOpenExtensionSetup={openSetupSection}
           extensionSetupBadge={setupBadge}
         />
@@ -360,6 +362,10 @@ export function MediaDashboard() {
               forceSub="playlists"
               player={playlistPlayer}
             />
+          ) : activeTab === "history" ? (
+            <HistoryPanel browsers={browsers} />
+          ) : activeTab === "blocked" ? (
+            <BlockedPanel />
           ) : (
             <>
               <BrowserSessionsPanel
@@ -410,6 +416,8 @@ export function MediaDashboard() {
           onSelectView={setActiveTab}
           vaultEnabled={VAULT_UI_ENABLED}
           playlistEnabled={VAULT_UI_ENABLED}
+          historyEnabled
+          blockedEnabled
         />
 
         <div className="pilpod-dashboard-glass-edge" aria-hidden="true" />

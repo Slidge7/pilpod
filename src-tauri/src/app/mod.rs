@@ -30,6 +30,10 @@ pub fn run() {
     builder = builder.setup(|app| {
         // Vault is platform-neutral (pure file I/O) — init on all platforms.
         crate::vault::init(app)?;
+        // History must be listening before the bridge starts emitting browser
+        // updates (Windows setup below). Degrades to "unavailable", never fails.
+        crate::history::init(app);
+        crate::youtube_block::init(app);
         // Reads persisted widget settings into memory. The OS window is left
         // for `Ready` so the main window exists first — the widget resolves
         // its monitor from the screen the app is already on.
@@ -84,9 +88,11 @@ pub fn run() {
         } if label == "main" => {
             app_handle.exit(0);
         }
-        // Flush any unsaved vault edits before the process goes away.
+        // Flush any unsaved vault edits — and close open history rows — before
+        // the process goes away.
         tauri::RunEvent::Exit => {
             crate::vault::flush(app_handle);
+            crate::history::flush(app_handle);
             crate::widget::flush(app_handle);
         }
         _ => {}

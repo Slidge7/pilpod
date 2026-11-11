@@ -3,6 +3,7 @@ import "./SlideMenu.css";
 import type { AppearanceMode } from "../../../theme/appearance";
 import { GlassStrengthSlider } from "../../../shared/ui/GlassStrengthSlider";
 import { WALLPAPER_INTERVALS } from "../constants";
+import { prettyWallpaperName } from "../lib/wallpaperName";
 import type { WallpaperController } from "../hooks/useWallpaper";
 import { IDLE_INTERVALS, type IdleController } from "../idle";
 import type { WidgetController } from "../../widget";
@@ -11,7 +12,7 @@ import {
   IconBeaker,
   IconExtensionMissing,
   IconFolderOpen,
-  IconGodMode,
+  IconSky,
   IconImage,
   IconMoon,
   IconRefresh,
@@ -41,22 +42,13 @@ type Props = {
   onToggleAppearance: () => void;
   onRefresh: () => void;
   onOpenDevLab?: () => void;
-  /** Opens the God Mode overview window. */
-  onOpenGodMode?: () => void;
+  /** Opens the PilPod Sky window. */
+  onOpenSky?: () => void;
   /** Opens the permanent "Browser setup" section. */
   onOpenExtensionSetup?: () => void;
   /** Browsers needing setup; renders a dot on the entry. 0 = no dot. */
   extensionSetupBadge?: number;
 };
-
-/** Turn a wallpaper file name into a friendlier label, e.g. "01-aurora.jpg" -> "Aurora". */
-function prettyName(name: string | null): string {
-  if (!name) return "Off";
-  const base = name.replace(/\.[^.]+$/, "").replace(/^\d+[-_ ]?/, "");
-  const words = base.replace(/[-_]+/g, " ").trim();
-  if (!words) return "Wallpaper";
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
 
 export function SlideMenu({
   open,
@@ -73,7 +65,7 @@ export function SlideMenu({
   onToggleAppearance,
   onRefresh,
   onOpenDevLab,
-  onOpenGodMode,
+  onOpenSky,
   onOpenExtensionSetup,
   extensionSetupBadge = 0,
 }: Props) {
@@ -265,16 +257,16 @@ export function SlideMenu({
               ) : null}
             </button>
           ) : null}
-          {onOpenGodMode ? (
+          {onOpenSky ? (
             <button
               type="button"
-              onClick={onOpenGodMode}
+              onClick={onOpenSky}
               className="pilpod-slide-menu__btn"
-              title="God Mode — every browser, window and tab in one big view"
-              aria-label="Open God Mode"
+              title="PilPod Sky — every browser, tab, playlist and page you saved, in one view"
+              aria-label="Open PilPod Sky"
               tabIndex={btnTabIndex}
             >
-              <IconGodMode />
+              <IconSky />
             </button>
           ) : null}
           {import.meta.env.DEV && onOpenDevLab ? (
@@ -407,7 +399,7 @@ export function SlideMenu({
                   ? wallpaper.source === "custom"
                     ? "Add images to start"
                     : "No wallpapers"
-                  : prettyName(wallpaper.currentLabel)}
+                  : prettyWallpaperName(wallpaper.currentLabel)}
               </span>
               <button
                 type="button"

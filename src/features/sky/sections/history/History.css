@@ -1,0 +1,198 @@
+/* History section — a day-by-day timeline. */
+
+.sky-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 1100px;
+}
+
+.sky-day {
+  /* Days off screen skip layout and paint; long histories stay smooth. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
+
+.sky-day__head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 4px 8px;
+  background: linear-gradient(var(--pilpod-bg-shell) 80%, transparent);
+}
+
+.sky-day__head h3 {
+  margin: 0;
+  font-family: var(--sky-font-display);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sky-day__count {
+  flex: 1;
+  font-size: 12px;
+  color: var(--pilpod-text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.sky-day__rows {
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--pilpod-border-muted);
+  border-radius: var(--sky-radius-card);
+  background: var(--pilpod-bg-card);
+}
+
+.sky-hrow {
+  display: grid;
+  grid-template-columns: 58px auto minmax(0, 1fr) 96px 22px auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 5px 8px;
+  border-radius: var(--sky-radius-sm);
+}
+
+.sky-hrow + .sky-hrow {
+  box-shadow: 0 -1px 0 var(--pilpod-border-muted);
+}
+
+.sky-hrow:hover {
+  background: var(--pilpod-bg-row-hover);
+  box-shadow: none;
+}
+
+.sky-hrow:hover + .sky-hrow {
+  box-shadow: none;
+}
+
+.sky-hrow__time {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--pilpod-text-muted);
+  text-align: right;
+}
+
+.sky-hrow__art {
+  --sky-thumb-size: 38px;
+  width: 64px;
+  border-radius: 7px;
+}
+
+.sky-hrow__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sky-hrow__main:focus-visible {
+  outline: 2px solid var(--sky-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.sky-hrow__title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sky-hrow__main:hover .sky-hrow__title {
+  color: var(--sky-accent);
+}
+
+.sky-hrow__sub {
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sky-hrow__span {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--pilpod-text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sky-hrow__span small {
+  font-size: inherit;
+  color: var(--pilpod-text-subtle);
+}
+
+.sky-hrow__span--live {
+  color: var(--pilpod-badge-active-text);
+  font-weight: 600;
+}
+
+.sky-hrow__browser {
+  display: inline-flex;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--pilpod-text-subtle);
+  overflow: hidden;
+}
+
+.sky-hrow__browser-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--pilpod-text-muted);
+  background: var(--pilpod-bg-muted);
+  box-shadow: inset 0 0 0 1px var(--pilpod-border);
+}
+
+.sky-hrow__browser img {
+  display: block;
+}
+
+.sky-hrow__actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+}
+
+.sky-hrow:hover .sky-hrow__actions,
+.sky-hrow:focus-within .sky-hrow__actions {
+  opacity: 1;
+}
+
+.sky-timeline__more {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.sky-timeline__end {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--pilpod-text-subtle);
+}
+
+@media (max-width: 1180px) {
+  .sky-hrow {
+    grid-template-columns: 50px auto minmax(0, 1fr) 80px auto;
+  }
+  .sky-hrow__browser {
+    display: none;
+  }
+}

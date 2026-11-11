@@ -6,6 +6,21 @@ import {
   IDLE_DEFAULT_INTERVAL,
   type IdleIntervalId,
 } from "./config";
+import { useStorageSync } from "../../../shared/useStorageSync";
+
+const SYNCED_KEYS = [IDLE_ENABLED_STORAGE_KEY, IDLE_INTERVAL_STORAGE_KEY];
+
+function readEnabled(): boolean {
+  const stored = readLS(IDLE_ENABLED_STORAGE_KEY);
+  return stored === null ? true : stored === "1";
+}
+
+function readIntervalId(): IdleIntervalId {
+  const raw = readLS(IDLE_INTERVAL_STORAGE_KEY);
+  return raw && IDLE_INTERVALS.some((i) => i.id === raw)
+    ? (raw as IdleIntervalId)
+    : IDLE_DEFAULT_INTERVAL;
+}
 
 function readLS(key: string): string | null {
   try {
@@ -31,17 +46,13 @@ export type IdleController = {
 };
 
 export function useIdleConfig(): IdleController {
-  const [enabled, setEnabled] = useState<boolean>(() => {
-    const stored = readLS(IDLE_ENABLED_STORAGE_KEY);
-    return stored === null ? true : stored === "1";
-  });
+  const [enabled, setEnabled] = useState<boolean>(readEnabled);
+  const [intervalId, setIntervalIdState] = useState<IdleIntervalId>(readIntervalId);
 
-  const [intervalId, setIntervalIdState] = useState<IdleIntervalId>(() => {
-    const raw = readLS(IDLE_INTERVAL_STORAGE_KEY);
-    if (raw && IDLE_INTERVALS.some((i) => i.id === raw)) {
-      return raw as IdleIntervalId;
-    }
-    return IDLE_DEFAULT_INTERVAL;
+  // Another window (PilPod Sky's settings) changed idle mode.
+  useStorageSync(SYNCED_KEYS, () => {
+    setEnabled(readEnabled());
+    setIntervalIdState(readIntervalId());
   });
 
   const toggleEnabled = useCallback(() => {

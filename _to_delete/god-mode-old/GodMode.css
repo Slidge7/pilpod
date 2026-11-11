@@ -1,0 +1,424 @@
+/* God Mode — window shell: tokens, header, sidebar, main area.
+ *
+ * Colours are the app's --pilpod-* tokens (src/index.css), so light/dark and
+ * any palette change apply with no work here. God Mode adds one accent — the
+ * violet of its brand mark — for selection and search, and a radius scale
+ * with a clear hierarchy: window 8 → panels 14 → cards 12 → controls 8.
+ */
+
+.gm-shell {
+  --gm-accent: #7c3aed;
+  --gm-accent-strong: #6d28d9;
+  --gm-accent-soft: rgb(124 58 237 / 0.1);
+  --gm-accent-ring: rgb(124 58 237 / 0.4);
+  --gm-mark: rgb(124 58 237 / 0.16);
+  --gm-radius-lg: 14px;
+  --gm-radius-card: 12px;
+  --gm-radius-md: 10px;
+  --gm-radius-sm: 8px;
+  --gm-sidebar-width: 256px;
+  --gm-header-height: 56px;
+  --gm-gutter: 20px;
+  --gm-card-min: 232px;
+  --gm-shadow-pop:
+    0 1px 0 rgb(255 255 255 / 0.5) inset,
+    0 24px 48px -12px rgb(15 23 42 / 0.28),
+    0 4px 12px rgb(15 23 42 / 0.08);
+  --gm-font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--pilpod-border);
+  border-radius: var(--pilpod-screen-radius);
+  box-sizing: border-box;
+  background: var(--pilpod-bg-shell);
+  color: var(--pilpod-text);
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+html.dark .gm-shell {
+  --gm-accent: #a78bfa;
+  --gm-accent-strong: #8b5cf6;
+  --gm-accent-soft: rgb(167 139 250 / 0.14);
+  --gm-accent-ring: rgb(167 139 250 / 0.45);
+  --gm-mark: rgb(167 139 250 / 0.26);
+  --gm-shadow-pop:
+    0 1px 0 rgb(255 255 255 / 0.04) inset,
+    0 28px 56px -12px rgb(0 0 0 / 0.65),
+    0 4px 14px rgb(0 0 0 / 0.35);
+}
+
+.gm-shell *,
+.gm-shell *::before,
+.gm-shell *::after {
+  box-sizing: border-box;
+}
+
+.gm-shell button,
+.gm-shell input,
+.gm-shell select {
+  font: inherit;
+}
+
+.gm-shell mark {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: var(--gm-mark);
+  color: inherit;
+}
+
+.gm-shell kbd {
+  display: inline-flex;
+  align-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--pilpod-border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--pilpod-bg-elevated);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--pilpod-text-muted);
+}
+
+.gm-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.gm-header {
+  position: relative;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: var(--gm-sidebar-width) minmax(0, 1fr) auto;
+  align-items: center;
+  height: var(--gm-header-height);
+  padding: 0 8px 0 0;
+  flex: none;
+  border-bottom: 1px solid var(--pilpod-border);
+  background: var(--pilpod-bg-frame);
+  user-select: none;
+}
+
+.gm-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 100%;
+  padding: 0 16px 0 var(--gm-gutter);
+}
+
+.gm-brand__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: #fff;
+  background: linear-gradient(135deg, #8b5cf6, var(--pilpod-accent-blue));
+  box-shadow: 0 4px 14px rgb(124 58 237 / 0.35);
+}
+
+.gm-brand__mark svg {
+  width: 16px;
+  height: 16px;
+}
+
+.gm-brand__title {
+  margin: 0;
+  font-family: var(--gm-font-display);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.gm-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pilpod-badge-active-text);
+  background: var(--pilpod-badge-active-bg);
+  border: 1px solid var(--pilpod-badge-active-border);
+}
+
+.gm-live__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: gm-pulse 2s ease-in-out infinite;
+}
+
+.gm-live--idle {
+  color: var(--pilpod-text-muted);
+  background: transparent;
+  border-color: var(--pilpod-border);
+}
+
+.gm-live--idle .gm-live__dot {
+  animation: none;
+}
+
+@keyframes gm-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.gm-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 16px;
+}
+
+.gm-header__sep {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background: var(--pilpod-border);
+}
+
+.gm-window-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pilpod-text-secondary);
+  cursor: pointer;
+}
+
+.gm-window-btn:hover {
+  background: var(--pilpod-bg-row-hover);
+}
+
+.gm-window-btn--close:hover {
+  color: #fff;
+  background: var(--pilpod-dismiss-bg);
+}
+
+.gm-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px var(--gm-gutter) 0;
+  padding: 8px 12px;
+  border: 1px solid var(--pilpod-error-border);
+  border-radius: var(--gm-radius-sm);
+  background: var(--pilpod-error-bg);
+  color: var(--pilpod-error-text);
+}
+
+/* ── Body: sidebar + main ───────────────────────────────────────────────── */
+
+.gm-body {
+  display: grid;
+  grid-template-columns: var(--gm-sidebar-width) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+.gm-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--pilpod-border);
+  background: var(--pilpod-bg-frame);
+}
+
+.gm-nav {
+  flex: none;
+  padding: 12px 10px 10px;
+}
+
+.gm-nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gm-nav__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--gm-radius-sm);
+  background: transparent;
+  color: var(--pilpod-text-secondary);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gm-nav__item:hover {
+  background: var(--pilpod-bg-row-hover);
+  color: var(--pilpod-text);
+}
+
+.gm-nav__item[aria-current="page"] {
+  background: var(--pilpod-bg-elevated);
+  color: var(--pilpod-text);
+  box-shadow:
+    0 0 0 1px var(--pilpod-border),
+    var(--pilpod-card-shadow);
+}
+
+/* The one place God Mode's accent marks "you are here". */
+.gm-nav__item[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--gm-accent);
+}
+
+.gm-nav__icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--pilpod-text-muted);
+}
+
+.gm-nav__item[aria-current="page"] .gm-nav__icon {
+  color: var(--gm-accent);
+}
+
+.gm-nav__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.gm-nav__count {
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--pilpod-text-subtle);
+}
+
+.gm-nav__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: #fff;
+  background: var(--pilpod-playback-red);
+}
+
+.gm-sidebar__slot {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+  min-height: 0;
+  padding: 12px 10px 16px;
+  border-top: 1px solid var(--pilpod-border-muted);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.gm-sidebar__slot:empty {
+  visibility: hidden;
+}
+
+.gm-status-panel {
+  flex: none;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--pilpod-border-muted);
+}
+
+.gm-status-panel dl {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+}
+
+.gm-status-panel__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+}
+
+.gm-status-panel dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--pilpod-text-muted);
+  white-space: nowrap;
+}
+
+.gm-status-panel dd {
+  margin: 0;
+  color: var(--pilpod-text-secondary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ── Narrow windows ─────────────────────────────────────────────────────── */
+
+@media (max-width: 1180px) {
+  .gm-shell {
+    --gm-sidebar-width: 220px;
+    --gm-gutter: 14px;
+  }
+  .gm-brand .gm-live {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gm-live__dot {
+    animation: none;
+  }
+}

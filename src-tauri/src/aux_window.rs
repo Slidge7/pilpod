@@ -1,6 +1,6 @@
 //! Auxiliary page windows: full PilPod pages that live in their own OS window.
 //!
-//! The dev lab and God Mode are both "a big page opened from the dashboard".
+//! The dev lab and PilPod Sky are both "a big page opened from the dashboard".
 //! They share one shape — undecorated and transparent (the page paints its own
 //! rim), resizable, loading the main `index.html` and routed by window label in
 //! `App.tsx` — and one rule: asking for a window that already exists brings it

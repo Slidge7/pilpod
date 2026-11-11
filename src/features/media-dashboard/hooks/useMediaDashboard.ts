@@ -3,6 +3,17 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ALWAYS_ON_TOP_STORAGE_KEY } from "../constants";
 import { useBrowsers } from "./useBrowsers";
 import { useBrowserControls } from "./useBrowserControls";
+import { useStorageSync } from "../../../shared/useStorageSync";
+
+const SYNCED_KEYS = [ALWAYS_ON_TOP_STORAGE_KEY];
+
+function readAlwaysOnTop(): boolean {
+  try {
+    return localStorage.getItem(ALWAYS_ON_TOP_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * State for the main dashboard window.
@@ -24,13 +35,10 @@ import { useBrowserControls } from "./useBrowserControls";
 export function useMediaDashboard() {
   const { browsers, browserAudio, refresh: refreshBrowsers } = useBrowsers();
 
-  const [alwaysOnTop, setAlwaysOnTop] = useState(() => {
-    try {
-      return localStorage.getItem(ALWAYS_ON_TOP_STORAGE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
+  const [alwaysOnTop, setAlwaysOnTop] = useState(readAlwaysOnTop);
+
+  // PilPod Sky's settings can pin or unpin this window.
+  useStorageSync(SYNCED_KEYS, () => setAlwaysOnTop(readAlwaysOnTop()));
 
   const writeAlwaysOnTop = useCallback((next: boolean) => {
     setAlwaysOnTop(next);

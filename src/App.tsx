@@ -1,6 +1,6 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { DevLabApp } from "./features/dev-lab";
-import { GOD_MODE_LABEL, GodModeApp } from "./features/god-mode";
+import { SKY_LABEL, SkyApp } from "./features/sky";
 import { MediaDashboard } from "./features/media-dashboard";
 import {
   PlayerWindow,
@@ -17,6 +17,6 @@ const label = getCurrentWebview().label;
 export default function App() {
   if (label === PLAYER_UI_LABEL) return <PlayerWindow />;
   if (label === PLAYER_STAGE_LABEL) return <StageView />;
-  if (label === GOD_MODE_LABEL) return <GodModeApp />;
+  if (label === SKY_LABEL) return <SkyApp />;
   return label === "dev-lab" ? <DevLabApp /> : <MediaDashboard />;
 }

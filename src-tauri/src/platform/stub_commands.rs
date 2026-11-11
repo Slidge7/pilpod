@@ -263,3 +263,8 @@ pub fn extension_setup_set_dismissed(_dismissed: bool) -> Result<bool, String> {
 pub fn extension_setup_reset(_browser_id: String) -> Result<bool, String> {
     Ok(false)
 }
+
+#[tauri::command]
+pub fn history_open(_url: String) -> Result<String, String> {
+    Err("PilPod requires Windows".into())
+}

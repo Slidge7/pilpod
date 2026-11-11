@@ -1,0 +1,159 @@
+/* Bookmarks section — a grid of saved pages. */
+
+.gm-bm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.gm-bm {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  column-gap: 12px;
+  min-height: 118px;
+  padding: 14px 14px 10px;
+  border: 1px solid var(--pilpod-border-muted);
+  border-radius: var(--gm-radius-card);
+  background: var(--pilpod-bg-card);
+  box-shadow: var(--pilpod-card-shadow);
+  transition: border-color 120ms ease;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 118px;
+}
+
+.gm-bm:hover,
+.gm-bm:focus-within {
+  border-color: var(--gm-accent-ring);
+}
+
+.gm-bm__open {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.gm-bm__open:focus-visible {
+  outline: 2px solid var(--gm-accent);
+  outline-offset: -2px;
+}
+
+.gm-bm__icon {
+  --gm-thumb-size: 36px;
+  grid-row: 1 / 3;
+  pointer-events: none;
+}
+
+.gm-bm__text {
+  min-width: 0;
+  pointer-events: none;
+}
+
+.gm-bm__title {
+  display: -webkit-box;
+  margin: 0;
+  padding-right: 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.gm-bm__host {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-bm__pin {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 13px;
+  height: 13px;
+  color: var(--gm-accent);
+}
+
+.gm-bm__foot {
+  position: relative;
+  z-index: 1;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  margin-top: 10px;
+  pointer-events: none;
+}
+
+.gm-bm__foot > * {
+  pointer-events: auto;
+}
+
+.gm-bm__tags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+}
+
+.gm-bm__more {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--pilpod-text-subtle);
+}
+
+.gm-bm__when {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--pilpod-text-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.gm-bm__tags > li {
+  flex: none;
+}
+
+/* Floats over the tags on hover, so the tags get the card's full width. */
+.gm-bm__actions {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  display: flex;
+  gap: 2px;
+  padding-left: 10px;
+  background: var(--pilpod-bg-card);
+  box-shadow: -14px 0 12px -2px var(--pilpod-bg-card);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.gm-bm:hover .gm-bm__actions,
+.gm-bm:focus-within .gm-bm__actions {
+  opacity: 1;
+}
+
+.gm-sort {
+  display: inline-flex;
+}

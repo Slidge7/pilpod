@@ -31,6 +31,10 @@ tokio = { version = "1", features = ["process", "io-util", "rt-multi-thread", "n
 tokio-tungstenite = "0.24"
 futures-util = "0.3"
 uuid = { version = "1", features = ["v4"] }
+# Browsing/media history (`src/history`) is the one dataset that grows without
+# bound, so it gets a real database instead of a whole-file JSON store.
+# `bundled` compiles SQLite in — nothing for the user to install.
+rusqlite = { version = "0.41", features = ["bundled"] }
 axum = "0.7"
 tower-http = { version = "0.5", features = ["cors"] }
 

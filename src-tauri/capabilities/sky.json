@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "sky",
+  "description": "Capability for the PilPod Sky window. It reads broadcast state and acts through the same app commands as the dashboard. Window permissions are only what its own title bar needs (drag, minimize, maximize, close); the dialog permissions are for the vault export and import buttons.",
+  "windows": ["sky"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-set-focus",
+    "core:window:allow-start-dragging",
+    "dialog:allow-open",
+    "dialog:allow-save"
+  ]
+}

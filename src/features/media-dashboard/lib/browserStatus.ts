@@ -4,7 +4,7 @@ import { isBrowserLocked } from "../../extension-setup";
 /**
  * What a browser row's connection indicator says.
  *
- * Shared by every surface that lists browsers (the dashboard and God Mode),
+ * Shared by every surface that lists browsers (the dashboard and Sky),
  * so "is this browser connected?" has exactly one answer in the app.
  */
 export type BrowserConnectionStatus =

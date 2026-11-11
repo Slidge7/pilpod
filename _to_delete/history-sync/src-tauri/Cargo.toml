@@ -1,0 +1,62 @@
+[package]
+name = "pilpod"
+version = "2.0.0"
+description = "PilPod — browser media dashboard"
+authors = ["you"]
+edition = "2021"
+default-run = "pilpod"
+
+[lib]
+name = "pilpod_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# `unstable` unlocks multi-webview windows: the in-app player tiles the site's
+# page (video stage) and PilPod's own playlist UI inside ONE window. See
+# `plans/INAPP_PLAYER_PLAN.md` §1.
+# `unstable` unlocks multi-webview windows (above). `tray-icon` + `image-ico`
+# give PilPod its notification-area presence, which is what keeps the app
+# reachable — and quittable — while it runs with the dashboard hidden.
+tauri = { version = "2", features = ["unstable", "tray-icon", "image-ico"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+base64 = "0.22"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+tokio = { version = "1", features = ["process", "io-util", "rt-multi-thread", "net", "sync", "macros"] }
+tokio-tungstenite = "0.24"
+futures-util = "0.3"
+uuid = { version = "1", features = ["v4"] }
+# Browsing/media history (`src/history`) is the one dataset that grows without
+# bound, so it gets a real database instead of a whole-file JSON store.
+# `bundled` compiles SQLite in — nothing for the user to install.
+rusqlite = { version = "0.41", features = ["bundled"] }
+axum = "0.7"
+tower-http = { version = "0.5", features = ["cors"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Media_Audio",
+  "Win32_System_Com",
+  "Win32_System_Com_StructuredStorage",
+  "Win32_System_Variant",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_UI_Shell",
+  "Win32_Graphics_Gdi",
+  "Win32_Graphics_Dwm",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Threading",
+  "Win32_System_Diagnostics_ToolHelp",
+  "Win32_System_Power",
+  "Win32_Security",
+  "Win32_NetworkManagement_IpHelper",
+  "Win32_Networking_WinSock",
+] }
+winreg = "0.52"
+reqwest = { version = "0.12", features = ["json"] }
+semver = "1"

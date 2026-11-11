@@ -1,0 +1,313 @@
+/* Tab menus: the control panel, the mixer slider and the window header's
+ * save action. (The save panel's rows are shared, in ui/ui.css.) */
+
+/* ── Control panel ──────────────────────────────────────────────────────── */
+
+.sky-tabpanel {
+  display: flex;
+  flex-direction: column;
+}
+
+.sky-tabpanel__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 14px 10px;
+}
+
+.sky-tabpanel__art {
+  --sky-thumb-size: 46px;
+  border-radius: var(--sky-radius-sm);
+}
+
+.sky-tabpanel__titles {
+  min-width: 0;
+}
+
+.sky-tabpanel__title {
+  margin: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sky-tabpanel__meta {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--pilpod-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sky-tabpanel__gone {
+  margin: 0 14px 10px;
+  font-size: 12.5px;
+  color: var(--pilpod-text-muted);
+}
+
+.sky-tabpanel__player {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 14px 12px;
+}
+
+.sky-tabpanel__live-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--pilpod-text-subtle);
+}
+
+.sky-tabpanel__live-note:empty {
+  display: none;
+}
+
+.sky-seek {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sky-seek input {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--sky-accent);
+  cursor: pointer;
+}
+
+.sky-seek__time {
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--pilpod-text-muted);
+}
+
+.sky-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.sky-transport__play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--sky-accent);
+  color: #fff;
+  box-shadow: 0 8px 18px -8px var(--sky-accent);
+  cursor: pointer;
+}
+
+.sky-transport__play svg {
+  width: 18px;
+  height: 18px;
+}
+
+.sky-transport__play:focus-visible {
+  outline: 2px solid var(--pilpod-text);
+  outline-offset: 2px;
+}
+
+.sky-volume {
+  --sky-vol-color: var(--sky-accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sky-volume[data-tone="boost"] {
+  --sky-vol-color: #f59e0b;
+}
+
+.sky-volume[data-tone="high"] {
+  --sky-vol-color: #ef4444;
+}
+
+.sky-volume[data-tone="muted"] {
+  --sky-vol-color: var(--pilpod-text-subtle);
+}
+
+.sky-volume input,
+.sky-mixer input {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  appearance: none;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--sky-vol-color, var(--sky-accent)) var(--sky-vol, 50%),
+    var(--pilpod-slider-track) var(--sky-vol, 50%)
+  );
+  cursor: pointer;
+}
+
+.sky-volume input::-webkit-slider-thumb,
+.sky-mixer input::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.15), 0 1px 4px rgb(0 0 0 / 0.3);
+}
+
+.sky-volume input:focus-visible,
+.sky-mixer input:focus-visible {
+  outline: 2px solid var(--sky-accent);
+  outline-offset: 4px;
+}
+
+/* 100% sits at the middle of the track; a tick marks where boost begins. */
+.sky-volume input {
+  background:
+    linear-gradient(var(--pilpod-text-subtle), var(--pilpod-text-subtle)) 50% 50% / 1px 8px no-repeat,
+    linear-gradient(
+      90deg,
+      var(--sky-vol-color) var(--sky-vol, 50%),
+      var(--pilpod-slider-track) var(--sky-vol, 50%)
+    );
+}
+
+.sky-volume__value {
+  min-width: 40px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--pilpod-text-secondary);
+}
+
+.sky-tabpanel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--pilpod-border-muted);
+}
+
+.sky-tabpanel__actions .sky-btn {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.sky-tabpanel__spacer {
+  flex: 1;
+}
+
+/* ── Mixer slider in a browser's header ─────────────────────────────────── */
+
+.sky-mixer {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: 170px;
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px solid var(--pilpod-border);
+  border-radius: 999px;
+  color: var(--pilpod-text-muted);
+}
+
+.sky-mixer svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+}
+
+.sky-mixer__value {
+  min-width: 32px;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── Window header ──────────────────────────────────────────────────────── */
+
+.sky-window__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+
+.sky-window__head .sky-window__label {
+  margin: 0;
+}
+
+.sky-window__save {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pilpod-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.sky-window:hover .sky-window__save:not(:disabled),
+.sky-window__save:focus-visible {
+  opacity: 1;
+}
+
+.sky-window__save:disabled {
+  cursor: default;
+}
+
+.sky-window__save:hover:not(:disabled) {
+  background: var(--sky-accent-soft);
+  color: var(--sky-accent);
+}
+
+.sky-window__save svg {
+  width: 12px;
+  height: 12px;
+}
+
+.sky-window__saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--pilpod-badge-active-text);
+}
+
+/* ── Live toolbar: every tab at once ────────────────────────────────────── */
+
+.sky-quick {
+  display: flex;
+  gap: 6px;
+}
+
+.sky-quick .sky-btn {
+  height: 32px;
+  font-weight: 600;
+}
+
+.sky-quick .sky-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 1320px) {
+  .sky-quick .sky-btn {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+    font-size: 0;
+    gap: 0;
+  }
+}

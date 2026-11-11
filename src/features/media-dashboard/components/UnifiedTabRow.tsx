@@ -1,3 +1,4 @@
+import { BlockVideoButton } from "../../youtube-block";
 import "./UnifiedTabRow.css";
 import type { ReactNode } from "react";
 import type { AudioSessionInfoDto, BrowserTab } from "../../../types/media";
@@ -205,6 +206,13 @@ export function UnifiedTabRow({
               Wake
             </button>
           ) : null}
+
+          <BlockVideoButton
+            url={tab.url}
+            title={tab.media?.title?.trim() || tab.title}
+            browserName={browserDisplayName}
+            className="pilpod-control-card__icon-act pilpod-control-card__icon-act--cl"
+          />
 
           {saveButton}
 
