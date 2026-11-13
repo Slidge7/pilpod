@@ -54,6 +54,12 @@ pub fn origin_allowed(origin: &str) -> bool {
         return true;
     }
     if origin.starts_with("chrome-extension://") {
+        // Dev builds: an extension loaded unpacked gets a random ID that can
+        // never match the pinned store ID, so accept any Chromium extension.
+        // Shipped (release) builds stay pinned.
+        if cfg!(debug_assertions) {
+            return true;
+        }
         return ALLOWED_EXTENSION_ORIGINS.is_empty()
             || ALLOWED_EXTENSION_ORIGINS.contains(&origin);
     }
@@ -104,6 +110,7 @@ mod tests {
     /// A different Chromium extension is refused now that the ID is pinned.
     /// This is the one thing pinning actually buys.
     #[test]
+    #[cfg(not(debug_assertions))]
     fn origin_rejects_other_chromium_extensions() {
         assert!(!origin_allowed("chrome-extension://abc"));
         assert!(!origin_allowed(
