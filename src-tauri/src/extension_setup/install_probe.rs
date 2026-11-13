@@ -72,6 +72,10 @@ impl InstallState {
 struct PrefsEntry {
     id: String,
     enabled: bool,
+    /// `chrome.runtime.setUninstallURL` value. The companion puts its
+    /// `browserId` UUID in it, which is how a profile folder is tied to a
+    /// live bridge connection (see `browser_profiles`).
+    uninstall_url: Option<String>,
 }
 
 /// Does this settings entry describe an actual install (rather than a stub some
@@ -144,6 +148,11 @@ fn companion_entries(prefs: &Value, profile: &Path) -> Vec<PrefsEntry> {
         .map(|(id, e)| PrefsEntry {
             id: id.clone(),
             enabled: entry_enabled(e),
+            uninstall_url: e
+                .get("uninstall_url")
+                .and_then(Value::as_str)
+                .filter(|u| !u.is_empty())
+                .map(str::to_string),
         })
         .collect()
 }
@@ -158,6 +167,37 @@ fn read_json(path: &Path) -> Option<Value> {
 /// Probe one profile folder. `profile_dir` is what we would pass back to the
 /// browser as `--profile-directory`.
 pub fn probe_profile(profile: &Path, profile_dir: Option<&str>) -> Option<CompanionInstall> {
+    best(profile_entries(profile).into_iter().map(|e| CompanionInstall {
+        extension_id: e.id,
+        profile_dir: profile_dir.map(str::to_string),
+        enabled: e.enabled,
+    }))
+}
+
+/// The companion as recorded in one profile, including the uninstall URL that
+/// carries its `browserId`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompanionMarker {
+    pub extension_id: String,
+    pub enabled: bool,
+    pub uninstall_url: Option<String>,
+}
+
+/// Like [`probe_profile`], but keeps the uninstall URL. Same preference
+/// (enabled first, then the store build).
+pub fn probe_profile_marker(profile: &Path) -> Option<CompanionMarker> {
+    profile_entries(profile)
+        .into_iter()
+        .max_by_key(|e| (e.enabled, e.id == config::EXTENSION_ID))
+        .map(|e| CompanionMarker {
+            extension_id: e.id,
+            enabled: e.enabled,
+            uninstall_url: e.uninstall_url,
+        })
+}
+
+/// Every companion entry in one profile, both preference files merged.
+fn profile_entries(profile: &Path) -> Vec<PrefsEntry> {
     // Chromium on Windows keeps extension settings in `Secure Preferences`;
     // other builds (and some forks) in `Preferences`. An entry in either counts,
     // and a "disabled" in either wins — the two files are merged at runtime.
@@ -166,7 +206,12 @@ pub fn probe_profile(profile: &Path, profile_dir: Option<&str>) -> Option<Compan
         if let Some(v) = read_json(&profile.join(name)) {
             for e in companion_entries(&v, profile) {
                 match found.iter_mut().find(|f| f.id == e.id) {
-                    Some(f) => f.enabled &= e.enabled,
+                    Some(f) => {
+                        f.enabled &= e.enabled;
+                        if f.uninstall_url.is_none() {
+                            f.uninstall_url = e.uninstall_url;
+                        }
+                    }
                     None => found.push(e),
                 }
             }
@@ -181,14 +226,10 @@ pub fn probe_profile(profile: &Path, profile_dir: Option<&str>) -> Option<Compan
         found.push(PrefsEntry {
             id: config::EXTENSION_ID.to_string(),
             enabled: true,
+            uninstall_url: None,
         });
     }
-
-    best(found.into_iter().map(|e| CompanionInstall {
-        extension_id: e.id,
-        profile_dir: profile_dir.map(str::to_string),
-        enabled: e.enabled,
-    }))
+    found
 }
 
 /// Prefer an enabled install, then the store build over a dev copy.
@@ -399,5 +440,33 @@ mod tests {
         assert_eq!(serde_json::to_string(&InstallState::NotInstalled).unwrap(), "\"notInstalled\"");
         assert_eq!(serde_json::to_string(&InstallState::Disabled).unwrap(), "\"disabled\"");
         assert_eq!(serde_json::to_string(&InstallState::Installed).unwrap(), "\"installed\"");
+    }
+
+    #[test]
+    fn marker_carries_uninstall_url_from_either_prefs_file() {
+        let t = TempDir::new("marker");
+        let p = t.0.join("Profile 3");
+        let mut entry = store_entry();
+        entry["uninstall_url"] = json!("http://127.0.0.1:17399/companion-removed?bid=abc");
+        // Secure Preferences has the install, Preferences the URL: merged.
+        write_prefs(&p, "Secure Preferences", json!({ ID: store_entry() }));
+        write_prefs(&p, "Preferences", json!({ ID: entry }));
+        let m = probe_profile_marker(&p).unwrap();
+        assert_eq!(m.extension_id, ID);
+        assert!(m.enabled);
+        assert_eq!(
+            m.uninstall_url.as_deref(),
+            Some("http://127.0.0.1:17399/companion-removed?bid=abc")
+        );
+    }
+
+    #[test]
+    fn marker_is_none_without_companion() {
+        let t = TempDir::new("marker-none");
+        let p = t.0.join("Default");
+        write_prefs(&p, "Secure Preferences", json!({
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": { "location": 1, "uninstall_url": "https://x" }
+        }));
+        assert_eq!(probe_profile_marker(&p), None);
     }
 }

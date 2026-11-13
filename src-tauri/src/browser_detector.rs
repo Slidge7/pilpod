@@ -273,6 +273,7 @@ pub fn merge_detected_and_slots(
     reconnecting: &HashSet<String>,
     ws_connected: &HashSet<String>,
     activation: &crate::extension_setup::ActivationSnapshot,
+    profiles: &mut crate::browser_profiles::ProfilesByBrowser,
 ) -> Vec<DetectedBrowser> {
     let slot_active_cutoff = Duration::from_secs(CONNECTED_WINDOW_SECS);
     let now = std::time::Instant::now();
@@ -287,8 +288,31 @@ pub fn merge_detected_and_slots(
         *slots_per_os.entry(os_id).or_insert(0) += 1;
     }
 
+    // Tie each slot to its browser profile (marker / storage / inferred).
+    // Linking writes inferred matches back into `profiles`, so the payload's
+    // profile list agrees with the rows.
+    let mut slot_ids_per_os: HashMap<String, Vec<&str>> = HashMap::new();
+    for slot in slots.values() {
+        slot_ids_per_os
+            .entry(slot.effective_os_id())
+            .or_default()
+            .push(slot.browser_id.as_str());
+    }
+    let mut slot_profile: HashMap<String, (usize, crate::browser_profiles::BrowserProfileInfo)> =
+        HashMap::new();
+    for (os_id, ids) in &mut slot_ids_per_os {
+        ids.sort_unstable();
+        if let Some(list) = profiles.get_mut(os_id) {
+            for (slot_id, idx) in crate::browser_profiles::link_slots(list, ids) {
+                slot_profile.insert(slot_id, (idx, list[idx].clone()));
+            }
+        }
+    }
+
     let mut result: Vec<DetectedBrowser> = Vec::new();
     let mut os_ids_with_slots: HashSet<String> = HashSet::new();
+    // Row id → position of its profile in the browser's own order.
+    let mut profile_rank: HashMap<String, usize> = HashMap::new();
 
     // Pass B: one row per extension profile slot.
     for slot in slots.values() {
@@ -308,12 +332,25 @@ pub fn merge_detected_and_slots(
         let extension_reconnecting =
             reconnecting.contains(&slot.browser_id) && !ws_up;
 
-        // Phase 4: stable, human-friendly numbering persisted across restarts.
-        let profile_label = if slots_per_os.get(&os_id).copied().unwrap_or(0) > 1 {
-            let n = crate::browser_profile_order::profile_number(&os_id, &slot.browser_id);
-            Some(format!("{base_display} · Profile {n}"))
-        } else {
-            None
+        // The real profile name when we know the profile ("Chrome · Work"),
+        // shown whenever the browser has more than one profile. Unknown
+        // profile + several connections: stable "Profile N" numbering.
+        let several_slots = slots_per_os.get(&os_id).copied().unwrap_or(0) > 1;
+        let several_profiles = profiles.get(&os_id).is_some_and(|l| l.len() > 1);
+        let profile = slot_profile.get(&slot.browser_id).map(|(idx, p)| {
+            profile_rank.insert(slot.browser_id.clone(), *idx);
+            p.clone()
+        });
+        let profile_label = match &profile {
+            Some(p) if several_slots || several_profiles => {
+                Some(format!("{base_display} · {}", p.name))
+            }
+            Some(_) => None,
+            None if several_slots => {
+                let n = crate::browser_profile_order::profile_number(&os_id, &slot.browser_id);
+                Some(format!("{base_display} · Profile {n}"))
+            }
+            None => None,
         };
 
         result.push(DetectedBrowser {
@@ -331,19 +368,23 @@ pub fn merge_detected_and_slots(
             last_sync_secs: Some(slot_age_secs),
             extension_reconnecting,
             icon_url: crate::browser_icon::data_url_for_browser(&os_id),
+            profile,
         });
     }
 
-    // Deterministic row order (HashMap iteration is random): OS id, then
-    // profile number, then UUID as tiebreaker.
+    // Deterministic row order (HashMap iteration is random): OS id, then the
+    // browser's own profile order, then label, then UUID as tiebreaker.
+    let rank = |b: &DetectedBrowser| profile_rank.get(&b.id).copied().unwrap_or(usize::MAX);
     result.sort_by(|a, b| {
         (
             a.os_browser_id.as_str(),
+            rank(a),
             a.profile_label.as_deref().unwrap_or(""),
             a.id.as_str(),
         )
             .cmp(&(
                 b.os_browser_id.as_str(),
+                rank(b),
                 b.profile_label.as_deref().unwrap_or(""),
                 b.id.as_str(),
             ))
@@ -369,6 +410,7 @@ pub fn merge_detected_and_slots(
             last_sync_secs: None,
             extension_reconnecting: false,
             icon_url: crate::browser_icon::data_url_for_browser(&d.id),
+            profile: None,
         });
     }
 
@@ -417,6 +459,7 @@ pub fn build_browsers_payload(
     let store = ext_store.lock().unwrap_or_else(|e| e.into_inner());
     let reconnecting_set = reconnecting.lock().unwrap_or_else(|e| e.into_inner());
     let ws_connected = ws_connected_ids(ws_connections);
+    let mut browser_profiles = crate::browser_profiles::snapshot();
 
     let mut browsers = merge_detected_and_slots(
         &detected_list,
@@ -425,6 +468,7 @@ pub fn build_browsers_payload(
         &reconnecting_set,
         &ws_connected,
         activation,
+        &mut browser_profiles,
     );
 
     // The in-app player is a one-tab media source of its own. Appending it here
@@ -442,6 +486,7 @@ pub fn build_browsers_payload(
     BrowsersUpdatePayload {
         browsers,
         browser_audio,
+        browser_profiles,
     }
 }
 
@@ -574,10 +619,12 @@ pub fn spawn_detector(
         .spawn(move || {
             // Emit once immediately so the frontend has data right away.
             let initial = build_detected_browsers();
+            let initial_ids: Vec<String> = initial.iter().map(|d| d.id.clone()).collect();
             {
                 let mut lock = detected.lock().unwrap_or_else(|e| e.into_inner());
                 *lock = initial;
             }
+            crate::browser_profiles::refresh(&initial_ids, &HashSet::new());
             emit_browsers_to_ui(
                 &app,
                 &detected,
@@ -638,7 +685,28 @@ pub fn spawn_detector(
                 // closed browser is never revoked; see `extension_setup::verify`.
                 let revoked = sweep_revocations(&app, &detected, &slots, &mut silent_since, now);
 
-                if changed || !removed.is_empty() || revoked {
+                // Profile identity (names, avatars, which companion is where).
+                // One `stat` per file when nothing changed on disk.
+                let profiles_changed = {
+                    let mut os_ids: Vec<String> = detected
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .iter()
+                        .map(|d| d.id.clone())
+                        .collect();
+                    let map = slots.lock().unwrap_or_else(|e| e.into_inner());
+                    let live: HashSet<String> = map.keys().cloned().collect();
+                    for s in map.values() {
+                        let id = s.effective_os_id();
+                        if !os_ids.contains(&id) {
+                            os_ids.push(id);
+                        }
+                    }
+                    drop(map);
+                    crate::browser_profiles::refresh(&os_ids, &live)
+                };
+
+                if changed || !removed.is_empty() || revoked || profiles_changed {
                     emit_browsers_to_ui(
                         &app,
                         &detected,
@@ -702,7 +770,112 @@ mod tests {
             &HashSet::new(),
             &HashSet::new(),
             activation,
+            &mut HashMap::new(),
         )
+    }
+
+    fn merge_with_profiles(
+        detected: Vec<DetectedBrowserInfo>,
+        slots: Vec<BrowserSlot>,
+        profiles: &mut crate::browser_profiles::ProfilesByBrowser,
+    ) -> Vec<DetectedBrowser> {
+        let map: HashMap<String, BrowserSlot> = slots
+            .into_iter()
+            .map(|s| (s.browser_id.clone(), s))
+            .collect();
+        merge_detected_and_slots(
+            &detected,
+            &map,
+            &ExtensionInstalledStore::default(),
+            &HashSet::new(),
+            &HashSet::new(),
+            &Default::default(),
+            profiles,
+        )
+    }
+
+    fn disk_profile(
+        dir: &str,
+        name: &str,
+        companion: crate::browser_profiles::ProfileCompanion,
+        marker: Option<&str>,
+    ) -> crate::browser_profiles::BrowserProfileInfo {
+        crate::browser_profiles::BrowserProfileInfo {
+            dir: dir.into(),
+            name: name.into(),
+            email: None,
+            account_name: None,
+            avatar_key: None,
+            color: None,
+            last_used: false,
+            open: true,
+            companion,
+            browser_id: marker.map(str::to_string),
+            link: marker.map(|_| crate::browser_profiles::ProfileLink::Marker),
+            can_launch: true,
+        }
+    }
+
+    #[test]
+    fn profiles_give_rows_real_names_in_browser_order() {
+        use crate::browser_profiles::ProfileCompanion::Installed;
+        let mut profiles: crate::browser_profiles::ProfilesByBrowser = HashMap::from([(
+            "chrome".to_string(),
+            vec![
+                disk_profile("Default", "Personal", Installed, Some("uuid-z")),
+                disk_profile("Profile 2", "Work", Installed, Some("uuid-a")),
+            ],
+        )]);
+        let rows = merge_with_profiles(
+            vec![detected("chrome", "Google Chrome", true)],
+            vec![
+                slot("uuid-a", "Chrome", Some("chrome")),
+                slot("uuid-z", "Chrome", Some("chrome")),
+            ],
+            &mut profiles,
+        );
+        let labels: Vec<&str> = rows.iter().filter_map(|r| r.profile_label.as_deref()).collect();
+        // Browser order (Default first), not UUID or label order.
+        assert_eq!(labels, ["Google Chrome · Personal", "Google Chrome · Work"]);
+        assert_eq!(rows[0].profile.as_ref().unwrap().dir, "Default");
+        assert_eq!(rows[1].id, "uuid-a");
+    }
+
+    #[test]
+    fn single_connection_is_inferred_and_named_when_browser_has_profiles() {
+        use crate::browser_profiles::{ProfileCompanion::*, ProfileLink};
+        let mut profiles: crate::browser_profiles::ProfilesByBrowser = HashMap::from([(
+            "chrome".to_string(),
+            vec![
+                disk_profile("Default", "Personal", NotInstalled, None),
+                disk_profile("Profile 2", "Work", Installed, None),
+            ],
+        )]);
+        let rows = merge_with_profiles(
+            vec![detected("chrome", "Google Chrome", true)],
+            vec![slot("uuid-1", "Chrome", Some("chrome"))],
+            &mut profiles,
+        );
+        assert_eq!(rows[0].profile_label.as_deref(), Some("Google Chrome · Work"));
+        assert_eq!(rows[0].profile.as_ref().unwrap().link, Some(ProfileLink::Inferred));
+        // Written back so the payload's profile list agrees with the rows.
+        assert_eq!(profiles["chrome"][1].browser_id.as_deref(), Some("uuid-1"));
+    }
+
+    #[test]
+    fn single_profile_browser_keeps_plain_name() {
+        use crate::browser_profiles::ProfileCompanion::Installed;
+        let mut profiles: crate::browser_profiles::ProfilesByBrowser = HashMap::from([(
+            "brave".to_string(),
+            vec![disk_profile("Default", "Person 1", Installed, Some("uuid-b"))],
+        )]);
+        let rows = merge_with_profiles(
+            vec![detected("brave", "Brave", true)],
+            vec![slot("uuid-b", "Chrome", Some("brave"))],
+            &mut profiles,
+        );
+        assert_eq!(rows[0].profile_label, None);
+        assert_eq!(rows[0].profile.as_ref().unwrap().name, "Person 1");
     }
 
     fn activation(pairs: &[(&str, crate::extension_setup::ActivationState)]) -> crate::extension_setup::ActivationSnapshot {

@@ -1,0 +1,110 @@
+.pilpod-other-profiles {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--pilpod-glass-float-border);
+  border-radius: 10px;
+}
+
+.pilpod-other-profiles__title {
+  margin: 0 0 0.45rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--pilpod-text-secondary);
+}
+
+.pilpod-other-profiles__group + .pilpod-other-profiles__group {
+  margin-top: 0.5rem;
+}
+
+.pilpod-other-profiles__browser {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+  font-size: 11px;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-other-profiles__browser img {
+  border-radius: 3px;
+}
+
+.pilpod-other-profiles__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pilpod-other-profiles__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.25rem 0.3rem;
+  border-radius: 7px;
+}
+
+.pilpod-other-profiles__item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pilpod-other-profiles__text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.pilpod-other-profiles__name,
+.pilpod-other-profiles__status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pilpod-other-profiles__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pilpod-text);
+}
+
+.pilpod-other-profiles__status {
+  font-size: 10.5px;
+  color: var(--pilpod-text-muted);
+}
+
+.pilpod-other-profiles__btn {
+  flex-shrink: 0;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--pilpod-glass-float-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pilpod-text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.pilpod-other-profiles__btn:hover:not(:disabled) {
+  border-color: var(--pilpod-accent-blue-ring);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--pilpod-accent-blue);
+}
+
+.pilpod-other-profiles__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pilpod-other-profiles__error {
+  margin: 0.4rem 0 0;
+  font-size: 11px;
+  color: var(--pilpod-playback-red);
+}

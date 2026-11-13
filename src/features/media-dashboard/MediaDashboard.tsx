@@ -87,6 +87,7 @@ export function MediaDashboard() {
     refreshBrowserConnection,
     browsers,
     browserAudio,
+    browserProfiles,
   } = useMediaDashboard();
 
   // The floating widget lives in its own window; the dashboard only reads and
@@ -370,6 +371,7 @@ export function MediaDashboard() {
             <>
               <BrowserSessionsPanel
                 browsers={dashboardBrowsers}
+                browserProfiles={browserProfiles}
                 pendingKeys={browserPendingKeys}
                 browserAudio={browserAudio}
                 onPlayPause={toggleBrowserTab}

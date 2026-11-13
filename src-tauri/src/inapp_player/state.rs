@@ -244,6 +244,7 @@ impl InAppSession {
             last_sync_secs: Some(0),
             extension_reconnecting: false,
             icon_url: None,
+            profile: None,
         }
     }
 }

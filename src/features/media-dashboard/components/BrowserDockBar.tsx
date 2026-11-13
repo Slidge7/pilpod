@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import "./BrowserDockBar.css";
 import type { DetectedBrowser } from "../../../types/media";
+import { ProfileAvatar } from "./ProfileAvatar";
 import { scrollToBrowserProfile } from "../lib/browserProfileScroll";
 import {
   IconBlock,
@@ -98,17 +99,28 @@ export function BrowserDockBar({
                     scrollToBrowserProfile(browser.id);
                   }}
                 >
-                  {browser.iconUrl ? (
-                    <img
-                      src={browser.iconUrl}
-                      alt=""
-                      className="pilpod-browser-dock__icon"
-                      width={16}
-                      height={16}
-                    />
-                  ) : (
-                    <span className="pilpod-browser-dock__icon-fallback" aria-hidden />
-                  )}
+                  <span className="pilpod-browser-dock__icon-wrap">
+                    {browser.iconUrl ? (
+                      <img
+                        src={browser.iconUrl}
+                        alt=""
+                        className="pilpod-browser-dock__icon"
+                        width={16}
+                        height={16}
+                      />
+                    ) : (
+                      <span className="pilpod-browser-dock__icon-fallback" aria-hidden />
+                    )}
+                    {/* Profile badge, only when the browser has several profiles. */}
+                    {browser.profile && browser.profileLabel ? (
+                      <ProfileAvatar
+                        profile={browser.profile}
+                        size={12}
+                        title={null}
+                        className="pilpod-browser-dock__profile-badge"
+                      />
+                    ) : null}
+                  </span>
                   <span className="pilpod-browser-dock__label">{label}</span>
                 </button>
               );

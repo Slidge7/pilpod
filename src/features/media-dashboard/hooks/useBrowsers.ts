@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AudioSessionInfoDto,
+  BrowserProfileInfo,
   BrowsersUpdatePayload,
   DetectedBrowser,
 } from "../../../types/media";
@@ -16,18 +17,27 @@ function browserAudioEqual(
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+type ProfilesByBrowser = Record<string, BrowserProfileInfo[]>;
+
+const NO_PROFILES: ProfilesByBrowser = {};
+
 function applyPayload(
   payload: BrowsersUpdatePayload,
   setBrowsers: React.Dispatch<React.SetStateAction<DetectedBrowser[]>>,
   setBrowserAudio: React.Dispatch<
     React.SetStateAction<Record<string, AudioSessionInfoDto>>
   >,
+  setBrowserProfiles: React.Dispatch<React.SetStateAction<ProfilesByBrowser>>,
 ) {
   setBrowsers((prev) =>
     browsersEqual(prev, payload.browsers) ? prev : payload.browsers,
   );
   const audio = payload.browserAudio ?? {};
   setBrowserAudio((prev) => (browserAudioEqual(prev, audio) ? prev : audio));
+  const profiles = payload.browserProfiles ?? NO_PROFILES;
+  setBrowserProfiles((prev) =>
+    JSON.stringify(prev) === JSON.stringify(profiles) ? prev : profiles,
+  );
 }
 
 /**
@@ -38,16 +48,19 @@ export function useBrowsers() {
   const [browserAudio, setBrowserAudio] = useState<
     Record<string, AudioSessionInfoDto>
   >({});
+  const [browserProfiles, setBrowserProfiles] =
+    useState<ProfilesByBrowser>(NO_PROFILES);
 
   const refresh = useCallback(async () => {
     try {
       const payload = await invoke<BrowsersUpdatePayload>("get_browsers");
-      applyPayload(payload, setBrowsers, setBrowserAudio);
+      applyPayload(payload, setBrowsers, setBrowserAudio, setBrowserProfiles);
     } catch {
       setBrowsers((prev) => (prev.length === 0 ? prev : []));
       setBrowserAudio((prev) =>
         Object.keys(prev).length === 0 ? prev : {},
       );
+      setBrowserProfiles(NO_PROFILES);
     }
   }, []);
 
@@ -57,7 +70,7 @@ export function useBrowsers() {
     let unlisten: UnlistenFn | undefined;
 
     void listen<BrowsersUpdatePayload>(BROWSERS_UPDATE_EVENT, (ev) => {
-      applyPayload(ev.payload, setBrowsers, setBrowserAudio);
+      applyPayload(ev.payload, setBrowsers, setBrowserAudio, setBrowserProfiles);
     }).then((u) => {
       unlisten = u;
     });
@@ -83,5 +96,5 @@ export function useBrowsers() {
     };
   }, [refresh]);
 
-  return { browsers, browserAudio, refresh };
+  return { browsers, browserAudio, browserProfiles, refresh };
 }

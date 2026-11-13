@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import "./BrowserSessionsPanel.css";
-import type { AudioSessionInfoDto, BrowserTab, DetectedBrowser } from "../../../types/media";
+import type {
+  AudioSessionInfoDto,
+  BrowserProfileInfo,
+  BrowserTab,
+  DetectedBrowser,
+} from "../../../types/media";
 import {
   IconBrowserClosed,
   IconChevronRight,
@@ -43,6 +48,9 @@ import { isBrowserLocked } from "../../extension-setup";
 import { UnifiedTabRow } from "./UnifiedTabRow";
 import { MediaItemCard } from "./MediaItemCard";
 import { ActiveMediaStrip } from "./ActiveMediaStrip";
+import { ProfileAvatar } from "./ProfileAvatar";
+import { OtherBrowserProfiles } from "./OtherBrowserProfiles";
+import { profileTooltip } from "../lib/browserProfiles";
 
 function browserStatusMeta(
   status: BrowserConnectionStatus,
@@ -115,6 +123,8 @@ export type TabAccessories = {
 
 type Props = {
   browsers: DetectedBrowser[];
+  /** Every browser profile on disk (keyed by `osBrowserId`) — for "Other profiles". */
+  browserProfiles?: Readonly<Record<string, BrowserProfileInfo[]>>;
   pendingKeys: ReadonlySet<string>;
   browserAudio: Readonly<Record<string, AudioSessionInfoDto>>;
   onPlayPause: (tab: BrowserTab, browserId: string) => void;
@@ -238,7 +248,10 @@ function BrowserHeader({
 
   return (
     <header className={headClass}>
-      <span className="pilpod-browser-profile__identity">
+      <span
+        className="pilpod-browser-profile__identity"
+        title={browser.profile ? profileTooltip(browser.profile) : undefined}
+      >
         {browser.iconUrl ? (
           <img
             src={browser.iconUrl}
@@ -253,6 +266,10 @@ function BrowserHeader({
             aria-hidden
           />
         )}
+        {/* Which profile: only when the browser has several (label is set). */}
+        {browser.profile && browser.profileLabel ? (
+          <ProfileAvatar profile={browser.profile} size={16} title={null} />
+        ) : null}
         {!hasMediaTabs && (
           <span className="pilpod-browser-profile__label-text">
             {displayName}
@@ -944,6 +961,7 @@ function excludeSetValue(set: Set<string>, key: string): Set<string> {
 
 export function BrowserSessionsPanel({
   browsers,
+  browserProfiles,
   pendingKeys,
   browserAudio,
   onPlayPause,
@@ -1174,6 +1192,10 @@ export function BrowserSessionsPanel({
           );
         })}
       </div>
+
+      {!narrowResults && browserProfiles ? (
+        <OtherBrowserProfiles browsers={browsers} browserProfiles={browserProfiles} />
+      ) : null}
     </section>
   );
 }

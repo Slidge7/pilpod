@@ -33,7 +33,7 @@ function readAlwaysOnTop(): boolean {
  * window's always-on-top preference. Minimize means minimize again.
  */
 export function useMediaDashboard() {
-  const { browsers, browserAudio, refresh: refreshBrowsers } = useBrowsers();
+  const { browsers, browserAudio, browserProfiles, refresh: refreshBrowsers } = useBrowsers();
 
   const [alwaysOnTop, setAlwaysOnTop] = useState(readAlwaysOnTop);
 
@@ -131,5 +131,6 @@ export function useMediaDashboard() {
 
     browsers,
     browserAudio,
+    browserProfiles,
   };
 }

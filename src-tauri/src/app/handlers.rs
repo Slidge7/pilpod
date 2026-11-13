@@ -75,6 +75,9 @@ macro_rules! pilpod_invoke_handler {
             browser_cmds::get_browsers,
             browser_cmds::refresh_browser_connection,
             browser_cmds::request_browser_sync,
+            browser_cmds::open_browser_profile,
+            // Profile avatars: platform-neutral cache lookup.
+            crate::browser_profiles::get_browser_profile_avatar,
             // The widget is platform-neutral — real commands everywhere.
             crate::widget::commands::widget_get_state,
             crate::widget::commands::widget_set_enabled,

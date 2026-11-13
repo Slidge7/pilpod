@@ -3,7 +3,7 @@ use std::{net::SocketAddr, sync::Arc};
 use axum::{
     extract::{ConnectInfo, State},
     http::{Method, StatusCode},
-    response::IntoResponse,
+    response::{Html, IntoResponse},
     routing::{get, options, post},
     Json, Router,
 };
@@ -146,6 +146,33 @@ async fn handle_post(
     .into_response()
 }
 
+/// Page Chromium opens when the companion is uninstalled. The companion sets
+/// this as its uninstall URL with its `browserId` in the query — that stored
+/// URL is how `browser_profiles` ties a profile folder to a connection. The
+/// page itself only says goodbye: it changes no state, so a web page that
+/// requests it can do nothing.
+const COMPANION_REMOVED_PAGE: &str = r#"<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>PilPod Companion removed</title>
+<style>
+  body{font:15px/1.5 system-ui,Segoe UI,sans-serif;background:#111318;color:#e8e9ed;
+       display:grid;place-items:center;min-height:100vh;margin:0}
+  main{max-width:28rem;padding:2rem;text-align:center}
+  h1{font-size:1.25rem;margin:0 0 .5rem}
+  p{color:#a3a7b3;margin:.25rem 0}
+</style></head>
+<body><main>
+  <h1>PilPod Companion was removed from this profile</h1>
+  <p>PilPod will no longer see or control the tabs in this browser profile.</p>
+  <p>You can reinstall it any time from PilPod's browser setup. You can close this tab.</p>
+</main></body></html>"#;
+
+async fn handle_companion_removed(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> impl IntoResponse {
+    if !is_loopback(peer) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    Html(COMPANION_REMOVED_PAGE).into_response()
+}
+
 async fn handle_options(ConnectInfo(peer): ConnectInfo<SocketAddr>) -> impl IntoResponse {
     if !is_loopback(peer) {
         return StatusCode::FORBIDDEN.into_response();
@@ -160,6 +187,10 @@ pub fn router(ctx: Arc<BridgeContext>) -> Router {
         .route(CAPABILITIES_PATH, options(handle_options))
         .route(BROWSER_MEDIA_PATH, post(handle_post))
         .route(BROWSER_MEDIA_PATH, options(handle_options))
+        .route(
+            crate::browser_profiles::UNINSTALL_PATH,
+            get(handle_companion_removed),
+        )
         .layer(cors_layer())
         .with_state(ctx)
 }

@@ -31,6 +31,10 @@ mod sky;
 mod extension_setup;
 
 mod browser_dto;
+// Browser profile identity: names, avatars, which companion lives in which
+// profile. Parsing is platform-neutral; only the folder lookup is Windows.
+#[cfg_attr(not(windows), allow(dead_code))]
+mod browser_profiles;
 mod browser_tabs;
 #[cfg(windows)]
 mod browser_audio;

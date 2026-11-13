@@ -90,6 +90,10 @@ pub struct DetectedBrowser {
     pub extension_reconnecting: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon_url: Option<String>,
+    /// The browser profile this row's companion lives in (name, account,
+    /// avatar, colour), when PilPod could tell. See `browser_profiles`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile: Option<crate::browser_profiles::BrowserProfileInfo>,
 }
 
 /// Emitted on `"browsers://update"` and returned by `get_browsers`.
@@ -100,6 +104,11 @@ pub struct BrowsersUpdatePayload {
     /// Per-browser WASAPI audio, keyed by extension `browserId` UUID.
     #[serde(default)]
     pub browser_audio: HashMap<String, AudioSessionInfoDto>,
+    /// Every profile of every detected browser — connected or not — keyed by
+    /// OS browser id, in the browser's own order. Lets the UI show profiles
+    /// that don't have the companion yet.
+    #[serde(default)]
+    pub browser_profiles: crate::browser_profiles::ProfilesByBrowser,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

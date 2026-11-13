@@ -89,6 +89,45 @@ Ground truth: **socket peer PID matching.** When the extension connects to the l
 - Vitest: window grouping edge cases (moved tab, closed window, focus change).
 - Manual (via Dev Lab): 2 Chrome profiles + 2 windows each → 2 rows, 2 window groups per row, focus targets exact window.
 
+### Phase 4b — Real profile identity (done 2026-11-13)
+
+**Correction to Phase 4:** Chromium runs *every* profile in one browser process.
+Launching with `--profile-directory` hands off to the running process, so
+profiles never get their own PID and peer-PID binding cannot tell them apart.
+(Firefox is the opposite: one process per profile.)
+
+What was built instead (`src-tauri/src/browser_profiles.rs`):
+
+- **Who the profiles are:** `User Data/Local State` → `profile.info_cache`
+  (display name, account email/name, `Google Profile Picture.png`, highlight
+  colour) and `profile.last_active_profiles` (open). Firefox: `profiles.ini`.
+  Opera-style roots count as one profile.
+- **Which UUID lives where**, in order:
+  1. *Marker* — the companion sets
+     `chrome.runtime.setUninstallURL("http://127.0.0.1:17399/companion-removed?bid=<uuid>")`
+     (only while the bridge is enabled). Chromium stores it as
+     `extensions.settings.<id>.uninstall_url` in the profile's prefs, which
+     `install_probe::probe_profile_marker` reads.
+  2. *Storage* — older companions: byte-search the profile's
+     `Local Extension Settings/<ext-id>/*.log|*.ldb` for a **live** UUID.
+  3. *Inferred* (merge time) — one unlinked connection + one candidate profile.
+- File-stamp cache: the detector's 2 s tick costs one `stat` per file when
+  nothing changed. Avatars are fetched on demand (`get_browser_profile_avatar`),
+  not sent with every `browsers://update`.
+- Rows: `DetectedBrowser.profile` + label `"Google Chrome · Work"` whenever the
+  browser has >1 profile; rows ordered as the browser orders its profiles.
+  Unknown profile falls back to the old stable `Profile N`.
+- Payload: `browserProfiles` (every profile, connected or not). The dashboard
+  lists unconnected ones under **Other profiles on this computer** with
+  *Add companion* (opens the store page in that profile) / *Open*
+  (`open_browser_profile`, only dirs PilPod itself listed).
+- Bridge: `GET /companion-removed` serves a static goodbye page (no state change).
+
+**Manual checklist:** 2 Chrome profiles with the companion → rows named after
+the profiles with avatars; a third profile without it appears under *Other
+profiles*; *Add companion* opens the store in that profile; rename a profile in
+Chrome → label updates within ~2 s.
+
 ---
 
 ## Phase 5 — Hardening & regression suite

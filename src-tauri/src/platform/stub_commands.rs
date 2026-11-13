@@ -25,7 +25,17 @@ pub fn get_browsers() -> BrowsersUpdatePayload {
     BrowsersUpdatePayload {
         browsers: Vec::new(),
         browser_audio: std::collections::HashMap::new(),
+        browser_profiles: std::collections::HashMap::new(),
     }
+}
+
+#[tauri::command]
+pub fn open_browser_profile(
+    _os_browser_id: String,
+    _profile_dir: String,
+    _add_companion: Option<bool>,
+) -> Result<(), String> {
+    Err("PilPod requires Windows".into())
 }
 
 #[tauri::command]

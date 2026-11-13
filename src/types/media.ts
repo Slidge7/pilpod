@@ -9,6 +9,45 @@ export type AudioSessionInfoDto = {
 export type BrowsersUpdatePayload = {
   browsers: DetectedBrowser[];
   browserAudio?: Record<string, AudioSessionInfoDto>;
+  /**
+   * Every profile of every detected browser, connected or not, keyed by
+   * `osBrowserId`, in the browser's own order.
+   */
+  browserProfiles?: Record<string, BrowserProfileInfo[]>;
+};
+
+/** Companion state inside one browser profile. Mirrors Rust `ProfileCompanion`. */
+export type ProfileCompanion = "notInstalled" | "disabled" | "installed";
+
+/**
+ * How a profile was tied to a companion connection:
+ * `marker` (uninstall-URL marker), `storage` (found in the extension's own
+ * storage) or `inferred` (the only possible match).
+ */
+export type ProfileLink = "marker" | "storage" | "inferred";
+
+/** One browser profile on disk. Mirrors Rust `browser_profiles::BrowserProfileInfo`. */
+export type BrowserProfileInfo = {
+  /** Profile folder ("Default", "Profile 2"); "" when the browser has a single root profile. */
+  dir: string;
+  /** Name the browser shows for the profile ("Work"). */
+  name: string;
+  email?: string | null;
+  /** Signed-in account's full name. */
+  accountName?: string | null;
+  /** Pass to `get_browser_profile_avatar`; absent ⇒ no picture, draw an initial. */
+  avatarKey?: string | null;
+  /** Profile colour, `#rrggbb`. */
+  color?: string | null;
+  lastUsed: boolean;
+  /** The browser lists this profile as open (Chromium only). */
+  open: boolean;
+  companion: ProfileCompanion;
+  /** Companion `browserId` living in this profile — matches `DetectedBrowser.id`. */
+  browserId?: string | null;
+  link?: ProfileLink | null;
+  /** PilPod can open this profile directly. */
+  canLaunch: boolean;
 };
 
 /** Per-window rollup derived from a profile's tabs (focused window first). */
@@ -52,6 +91,8 @@ export type DetectedBrowser = {
   lastSyncSecs: number | null;
   extensionReconnecting?: boolean;
   iconUrl?: string | null;
+  /** The browser profile this row's companion lives in, when PilPod could tell. */
+  profile?: BrowserProfileInfo | null;
 };
 
 export type WakeAndSyncBrowserResult = {

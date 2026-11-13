@@ -485,6 +485,13 @@ fn firefox_appdata_rel(browser_id: &str) -> Option<&'static str> {
     }
 }
 
+/// Firefox-family folder holding `profiles.ini` (`%APPDATA%\Mozilla\Firefox`…).
+pub fn firefox_profiles_base(browser_id: &str) -> Option<PathBuf> {
+    let rel = firefox_appdata_rel(browser_id)?;
+    let roaming = std::env::var_os("APPDATA")?;
+    Some(PathBuf::from(roaming).join(rel.replace('/', "\\")))
+}
+
 /// Every Chromium "User Data"-style folder a browser keeps profiles in. Used by
 /// `extension_setup::install_probe`, which reads each profile's preferences to
 /// find the companion, its profile and whether it is enabled.

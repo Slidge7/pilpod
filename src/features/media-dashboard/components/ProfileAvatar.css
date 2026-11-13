@@ -1,0 +1,20 @@
+/* Browser profile avatar: account picture, or initial on the profile colour. */
+.pilpod-profile-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px var(--pilpod-glass-float-border, rgba(255, 255, 255, 0.18));
+  user-select: none;
+}
+
+.pilpod-profile-avatar--initial {
+  background-color: var(--pilpod-accent-blue, #4c8dff);
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+}
